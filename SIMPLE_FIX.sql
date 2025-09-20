@@ -1,0 +1,10 @@
+-- COPY AND PASTE THESE 3 LINES INTO SUPABASE SQL EDITOR:
+
+ALTER TABLE quotation_items ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE quotation_items ADD COLUMN IF NOT EXISTS tax_percentage DECIMAL(6,3) DEFAULT 0;  
+ALTER TABLE quotation_items ADD COLUMN IF NOT EXISTS tax_inclusive BOOLEAN DEFAULT false;
+
+-- Optional: Also add to invoice_items
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS tax_percentage DECIMAL(6,3) DEFAULT 0;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS tax_inclusive BOOLEAN DEFAULT false;

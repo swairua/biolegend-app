@@ -1,0 +1,22 @@
+# Routes to Remove from App.tsx (pages were deleted)
+
+# Debug/Fix Routes to Remove:
+- /audit -> AuditPage (removed)
+- /auto-fix -> AutoFixPage (removed)  
+- /database-fix-page -> DatabaseFixPage (removed)
+- /product-table-fix -> ProductTableFixPage (removed)
+- /quotations-table-fix -> QuotationsTableFixPage (removed)
+- /test-quotation-fixes -> TestQuotationFixes (removed)
+- /fix-quotation-issues -> FixQuotationIssues (removed)
+- /system-fix-test -> SystemFixTest (removed)
+- /proforma-function-fix -> ProformaFunctionFixPage (removed)
+
+# Routes to Keep:
+- /payment-sync -> PaymentSynchronizationPage (legitimate feature)
+- /optimized-inventory -> OptimizedInventory (performance optimization)
+- /performance-optimizer -> PerformanceOptimizerPage (legitimate feature)
+- /optimized-customers -> OptimizedCustomers (performance optimization)
+- /customer-performance-optimizer -> CustomerPerformanceOptimizerPage (legitimate feature)
+- /proforma-number-diagnostic -> ProformaNumberDiagnosticPage (need to verify)
+
+# Action Required: Update App.tsx imports and routes
