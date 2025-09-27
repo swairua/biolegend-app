@@ -166,7 +166,7 @@ export function getTaxDisplayInfo(item: CalculatedItem): {
     taxInfo = '(tax-free)';
   }
   
-  const breakdown = `${item.quantity} × $${item.unit_price.toFixed(2)} = $${item.base_amount.toFixed(2)}`;
+  const breakdown = `${item.quantity} × ${formatCurrency(item.unit_price)} = ${formatCurrency(item.base_amount)}`;
   
   return {
     displayPrice,
