@@ -1390,7 +1390,10 @@ export const useQuotations = (companyId?: string) => {
             notes,
             terms_and_conditions,
             created_at,
-            updated_at
+            updated_at,
+            currency_code,
+            exchange_rate,
+            fx_date
           `)
           .eq('company_id', companyId)
           .order('created_at', { ascending: false });
