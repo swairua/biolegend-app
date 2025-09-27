@@ -40,7 +40,7 @@ export function CurrencyColumnsMigration() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Adds currency_code, exchange_rate and fx_date to invoices (and best-effort to related tables). Default currency is KES.
+          Adds currency_code, exchange_rate and fx_date to invoices, quotations, proforma invoices, credit notes, payments, remittance advice, and LPOs. Existing rows default to KES with rate 1 and fx_date set to the document date.
         </p>
         <div className="flex gap-2">
           <Button onClick={onRun} disabled={running}>

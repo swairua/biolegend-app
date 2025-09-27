@@ -138,7 +138,10 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
         amount: paymentData.amount,
         payment_method: mapPaymentMethod(paymentData.payment_method),
         reference_number: paymentData.reference_number || paymentNumber,
-        notes: paymentData.notes
+        notes: paymentData.notes,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: paymentData.payment_date
       };
 
       const result = await createPaymentMutation.mutateAsync(paymentRecord);

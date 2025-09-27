@@ -33,6 +33,7 @@ import {
 import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useGenerateCreditNoteNumber } from '@/hooks/useCreditNotes';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { useCreateCreditNoteWithItems } from '@/hooks/useCreditNoteItems';
 import { toast } from 'sonner';
 
@@ -75,6 +76,7 @@ export function CreateCreditNoteModal({
   const [items, setItems] = useState<CreditNoteItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, rate } = useCurrency();
 
   const { data: companies, isLoading: loadingCompanies, error: companiesError } = useCompanies();
   const companyId = companies?.[0]?.id;
@@ -318,7 +320,10 @@ export function CreateCreditNoteModal({
         affects_inventory: affectsInventory,
         notes: notes,
         terms_and_conditions: termsAndConditions,
-        created_by: null // TODO: Get from auth context when implemented
+        created_by: null,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: creditNoteDate
       };
 
       const creditNoteItems = items.map((item, index) => ({
