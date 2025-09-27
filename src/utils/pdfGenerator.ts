@@ -139,9 +139,7 @@ const buildDocumentHTML = (data: DocumentData) => {
   })();
   const hasStatementLPO = data.type === 'statement' && Array.isArray(data.items) && data.items.some((i: any) => i && (i as any).lpo_number);
 
-  import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
-
-  const code = data.currency_code || 'KES';
+    const code = data.currency_code || 'KES';
   const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, code);
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString('en-GB', {
