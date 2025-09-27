@@ -401,6 +401,35 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       // Ensure DB has currency columns (safe no-op if already present)
       await ensureInvoiceCurrencyColumns();
 
+      // Lock exchange rate at creation time and ensure values reflect that rate
+      let effectiveRate = exchangeRate;
+      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+        toast.info('Locking exchange rate for invoice date...');
+        effectiveRate = await getExchangeRate('KES', 'USD', invoiceDate);
+        if (!effectiveRate || effectiveRate <= 0) {
+          throw new Error('Unable to fetch exchange rate for the selected date');
+        }
+      }
+      const baseRate = (Number.isFinite(exchangeRate) && exchangeRate > 0) ? exchangeRate : 1;
+      const factor = currencyCode === 'USD' ? (effectiveRate / baseRate) : 1;
+
+      const adjustedItems = items.map(item => ({
+        product_id: item.product_id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: currencyCode === 'USD' ? Number(item.unit_price) * factor : Number(item.unit_price),
+        discount_before_vat: item.discount_before_vat || 0,
+        tax_percentage: item.tax_percentage,
+        tax_amount: currencyCode === 'USD' ? Number(item.tax_amount || 0) * factor : Number(item.tax_amount || 0),
+        tax_inclusive: item.tax_inclusive,
+        line_total: currencyCode === 'USD' ? Number(item.line_total) * factor : Number(item.line_total)
+      }));
+
+      const adjustedSubtotal = currencyCode === 'USD' ? subtotal * factor : subtotal;
+      const adjustedTaxAmount = currencyCode === 'USD' ? taxAmount * factor : taxAmount;
+      const adjustedTotalAmount = currencyCode === 'USD' ? totalAmount * factor : totalAmount;
+      const adjustedBalanceDue = adjustedTotalAmount;
+
       const invoiceData = {
         company_id: currentCompany.id,
         customer_id: selectedCustomerId,
@@ -409,30 +438,20 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         due_date: dueDate,
         lpo_number: lpoNumber || null,
         status: 'draft',
-        subtotal: subtotal,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
+        subtotal: adjustedSubtotal,
+        tax_amount: adjustedTaxAmount,
+        total_amount: adjustedTotalAmount,
         paid_amount: 0,
-        balance_due: balanceDue,
+        balance_due: adjustedBalanceDue,
         terms_and_conditions: termsAndConditions,
         notes: notes,
         created_by: profile?.id,
         currency_code: currencyCode,
-        exchange_rate: exchangeRate,
+        exchange_rate: currencyCode === 'USD' ? effectiveRate : 1,
         fx_date: invoiceDate
       };
 
-      const invoiceItems = items.map(item => ({
-        product_id: item.product_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        discount_before_vat: item.discount_before_vat || 0,
-        tax_percentage: item.tax_percentage,
-        tax_amount: item.tax_amount,
-        tax_inclusive: item.tax_inclusive,
-        line_total: item.line_total
-      }));
+      const invoiceItems = adjustedItems;
 
       // Step 3: Create invoice and items
       setSubmitProgress({
