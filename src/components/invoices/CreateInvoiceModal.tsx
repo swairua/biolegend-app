@@ -327,7 +327,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
   import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 
-  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode);
+  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
 
   const subtotal = items.reduce((sum, item) => {
     // Calculate subtotal as base amount minus discounts
