@@ -54,6 +54,7 @@ export default function InventoryReports() {
 
   const { data: products } = useProducts();
   const { data: stockMovements } = useStockMovements();
+  const { format } = useCurrency();
 
   // Calculate stock movement data from real movements
   const calculateStockMovementData = () => {
