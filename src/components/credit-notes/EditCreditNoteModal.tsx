@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useUpdateCreditNote } from '@/hooks/useCreditNotes';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 
 interface EditCreditNoteModalProps {
@@ -62,6 +64,9 @@ export function EditCreditNoteModal({
   }, [creditNote, open]);
 
   if (!creditNote) return null;
+
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   // Only allow editing draft credit notes
   if (creditNote.status !== 'draft') {
@@ -216,31 +221,19 @@ export function EditCreditNoteModal({
               <div>
                 <div className="text-muted-foreground">Total Amount</div>
                 <div className="font-semibold">
-                  {new Intl.NumberFormat('en-KE', {
-                    style: 'currency',
-                    currency: 'KES',
-                    minimumFractionDigits: 2
-                  }).format(creditNote.total_amount)}
+                  {formatCurrency(creditNote.total_amount)}
                 </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Applied</div>
                 <div className="font-semibold">
-                  {new Intl.NumberFormat('en-KE', {
-                    style: 'currency',
-                    currency: 'KES',
-                    minimumFractionDigits: 2
-                  }).format(creditNote.applied_amount)}
+                  {formatCurrency(creditNote.applied_amount)}
                 </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Balance</div>
                 <div className="font-semibold">
-                  {new Intl.NumberFormat('en-KE', {
-                    style: 'currency',
-                    currency: 'KES',
-                    minimumFractionDigits: 2
-                  }).format(creditNote.balance)}
+                  {formatCurrency(creditNote.balance)}
                 </div>
               </div>
               <div>

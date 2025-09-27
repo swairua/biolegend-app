@@ -52,6 +52,8 @@ interface CompanyDetails {
   logo_url?: string;
 }
 
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+
 const DEFAULT_COMPANY: CompanyDetails = {
   name: 'Biolegend Scientific Ltd',
   address: 'P.O. Box 85988-00200, Nairobi\\nAlpha Center, Eastern Bypass, Membley',
@@ -64,15 +66,8 @@ const DEFAULT_COMPANY: CompanyDetails = {
 
 export const generateJsPDF = (data: DocumentData) => {
   const company = data.company || DEFAULT_COMPANY;
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+
+  const formatCurrency = (amount: number, code: string = 'KES') => formatCurrencyUtil(Number(amount) || 0, code);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', {

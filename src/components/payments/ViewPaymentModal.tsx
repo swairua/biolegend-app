@@ -46,6 +46,9 @@ interface Payment {
   payment_allocations?: PaymentAllocation[];
 }
 
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
+
 interface ViewPaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -82,14 +85,8 @@ export const ViewPaymentModal = ({
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const handleDownload = () => {
     onDownloadReceipt?.(payment);

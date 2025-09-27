@@ -32,6 +32,8 @@ import {
 import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface QuotationItem {
   id: string;
@@ -64,6 +66,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
@@ -223,14 +227,6 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
 
   const subtotal = items.reduce((sum, item) => {
     // Always use base amount for subtotal (unit price × quantity × discount)

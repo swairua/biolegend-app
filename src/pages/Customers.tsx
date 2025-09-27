@@ -47,6 +47,8 @@ import { ViewCustomerModal } from '@/components/customers/ViewCustomerModal';
 import { CreateCustomerModal } from '@/components/customers/CreateCustomerModal';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface Customer {
   id: string;
@@ -111,13 +113,9 @@ export default function Customers() {
     return matchesSearch && matchesStatus && matchesCity && matchesCreditLimit;
   }) || [];
 
+  const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+    return format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
   };
 
 

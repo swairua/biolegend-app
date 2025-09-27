@@ -27,6 +27,8 @@ import { useRemittanceAdvice, useCompanies } from '@/hooks/useDatabase';
 import { CreateRemittanceModal } from '@/components/remittance/CreateRemittanceModalFixed';
 import { ViewRemittanceModal } from '@/components/remittance/ViewRemittanceModal';
 import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 // Remittance advice page - uses real database data via useRemittanceAdvice hook
 
@@ -44,6 +46,9 @@ const RemittanceAdvice = () => {
 
   // Get the current company (assuming first company for now)
   const currentCompany = companies[0];
+
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const handleViewRemittance = (remittance: any) => {
     setSelectedRemittance(remittance);
@@ -244,7 +249,7 @@ const RemittanceAdvice = () => {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      ${(remittance.total_payment || remittance.totalPayment || 0).toFixed(2)}
+                      {formatCurrency(remittance.total_payment || remittance.totalPayment || 0)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -375,20 +380,20 @@ const RemittanceAdvice = () => {
                         {item.invoiceNumber || item.creditNote}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.invoiceAmount ? `$${(item.invoiceAmount || 0).toFixed(2)}` : ''}
+                        {item.invoiceAmount ? formatCurrency(item.invoiceAmount || 0) : ''}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.creditAmount ? `$${(item.creditAmount || 0).toFixed(2)}` : ''}
+                        {item.creditAmount ? formatCurrency(item.creditAmount || 0) : ''}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${(item.payment || 0).toFixed(2)}
+                        {formatCurrency(item.payment || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t-2">
                     <TableCell colSpan={4} className="font-semibold">Total Payment</TableCell>
                     <TableCell className="text-right font-bold text-lg">
-                      ${(filteredRemittances[0].totalPayment || 0).toFixed(2)}
+                      {formatCurrency(filteredRemittances[0].totalPayment || 0) }
                     </TableCell>
                   </TableRow>
                 </TableBody>

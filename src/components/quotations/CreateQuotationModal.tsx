@@ -32,6 +32,8 @@ import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, u
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface QuotationItem {
   id: string;
@@ -63,6 +65,8 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -197,14 +201,6 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
 
   const subtotal = items.reduce((sum, item) => {
     // Unit prices are always tax-exclusive, so subtotal is always the base amount

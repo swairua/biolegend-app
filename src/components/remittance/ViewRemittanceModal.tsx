@@ -9,16 +9,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileText, 
-  Download, 
-  Calendar, 
-  Building2, 
-  User, 
+import {
+  FileText,
+  Download,
+  Calendar,
+  Building2,
+  User,
   MapPin,
   CreditCard,
   DollarSign
 } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { downloadRemittancePDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 
@@ -38,13 +40,8 @@ export function ViewRemittanceModal({
 
   if (!remittance) return null;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount || 0);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {

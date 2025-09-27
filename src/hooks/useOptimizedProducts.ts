@@ -293,15 +293,14 @@ export interface OptimizedProduct {
   };
 }
 
-// Currency formatter hook
+import { formatCurrency } from '@/utils/formatCurrency';
+
+// Currency formatter hook (returns object with .format to be compatible with Intl.NumberFormat)
 export const useCurrencyFormatter = () => {
   return useMemo(() => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
+    return {
+      format: (amount: number) => formatCurrency(Number(amount) || 0, 'KES', 0, 0)
+    };
   }, []);
 };
 

@@ -23,6 +23,8 @@ import {
   Activity
 } from 'lucide-react';
 import { useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface Customer {
   id: string;
@@ -61,14 +63,8 @@ export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCrea
   const totalInvoices = invoices?.length || 0;
   const totalPayments = payments?.length || 0;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';

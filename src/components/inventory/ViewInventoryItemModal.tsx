@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Package,
   Barcode,
   DollarSign,
@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface InventoryItem {
   id: string;
@@ -65,14 +67,10 @@ export function ViewInventoryItemModal({ open, onOpenChange, item, onEdit, onRes
     }
   };
 
+  const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount.replace(/[^0-9.-]+/g, '')) : amount;
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(num);
+    const num = typeof amount === 'string' ? parseFloat(String(amount).replace(/[^0-9.-]+/g, '')) : Number(amount || 0);
+    return format(convertAmount(num, 'KES', currency, rate));
   };
 
   const stockPercentage = item.maxStock ? (item.currentStock / item.maxStock) * 100 : 0;

@@ -15,6 +15,8 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import {
   analyzePaymentSyncStatus,
   synchronizePayments,
@@ -110,14 +112,8 @@ export function PaymentSynchronization() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const getConfidenceBadge = (confidence: string) => {
     switch (confidence) {

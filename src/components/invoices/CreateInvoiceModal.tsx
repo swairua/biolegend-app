@@ -36,6 +36,7 @@ import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
 
 interface InvoiceItem {
@@ -324,14 +325,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode), {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+
+  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
 
   const subtotal = items.reduce((sum, item) => {
     // Calculate subtotal as base amount minus discounts
