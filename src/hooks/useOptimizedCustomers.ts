@@ -218,16 +218,13 @@ export const useCustomerCities = (companyId?: string) => {
   });
 };
 
-// Memoized currency formatter
+import { formatCurrency } from '@/utils/formatCurrency';
+
+// Memoized currency formatter (returns object with .format for compatibility)
 export const useCurrencyFormatter = () => {
-  return useMemo(() => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
-  }, []);
+  return useMemo(() => ({
+    format: (amount: number) => formatCurrency(Number(amount) || 0, 'KES', 0, 0)
+  }), []);
 };
 
 // Helper for customer status
