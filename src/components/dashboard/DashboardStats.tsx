@@ -62,6 +62,7 @@ export function DashboardStats() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
   const { data: stats, isLoading } = useDashboardStats(currentCompany?.id);
+  const { format } = useCurrency();
 
   if (isLoading) {
     return (
