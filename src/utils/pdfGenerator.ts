@@ -125,7 +125,7 @@ const buildDocumentHTML = (data: DocumentData) => {
   const company = data.company || DEFAULT_COMPANY;
   const visibleColumns = (() => {
     const cols: any = analyzeColumns(data.items);
-    if (data.type === 'quotation' || data.type === 'invoice') {
+    if (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') {
       cols.taxPercentage = false;
       cols.taxAmount = false;
       cols.discountPercentage = false;
@@ -242,8 +242,10 @@ const buildDocumentHTML = (data: DocumentData) => {
     .bank-details { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 10px; color: #111827; text-align: center; font-weight: 600; }
     .invoice-terms-section { margin: 30px 0 20px 0; page-break-inside: avoid; }
     .invoice-terms { width: 100%; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px; }
-    .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 0; background: transparent; border-radius: 0; border: none; font-size: 10px; color: #111827; text-align: left; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
+    .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 15px; background: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; font-size: 10px; color: #111827; text-align: center; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
 .invoice-bank-details .bank-line { margin: 6px 0; }
+    .invoice-qr { display: flex; justify-content: center; align-items: center; margin: 10mm 0 6mm 0; }
+    .invoice-qr img { width: 40mm; height: 40mm; object-fit: contain; }
     .quotation-footer { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 12px; color: #111827; text-align: center; font-weight: 600; font-style: italic; }
   </style>
 </head>
@@ -424,14 +426,17 @@ const buildDocumentHTML = (data: DocumentData) => {
     ${''}
 
     ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
-    <div class="invoice-terms-section" style="page-break-before: always;">
+    <div class="invoice-terms-section" style="page-break-inside: avoid;">
       <div class="invoice-terms">
         <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
       </div>
     </div>` : ''}
 
     ${(data.type === 'invoice' || data.type === 'proforma') ? `
+    <div class="invoice-qr">
+      <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
+    </div>
     <div class="invoice-bank-details">
       <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
       <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
@@ -454,7 +459,7 @@ export const generatePDF = (data: DocumentData) => {
   // Analyze which columns have values
   const visibleColumns = (() => {
     const cols: any = analyzeColumns(data.items);
-    if (data.type === 'quotation' || data.type === 'invoice') {
+    if (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') {
       cols.taxPercentage = false;
       cols.taxAmount = false;
       cols.discountPercentage = false;
@@ -1220,23 +1225,26 @@ export const generatePDF = (data: DocumentData) => {
 
         <!-- Terms Section (for invoices and proformas) -->
         ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
-        <div class="invoice-terms-section" style="page-break-before: always;">
+        <div class="invoice-terms-section" style="page-break-inside: avoid;">
           <div class="invoice-terms">
             <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
           </div>
         </div>
         ` : ''}
 
-        <!-- Bank Details (for invoices and proformas) -->
+        <!-- QR code between Terms and Bank details -->
         ${(data.type === 'invoice' || data.type === 'proforma') ? `
-    <div class="invoice-bank-details">
-      <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
-      <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
-      <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
-      <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
-    </div>
-    ` : ''}
+        <div class="invoice-qr">
+          <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
+        </div>
+        <div class="invoice-bank-details">
+          <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
+          <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
+          <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
+          <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
+        </div>
+        ` : ''}
 
 
       </div>
@@ -1299,14 +1307,18 @@ export const generatePDFDownload = async (data: DocumentData) => {
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   // Footer reservation (mm) for types that require a persistent bottom footer
-  const footerReserveMm = data.type === 'quotation' ? 18 : 0; // space to keep free at bottom
+  const footerReserveMm = (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') ? 18 : 0; // space to keep free at bottom
 
   // Helper to draw footer on each page
   const drawFooter = (pageIndex: number) => {
-    if (data.type !== 'quotation') return;
+    if (data.type !== 'quotation' && data.type !== 'invoice' && data.type !== 'proforma') return;
     const marginMm = 20;
     const maxWidth = pageWidth - marginMm * 2;
-    const text = 'We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!';
+    const text = data.type === 'quotation'
+      ? 'We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!'
+      : data.type === 'invoice'
+      ? 'Thank you for your business. Please remit payment to the bank details below by the due date.'
+      : 'This is a proforma invoice. Payment confirms order. Thank you for your business.';
     pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(10);
     pdf.setTextColor(17, 24, 39);
