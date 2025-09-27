@@ -245,7 +245,7 @@ const buildDocumentHTML = (data: DocumentData) => {
     .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 15px; background: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; font-size: 10px; color: #111827; text-align: center; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
 .invoice-bank-details .bank-line { margin: 6px 0; }
     .invoice-qr { display: flex; justify-content: center; align-items: center; margin: 10mm 0 6mm 0; }
-    .invoice-qr img { width: 25mm; height: 25mm; object-fit: contain; }
+    .invoice-qr img { width: 40mm; height: 40mm; object-fit: contain; }
     .quotation-footer { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 12px; color: #111827; text-align: center; font-weight: 600; font-style: italic; }
   </style>
 </head>
