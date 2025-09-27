@@ -30,6 +30,8 @@ import { toast } from 'sonner';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useApplyCreditNoteToInvoice, type CreditNote } from '@/hooks/useCreditNotes';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 interface ApplyCreditNoteModalProps {
   open: boolean;
@@ -51,6 +53,8 @@ export function ApplyCreditNoteModal({
   const { data: invoices = [] } = useInvoices(creditNote?.company_id);
   const applyCreditNoteMutation = useApplyCreditNoteToInvoice();
   const { user } = useAuth();
+
+  const { currency, rate, format } = useCurrency();
 
   // Filter invoices for the same customer with outstanding balance
   const availableInvoices = invoices.filter(inv => 
@@ -83,14 +87,12 @@ export function ApplyCreditNoteModal({
     }
   }, [selectedInvoice, creditNote]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const fmtCredit = (amount: number) => format(
+    normalizeInvoiceAmount(Number(amount) || 0, (creditNote as any)?.currency_code as any, (creditNote as any)?.exchange_rate as any, currency, rate)
+  );
+  const fmtInvoice = (amount: number, inv?: any) => format(
+    normalizeInvoiceAmount(Number(amount) || 0, (inv as any)?.currency_code as any, (inv as any)?.exchange_rate as any, currency, rate)
+  );
 
   const handleAmountChange = (value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -102,7 +104,7 @@ export function ApplyCreditNoteModal({
     if (numValue <= maxAmount) {
       setAmountToApply(numValue);
     } else {
-      toast.error(`Amount cannot exceed ${formatCurrency(maxAmount)}`);
+      toast.error(`Amount cannot exceed ${fmtInvoice(maxAmount, selectedInvoice)}`);
     }
   };
 
@@ -186,7 +188,7 @@ export function ApplyCreditNoteModal({
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Available Balance</Label>
-                  <p className="font-medium text-success">{formatCurrency(creditNote.balance || 0)}</p>
+                  <p className="font-medium text-success">{fmtCredit(creditNote.balance || 0)}</p>
                 </div>
               </div>
               <div>
