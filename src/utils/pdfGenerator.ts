@@ -1383,14 +1383,18 @@ export const generatePDFDownload = async (data: DocumentData) => {
     while (renderedY < canvas.height) {
       let breakY = findBreak(renderedY, innerPageHeightPx);
 
-      // Force a break exactly before Terms section so it starts on a fresh page
+      // Force a break exactly before Terms section so it starts on a fresh page,
+      // but only if there is a meaningful amount of content before the terms.
       if (
         (data.type === 'invoice' || data.type === 'proforma') &&
-        termsTopCanvasPx != null &&
-        termsTopCanvasPx > renderedY + 10 &&
-        termsTopCanvasPx < breakY - 10
+        termsTopCanvasPx != null
       ) {
-        breakY = findBreak(renderedY, termsTopCanvasPx - renderedY);
+        const preTermsHeight = termsTopCanvasPx - renderedY;
+        const hasRoomBeforeTerms = preTermsHeight > (innerPageHeightPx * 0.15); // at least 15% of a page
+        const wouldSplitThisSlice = termsTopCanvasPx > renderedY + 10 && termsTopCanvasPx < breakY - 10;
+        if (wouldSplitThisSlice && hasRoomBeforeTerms) {
+          breakY = findBreak(renderedY, preTermsHeight);
+        }
       }
 
       const sliceHeight = Math.min(innerPageHeightPx, canvas.height - renderedY, breakY - renderedY);
@@ -1405,7 +1409,7 @@ export const generatePDFDownload = async (data: DocumentData) => {
       if (!ctx) break;
       ctx.drawImage(canvas, 0, renderedY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, pageCanvas.height);
 
-      // Detect near-empty (almost white) slices and skip them
+      // Detect near-empty slices and skip them
       const stepX = Math.max(10, Math.floor(pageCanvas.width / 100));
       const stepY = Math.max(10, Math.floor(pageCanvas.height / 100));
       let white = 0; let count = 0;
@@ -1417,9 +1421,11 @@ export const generatePDFDownload = async (data: DocumentData) => {
         }
       }
       const whiteRatio = white / Math.max(1, count);
-      const isBlank = whiteRatio > 0.99;
+      const isTinySlice = sliceHeight < Math.floor(innerPageHeightPx * 0.2);
+      const isBlankish = whiteRatio > 0.985;
+      const shouldSkip = isBlankish || (isTinySlice && whiteRatio > 0.95);
 
-      if (!isBlank) {
+      if (!shouldSkip) {
         pages.push({ dataUrl: pageCanvas.toDataURL('image/png'), pxHeight: sliceHeight });
       }
       renderedY += sliceHeight;
