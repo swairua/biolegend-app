@@ -26,6 +26,8 @@ import {
   Phone,
   Edit
 } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface ViewLPOModalProps {
   open: boolean;
