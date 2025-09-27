@@ -324,7 +324,7 @@ export function ViewQuotationModal({
                     <CardTitle className="text-lg">Notes</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quotation.notes}</p>
+                    <p className="text-xs leading-snug text-muted-foreground whitespace-pre-wrap break-words">{quotation.notes}</p>
                   </CardContent>
                 </Card>
               )}
@@ -335,7 +335,7 @@ export function ViewQuotationModal({
                     <CardTitle className="text-lg">Terms and Conditions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quotation.terms_and_conditions}</p>
+                    <p className="text-xs leading-snug text-muted-foreground whitespace-pre-wrap break-words">{quotation.terms_and_conditions}</p>
                   </CardContent>
                 </Card>
               )}
