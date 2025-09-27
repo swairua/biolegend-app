@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
+import { CurrencySwitcher } from '@/components/layout/CurrencySwitcher';
 
 export function Header() {
   const { user, profile, signOut, isAuthenticated } = useAuth();
