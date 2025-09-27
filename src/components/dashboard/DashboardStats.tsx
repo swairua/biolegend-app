@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, FileText, Package, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDashboardStats, useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface StatCardProps {
   title: string;
