@@ -7,9 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -48,9 +47,10 @@ export function ViewInvoiceModal({
 }: ViewInvoiceModalProps) {
   if (!invoice) return null;
 
-  const currencyCode = invoice?.currency_code || 'KES';
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatCurrency = (amount: number) => format(
+    normalizeInvoiceAmount(Number(amount) || 0, invoice?.currency_code as any, invoice?.exchange_rate as any, currency, rate)
+  );
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
