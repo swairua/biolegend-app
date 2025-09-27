@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 interface ViewCreditNoteModalProps {
   open: boolean;
@@ -34,14 +36,10 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCred
 
   if (!creditNote) return null;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const fmt = (amount: number) => format(
+    normalizeInvoiceAmount(Number(amount) || 0, (creditNote as any).currency_code as any, (creditNote as any).exchange_rate as any, currency, rate)
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -168,10 +166,10 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCred
                           </div>
                         </TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
+                        <TableCell className="text-right">{fmt(item.unit_price)}</TableCell>
                         <TableCell className="text-right">{item.tax_percentage}%</TableCell>
                         <TableCell className="text-right font-semibold">
-                          {formatCurrency(item.line_total)}
+                          {fmt(item.line_total)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -197,24 +195,24 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCred
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(creditNote.subtotal)}</span>
+                  <span className="font-semibold">{fmt(creditNote.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>VAT Amount:</span>
-                  <span className="font-semibold">{formatCurrency(creditNote.tax_amount)}</span>
+                  <span className="font-semibold">{fmt(creditNote.tax_amount)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg">
                   <span className="font-bold">Total Credit:</span>
-                  <span className="font-bold text-success">{formatCurrency(creditNote.total_amount)}</span>
+                  <span className="font-bold text-success">{fmt(creditNote.total_amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-warning">Applied Amount:</span>
-                  <span className="font-semibold text-warning">{formatCurrency(creditNote.applied_amount)}</span>
+                  <span className="font-semibold text-warning">{fmt(creditNote.applied_amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-primary">Remaining Balance:</span>
-                  <span className="font-semibold text-primary">{formatCurrency(creditNote.balance)}</span>
+                  <span className="font-semibold text-primary">{fmt(creditNote.balance)}</span>
                 </div>
               </div>
             </CardContent>
