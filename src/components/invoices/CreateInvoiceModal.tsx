@@ -183,11 +183,12 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
 
     // Use defensive price fallback - try selling_price first, then unit_price
-    const price = Number(product.selling_price || product.unit_price || 0);
-    if (isNaN(price) || price === 0) {
+    const priceBase = Number(product.selling_price || product.unit_price || 0);
+    if (isNaN(priceBase) || priceBase === 0) {
       console.warn('Product price missing or invalid for product:', product);
-      toast.warning(`Product "${product.name}" has no price set`);
+      toast.warning(`Product \"${product.name}\" has no price set`);
     }
+    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
 
     // Auto-populate with product details and smart defaults
     const newItem: InvoiceItem = {
