@@ -153,7 +153,7 @@ export function getTaxDisplayInfo(item: CalculatedItem): {
   taxInfo: string;
   breakdown: string;
 } {
-  const displayPrice = `$${item.unit_price.toFixed(2)}`;
+  const displayPrice = formatCurrency(item.unit_price);
   
   let taxInfo = '';
   if (item.tax_percentage > 0) {
