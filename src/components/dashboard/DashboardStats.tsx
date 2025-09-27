@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, FileText, Package, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDashboardStats, useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface StatCardProps {
   title: string;
@@ -61,6 +62,7 @@ export function DashboardStats() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
   const { data: stats, isLoading } = useDashboardStats(currentCompany?.id);
+  const { format } = useCurrency();
 
   if (isLoading) {
     return (
@@ -80,14 +82,7 @@ export function DashboardStats() {
     );
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => format(amount);
 
   const dashboardStats = [
     {

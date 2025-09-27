@@ -54,14 +54,13 @@ const getStockStatus = (currentStock: number, minStock: number): 'in_stock' | 'l
   return 'in_stock';
 };
 
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
+
 // Helper function to format currency
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+const useFormatCurrency = () => {
+  const { currency, rate, format } = useCurrency();
+  return (amount: number) => format(convertAmount(Number(amount)||0, 'KES', currency, rate));
 };
 
 function getStatusColor(status: InventoryItem['status']) {
@@ -150,6 +149,7 @@ export default function Inventory() {
     (item.product_categories?.name && item.product_categories.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const formatCurrency = useFormatCurrency();
   const totalValue = inventory.reduce((sum, item) => {
     return sum + ((item.stock_quantity || 0) * (item.selling_price || 0));
   }, 0);

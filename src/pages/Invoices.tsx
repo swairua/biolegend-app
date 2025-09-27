@@ -48,6 +48,8 @@ import { ViewInvoiceModal } from '@/components/invoices/ViewInvoiceModal';
 import { RecordPaymentModal } from '@/components/payments/RecordPaymentModal';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 interface Invoice {
   id: string;
@@ -63,6 +65,8 @@ interface Invoice {
   balance_due: number;
   status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
   invoice_items?: any[];
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
 }
 
 function getStatusColor(status: string) {
@@ -104,6 +108,7 @@ export default function Invoices() {
   
   // Use the fixed invoices hook
   const { data: invoices, isLoading, error, refetch } = useInvoices(currentCompany?.id);
+  const { currency, rate, format } = useCurrency();
 
   // Filter and search logic
   const filteredInvoices = invoices?.filter(invoice => {
@@ -121,20 +126,24 @@ export default function Invoices() {
     const matchesDateFrom = !dateFromFilter || invoiceDate >= new Date(dateFromFilter);
     const matchesDateTo = !dateToFilter || invoiceDate <= new Date(dateToFilter);
 
-    // Amount filter
-    const matchesAmountFrom = !amountFromFilter || (invoice.total_amount || 0) >= parseFloat(amountFromFilter);
-    const matchesAmountTo = !amountToFilter || (invoice.total_amount || 0) <= parseFloat(amountToFilter);
+    // Normalize amounts to current display currency for filtering
+    const normalizedTotal = normalizeInvoiceAmount(
+      Number(invoice.total_amount) || 0,
+      invoice.currency_code as any,
+      invoice.exchange_rate as any,
+      currency,
+      rate
+    );
+
+    const matchesAmountFrom = !amountFromFilter || normalizedTotal >= parseFloat(amountFromFilter);
+    const matchesAmountTo = !amountToFilter || normalizedTotal <= parseFloat(amountToFilter);
 
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
   }) || [];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+  const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', invoiceRate?: number) => {
+    const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, invoiceRate as any, currency, rate);
+    return format(normalized, currency);
   };
 
 
@@ -204,9 +213,9 @@ export default function Invoices() {
 Please find attached your invoice ${invoiceData.invoice_number} dated ${new Date(invoiceData.invoice_date).toLocaleDateString()}.
 
 Invoice Summary:
-- Invoice Amount: ${formatCurrency(invoiceData.total_amount || 0)}
+- Invoice Amount: ${displayAmount(invoiceData.total_amount || 0, invoiceData.currency_code as any, invoiceData.exchange_rate as any)}
 - Due Date: ${new Date(invoiceData.due_date).toLocaleDateString()}
-- Balance Due: ${formatCurrency(invoiceData.balance_due || 0)}
+- Balance Due: ${displayAmount(invoiceData.balance_due || 0, invoiceData.currency_code as any, invoiceData.exchange_rate as any)}
 
 Payment can be made via:
 - Bank Transfer
@@ -511,13 +520,13 @@ Website: www.biolegendscientific.co.ke`;
                       {new Date(invoice.due_date).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {formatCurrency(invoice.total_amount || 0)}
+                      {displayAmount(invoice.total_amount || 0, invoice.currency_code as any, invoice.exchange_rate as any)}
                     </TableCell>
                     <TableCell className="text-success">
-                      {formatCurrency(invoice.paid_amount || 0)}
+                      {displayAmount(invoice.paid_amount || 0, invoice.currency_code as any, invoice.exchange_rate as any)}
                     </TableCell>
                     <TableCell className={`font-medium ${(invoice.balance_due || 0) > 0 ? 'text-destructive' : 'text-success'}`}>
-                      {formatCurrency(invoice.balance_due || 0)}
+                      {displayAmount(invoice.balance_due || 0, invoice.currency_code as any, invoice.exchange_rate as any)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getStatusColor(invoice.status)}>
