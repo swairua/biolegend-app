@@ -9,16 +9,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileText, 
-  Download, 
-  Calendar, 
-  Building2, 
-  User, 
+import {
+  FileText,
+  Download,
+  Calendar,
+  Building2,
+  User,
   MapPin,
   CreditCard,
   DollarSign
 } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { downloadRemittancePDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 
