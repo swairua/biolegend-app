@@ -42,6 +42,7 @@ import {
 } from 'recharts';
 import { useProducts, useStockMovements } from '@/hooks/useDatabase';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 // No sample data - using real database data only
 
