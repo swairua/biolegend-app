@@ -76,14 +76,8 @@ export const ViewLPOModal = ({
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const handleDownload = () => {
     onDownloadPDF?.(lpo);
