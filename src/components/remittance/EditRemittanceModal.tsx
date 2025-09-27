@@ -26,6 +26,8 @@ import { useUpdateRemittanceAdvice, useUpdateRemittanceAdviceItems, useCustomers
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import type { RemittanceAdvice, RemittanceAdviceItem } from '@/types/remittance';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface EditRemittanceModalProps {
   open: boolean;
@@ -63,6 +65,8 @@ export function EditRemittanceModal({ open, onOpenChange, remittance, onSuccess 
 
   const [items, setItems] = useState<RemittanceItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amt: number) => format(convertAmount(Number(amt) || 0, 'KES', currency, rate));
 
   // Initialize form data when remittance changes
   useEffect(() => {
@@ -440,7 +444,7 @@ export function EditRemittanceModal({ open, onOpenChange, remittance, onSuccess 
               <div className="mt-4 flex justify-end">
                 <div className="bg-muted p-4 rounded-lg">
                   <div className="text-lg font-semibold">
-                    Total Payment: ${calculateTotalPayment().toFixed(2)}
+                    Total Payment: {formatCurrency(calculateTotalPayment())}
                   </div>
                 </div>
               </div>
