@@ -24,6 +24,8 @@ import {
   Send
 } from 'lucide-react';
 import { useQuotations, useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CreateQuotationModal } from '@/components/quotations/CreateQuotationModal';
