@@ -191,13 +191,13 @@ export default function SalesReports() {
         const existing = customerSales.get(customerId);
         customerSales.set(customerId, {
           name: customerName,
-          sales: existing.sales + (invoice.total_amount || 0),
+          sales: existing.sales + normalizeInvoiceAmount(invoice.total_amount || 0, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate),
           invoices: existing.invoices + 1
         });
       } else {
         customerSales.set(customerId, {
           name: customerName,
-          sales: invoice.total_amount || 0,
+          sales: normalizeInvoiceAmount(invoice.total_amount || 0, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate),
           invoices: 1
         });
       }
@@ -228,15 +228,15 @@ export default function SalesReports() {
     // For daily/monthly/yearly stats, use all invoices (not filtered by date range)
     const dailySales = allInvoices
       .filter(inv => new Date(inv.invoice_date) >= today)
-      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      .reduce((sum, inv) => sum + normalizeInvoiceAmount(inv.total_amount || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
 
     const monthlySales = allInvoices
       .filter(inv => new Date(inv.invoice_date) >= thirtyDaysAgo)
-      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      .reduce((sum, inv) => sum + normalizeInvoiceAmount(inv.total_amount || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
 
     const yearlySales = allInvoices
       .filter(inv => new Date(inv.invoice_date) >= yearStart)
-      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      .reduce((sum, inv) => sum + normalizeInvoiceAmount(inv.total_amount || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
 
     return {
       dailySales,
@@ -254,7 +254,7 @@ export default function SalesReports() {
       dateRange,
       startDate,
       endDate,
-      totalSales: filteredInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0),
+      totalSales: filteredInvoices.reduce((sum, inv) => sum + normalizeInvoiceAmount(inv.total_amount || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0),
       totalInvoices: filteredInvoices.length,
       topProducts: topProductsData,
       topCustomers: topCustomersData,
@@ -398,7 +398,7 @@ export default function SalesReports() {
               <DollarSign className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Daily Sales</p>
-                <p className="text-2xl font-bold text-success">${stats.dailySales.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-success">{format(stats.dailySales)}</p>
                 <p className="text-xs text-success">Today's revenue</p>
               </div>
             </div>
@@ -411,7 +411,7 @@ export default function SalesReports() {
               <TrendingUp className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Monthly Sales</p>
-                <p className="text-2xl font-bold text-primary">${stats.monthlySales.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">{format(stats.monthlySales)}</p>
                 <p className="text-xs text-success">Last 30 days</p>
               </div>
             </div>
@@ -424,7 +424,7 @@ export default function SalesReports() {
               <BarChart3 className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Yearly Sales</p>
-                <p className="text-2xl font-bold text-success">${stats.yearlySales.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-success">{format(stats.yearlySales)}</p>
                 <p className="text-xs text-success">This year</p>
               </div>
             </div>
@@ -520,7 +520,7 @@ export default function SalesReports() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value }) => `${name}: $${value}`}
+                    label={({ name, value }) => `${name}: ${format(Number(value))}`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="sales"
@@ -573,9 +573,9 @@ export default function SalesReports() {
                 {topCustomersData.map((customer, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{customer.name}</TableCell>
-                    <TableCell>${customer.sales.toFixed(2)}</TableCell>
+                    <TableCell>{format(customer.sales)}</TableCell>
                     <TableCell>{customer.invoices}</TableCell>
-                    <TableCell>${(customer.sales / customer.invoices).toFixed(2)}</TableCell>
+                    <TableCell>{format(customer.sales / customer.invoices)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -640,9 +640,9 @@ export default function SalesReports() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Average Order Value</span>
                 <span className="font-medium">
-                  ${invoices && invoices.length > 0
-                    ? (invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) / invoices.length).toFixed(2)
-                    : '0.00'
+                  {invoices && invoices.length > 0
+                    ? format(invoices.reduce((sum, inv) => sum + normalizeInvoiceAmount(inv.total_amount || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0) / invoices.length)
+                    : format(0)
                   }
                 </span>
               </div>
