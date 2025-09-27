@@ -36,6 +36,7 @@ import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
 
 interface InvoiceItem {
