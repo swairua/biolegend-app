@@ -263,15 +263,6 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const invoiceCurrency = (invoice?.currency_code as string) || 'KES';
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(getLocaleForCurrency(invoiceCurrency), {
-      style: 'currency',
-      currency: invoiceCurrency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
 
   const subtotal = items.reduce((sum, item) => {
     // Always use base amount for subtotal (unit price × quantity × discount)
