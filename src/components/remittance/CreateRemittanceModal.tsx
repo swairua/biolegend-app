@@ -25,6 +25,8 @@ import { useCreateRemittanceAdvice, useCreateRemittanceAdviceItems, useCustomers
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import type { RemittanceAdviceItemFormData } from '@/types/remittance';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface CreateRemittanceModalProps {
   open: boolean;
@@ -70,6 +72,8 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
   }]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amt: number) => format(convertAmount(Number(amt) || 0, 'KES', currency, rate));
 
   // Generate advice number when modal opens
   const generateAdviceNumber = async () => {
@@ -434,7 +438,7 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
               <div className="mt-4 flex justify-end">
                 <div className="text-right">
                   <div className="text-lg font-semibold">
-                    Total Payment: ${calculateTotalPayment().toFixed(2)}
+                    Total Payment: {formatCurrency(calculateTotalPayment())}
                   </div>
                 </div>
               </div>
