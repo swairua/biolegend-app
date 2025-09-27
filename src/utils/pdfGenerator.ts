@@ -136,8 +136,9 @@ const buildDocumentHTML = (data: DocumentData) => {
   })();
   const hasStatementLPO = data.type === 'statement' && Array.isArray(data.items) && data.items.some((i: any) => i && (i as any).lpo_number);
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-KE', {
-    style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2
+  const code = data.currency_code || 'KES';
+  const formatCurrency = (amount: number) => new Intl.NumberFormat(getLocaleForCurrency(code), {
+    style: 'currency', currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2
   }).format(amount);
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString('en-GB', {
