@@ -265,8 +265,26 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         return;
       }
 
+      // Determine effective exchange rate and convert values if needed
+      let effectiveRate = currency === 'USD' ? rate : 1;
+      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+        try {
+          const fetched = await getExchangeRate('KES', 'USD', quotationDate);
+          if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
+          effectiveRate = fetched;
+          toast.success(`Locked exchange rate for ${quotationDate}: ${fetched.toFixed(4)}`);
+        } catch (e: any) {
+          toast.error(e?.message || 'Failed to fetch exchange rate');
+          throw e;
+        }
+      }
+
       // Create quotation with items
       console.log('Preparing quotation data...');
+      const subtotalFinal = currency === 'USD' ? convertAmount(subtotal, 'KES', 'USD', effectiveRate) : subtotal;
+      const taxAmountFinal = currency === 'USD' ? convertAmount(taxAmount, 'KES', 'USD', effectiveRate) : taxAmount;
+      const totalAmountFinal = currency === 'USD' ? convertAmount(totalAmount, 'KES', 'USD', effectiveRate) : totalAmount;
+
       const quotationData = {
         company_id: currentCompany.id,
         customer_id: selectedCustomerId,
@@ -274,14 +292,14 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         quotation_date: quotationDate,
         valid_until: validUntil,
         status: 'draft',
-        subtotal: subtotal,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
+        subtotal: subtotalFinal,
+        tax_amount: taxAmountFinal,
+        total_amount: totalAmountFinal,
         terms_and_conditions: termsAndConditions,
         notes: notes,
         created_by: profile.id,
         currency_code: currency,
-        exchange_rate: currency === 'USD' ? rate : 1,
+        exchange_rate: currency === 'USD' ? effectiveRate : 1,
         fx_date: quotationDate
       };
       console.log('Quotation data prepared:', quotationData);
@@ -299,16 +317,21 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
           throw new Error(`Item "${item.product_name}" cannot have a negative unit price`);
         }
 
+        const unitPriceFinal = currency === 'USD' ? convertAmount(item.unit_price, 'KES', 'USD', effectiveRate) : item.unit_price;
+        const taxAmountBase = calculateTaxAmount(item);
+        const taxAmountFinalItem = currency === 'USD' ? convertAmount(taxAmountBase, 'KES', 'USD', effectiveRate) : taxAmountBase;
+        const lineTotalFinal = currency === 'USD' ? convertAmount(item.line_total, 'KES', 'USD', effectiveRate) : item.line_total;
+
         return {
           product_id: item.product_id,
           description: item.description,
           quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount_percentage: 0, // Can be added later if needed
+          unit_price: unitPriceFinal,
+          discount_percentage: 0,
           tax_percentage: item.vat_percentage || 0,
-          tax_amount: calculateTaxAmount(item),
+          tax_amount: taxAmountFinalItem,
           tax_inclusive: item.vat_inclusive || false,
-          line_total: item.line_total
+          line_total: lineTotalFinal
         };
       });
       console.log('Quotation items prepared:', quotationItems);
