@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sanitizeAndEscape } from './textSanitizer';
 import { getLocaleForCurrency } from './exchangeRates';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 
 // PDF Generation utility using HTML to print/PDF conversion
 // Since we don't have jsPDF installed, I'll create a simple HTML-to-print function
