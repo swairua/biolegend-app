@@ -70,6 +70,7 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
         const deliveryNoteNumber = dn?.delivery_number || dn?.delivery_note_number || '';
         return {
           date: inv.invoice_date,
+          lpo_date: (inv as any).lpo_date || inv.invoice_date,
           type: 'Invoice',
           reference: inv.invoice_number,
           description: `Invoice - ${inv.invoice_number}`,
@@ -441,11 +442,11 @@ const StatementOfAccounts = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>LPO</TableHead>
-                            <TableHead>Delivery Note</TableHead>
-                            <TableHead>Invoice No.</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead>LPO DATE</TableHead>
+                          <TableHead>Your LPO</TableHead>
+                          <TableHead>Delivery Note</TableHead>
+                          <TableHead>Invoice No</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -454,7 +455,7 @@ const StatementOfAccounts = () => {
                               <TableCell>
                                 <div className="flex items-center space-x-2">
                                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <span>{new Date(transaction.date).toLocaleDateString()}</span>
+                                  <span>{new Date((transaction as any).lpo_date || transaction.date).toLocaleDateString()}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="font-medium">{transaction.lpo_number || ''}</TableCell>
