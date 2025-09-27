@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Package,
   Barcode,
   DollarSign,
@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface InventoryItem {
   id: string;
