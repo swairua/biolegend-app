@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useUpdateCreditNote } from '@/hooks/useCreditNotes';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 
 interface EditCreditNoteModalProps {
