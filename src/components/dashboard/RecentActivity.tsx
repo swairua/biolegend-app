@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { usePayments, useRemittanceAdvice, useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount, convertAmount } from '@/utils/currency';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -56,14 +58,8 @@ export function RecentActivity() {
 
   const isLoading = invoicesLoading || paymentsLoading || remittancesLoading;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(amount);
 
   // Combine all activities
   const activities: Activity[] = [];
@@ -76,7 +72,7 @@ export function RecentActivity() {
         type: 'invoice',
         title: `Invoice ${invoice.invoice_number}`,
         customer: invoice.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(invoice.total_amount || 0),
+        amount: formatCurrency(normalizeInvoiceAmount(Number(invoice.total_amount)||0, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate)),
         status: invoice.status as Activity['status'],
         timestamp: new Date(invoice.created_at || '')
       });
@@ -91,7 +87,7 @@ export function RecentActivity() {
         type: 'payment',
         title: `Payment ${payment.payment_number}`,
         customer: payment.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(payment.amount || 0),
+        amount: formatCurrency(convertAmount(Number(payment.amount)||0, 'KES', currency, rate)),
         status: 'completed',
         timestamp: new Date(payment.created_at || '')
       });
@@ -106,7 +102,7 @@ export function RecentActivity() {
         type: 'remittance',
         title: `Remittance ${remittance.advice_number}`,
         customer: remittance.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(remittance.total_payment || 0),
+        amount: formatCurrency(convertAmount(Number(remittance.total_payment)||0, 'KES', currency, rate)),
         status: remittance.status as Activity['status'],
         timestamp: new Date(remittance.created_at || '')
       });
