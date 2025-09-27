@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,8 @@ import { useOptimizedProductSearch, usePopularProducts } from '@/hooks/useOptimi
 import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
+import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
 
 interface InvoiceItem {
   id: string;
@@ -70,6 +72,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [lpoNumber, setLpoNumber] = useState('');
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const previousRateRef = useRef<number>(1);
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
   
@@ -121,6 +126,53 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
+
+  const convertItemsByFactor = (factor: number) => {
+    setItems(prev => prev.map(item => {
+      const newUnit = parseFloat((item.unit_price * factor).toFixed(4));
+      const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, newUnit);
+      return { ...item, unit_price: newUnit, line_total: lineTotal, tax_amount: taxAmount };
+    }));
+  };
+
+  const handleCurrencyChange = async (newCurrency: 'KES' | 'USD') => {
+    try {
+      if (newCurrency === currencyCode) return;
+      let newRate = 1;
+      if (newCurrency === 'USD') {
+        toast.info('Fetching KES→USD rate...');
+        newRate = await getExchangeRate('KES', 'USD', invoiceDate);
+        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+      } else {
+        newRate = 1;
+      }
+      const factor = newRate / previousRateRef.current; // convert existing prices to new currency
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      setCurrencyCode(newCurrency);
+    } catch (e: any) {
+      console.error('Currency change failed:', e);
+      toast.error(e?.message || 'Failed to change currency');
+    }
+  };
+
+  const fetchAndSetRate = async () => {
+    try {
+      toast.info('Fetching exchange rate...');
+      const rate = await getExchangeRate('KES', currencyCode, invoiceDate);
+      if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
+      const factor = rate / exchangeRate;
+      convertItemsByFactor(factor);
+      previousRateRef.current = rate;
+      setExchangeRate(rate);
+      toast.success(`Rate updated: 1 KES = ${rate.toFixed(6)} ${currencyCode}`);
+    } catch (e: any) {
+      console.error('Failed to fetch rate:', e);
+      toast.error(e?.message || 'Failed to fetch exchange rate');
+    }
+  };
 
   const addItem = (product: any) => {
     const existingItem = items.find(item => item.product_id === product.id);
@@ -272,9 +324,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode), {
       style: 'currency',
-      currency: 'KES',
+      currency: currencyCode,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);
@@ -350,6 +402,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         total: 4
       });
 
+      // Ensure DB has currency columns (safe no-op if already present)
+      await ensureInvoiceCurrencyColumns();
+
       const invoiceData = {
         company_id: currentCompany.id,
         customer_id: selectedCustomerId,
@@ -365,7 +420,10 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         balance_due: balanceDue,
         terms_and_conditions: termsAndConditions,
         notes: notes,
-        created_by: profile?.id
+        created_by: profile?.id,
+        currency_code: currencyCode,
+        exchange_rate: exchangeRate,
+        fx_date: invoiceDate
       };
 
       const invoiceItems = items.map(item => ({
@@ -487,6 +545,32 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                       )}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Currency */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency *</Label>
+                    <Select value={currencyCode} onValueChange={(v) => handleCurrencyChange(v as 'KES' | 'USD')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
+                        <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rate">Exchange Rate</Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="rate" value={`1 KES = ${exchangeRate.toFixed(6)} ${currencyCode}`} readOnly />
+                      <Button type="button" variant="outline" onClick={fetchAndSetRate} disabled={currencyCode === 'KES'}>
+                        <Calculator className="h-4 w-4 mr-1" />
+                        Fetch
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Dates */}
