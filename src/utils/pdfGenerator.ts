@@ -426,7 +426,7 @@ const buildDocumentHTML = (data: DocumentData) => {
     ${''}
 
     ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
-    <div class="invoice-terms-section" style="page-break-before: always;">
+    <div class="invoice-terms-section" style="page-break-inside: avoid;">
       <div class="invoice-terms">
         <div class="section-subtitle">Terms & Conditions</div>
         <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
@@ -1225,7 +1225,7 @@ export const generatePDF = (data: DocumentData) => {
 
         <!-- Terms Section (for invoices and proformas) -->
         ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
-        <div class="invoice-terms-section" style="page-break-before: always;">
+        <div class="invoice-terms-section" style="page-break-inside: avoid;">
           <div class="invoice-terms">
             <div class="section-subtitle">Terms & Conditions</div>
         <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
