@@ -293,15 +293,17 @@ export interface OptimizedProduct {
   };
 }
 
-import { formatCurrency } from '@/utils/formatCurrency';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 // Currency formatter hook (returns object with .format to be compatible with Intl.NumberFormat)
 export const useCurrencyFormatter = () => {
+  const { currency, rate, format } = useCurrency();
   return useMemo(() => {
     return {
-      format: (amount: number) => formatCurrency(Number(amount) || 0, 'KES', 0, 0)
+      format: (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate))
     };
-  }, []);
+  }, [currency, rate, format]);
 };
 
 // Stock status utility hook
