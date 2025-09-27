@@ -15,6 +15,8 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import {
   analyzePaymentSyncStatus,
   synchronizePayments,
