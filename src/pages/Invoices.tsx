@@ -47,7 +47,7 @@ import { EditInvoiceModal } from '@/components/invoices/EditInvoiceModal';
 import { ViewInvoiceModal } from '@/components/invoices/ViewInvoiceModal';
 import { RecordPaymentModal } from '@/components/payments/RecordPaymentModal';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
-import { downloadInvoiceJsPDF } from '@/utils/jsPdfGenerator';
+import { downloadInvoicePDF } from '@/utils/pdfGenerator';
 
 interface Invoice {
   id: string;
