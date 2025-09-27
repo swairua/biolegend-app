@@ -9,6 +9,7 @@ import { enableResizeObserverErrorSuppression } from '@/utils/resizeObserverErro
 import App from './App.tsx'
 import './index.css'
 import { initGlobalErrorHandler } from '@/utils/globalErrorHandler';
+import { CurrencyProvider } from '@/contexts/CurrencyContext';
 
 // Suppress ResizeObserver errors before any components render
 enableResizeObserverErrorSuppression();
@@ -27,7 +28,9 @@ createRoot(document.getElementById("root")!).render(
         <AuthStatusIndicator />
         <CompanyProvider>
           <BrowserRouter>
-            <App />
+            <CurrencyProvider>
+              <App />
+            </CurrencyProvider>
           </BrowserRouter>
         </CompanyProvider>
       </AuthProvider>
