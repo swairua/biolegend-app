@@ -36,6 +36,7 @@ import { useGenerateCreditNoteNumber } from '@/hooks/useCreditNotes';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useCreateCreditNoteWithItems } from '@/hooks/useCreditNoteItems';
+import { getExchangeRate } from '@/utils/exchangeRates';
 import { toast } from 'sonner';
 
 interface CreditNoteItem {
@@ -297,6 +298,25 @@ export function CreateCreditNoteModal({
       // Generate credit note number
       const creditNoteNumber = await generateCreditNoteNumber.mutateAsync(companyId);
 
+      // Lock FX rate if creating in USD
+      let effectiveRate = currency === 'USD' ? rate : 1;
+      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+        try {
+          const fetched = await getExchangeRate('KES', 'USD', creditNoteDate);
+          if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
+          effectiveRate = fetched;
+          toast.success(`Locked exchange rate for ${creditNoteDate}: ${fetched.toFixed(4)}`);
+        } catch (e: any) {
+          toast.error(e?.message || 'Failed to fetch exchange rate');
+          throw e;
+        }
+      }
+
+      // Convert amounts if USD
+      const subtotalFinal = currency === 'USD' ? convertAmount(subtotal, 'KES', 'USD', effectiveRate) : subtotal;
+      const taxAmountFinal = currency === 'USD' ? convertAmount(taxAmount, 'KES', 'USD', effectiveRate) : taxAmount;
+      const totalAmountFinal = currency === 'USD' ? convertAmount(totalAmount, 'KES', 'USD', effectiveRate) : totalAmount;
+
       // Create credit note with items
       const creditNoteData = {
         company_id: companyId,
@@ -306,32 +326,37 @@ export function CreateCreditNoteModal({
         credit_note_date: creditNoteDate,
         status: 'draft' as const,
         reason: reason,
-        subtotal: subtotal,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
+        subtotal: subtotalFinal,
+        tax_amount: taxAmountFinal,
+        total_amount: totalAmountFinal,
         applied_amount: 0,
-        balance: totalAmount,
+        balance: totalAmountFinal,
         affects_inventory: affectsInventory,
         notes: notes,
         terms_and_conditions: termsAndConditions,
         created_by: null,
         currency_code: currency,
-        exchange_rate: currency === 'USD' ? rate : 1,
+        exchange_rate: currency === 'USD' ? effectiveRate : 1,
         fx_date: creditNoteDate
       };
 
-      const creditNoteItems = items.map((item, index) => ({
-        product_id: item.product_id || null,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tax_percentage: item.tax_percentage,
-        tax_amount: item.tax_amount,
-        tax_inclusive: item.tax_inclusive,
-        tax_setting_id: item.tax_percentage > 0 ? defaultTax?.id || null : null,
-        line_total: item.line_total,
-        sort_order: index
-      }));
+      const creditNoteItems = items.map((item, index) => {
+        const unitPriceFinal = currency === 'USD' ? convertAmount(item.unit_price, 'KES', 'USD', effectiveRate) : item.unit_price;
+        const taxAmountFinalItem = currency === 'USD' ? convertAmount(item.tax_amount || 0, 'KES', 'USD', effectiveRate) : (item.tax_amount || 0);
+        const lineTotalFinal = currency === 'USD' ? convertAmount(item.line_total, 'KES', 'USD', effectiveRate) : item.line_total;
+        return {
+          product_id: item.product_id || null,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: unitPriceFinal,
+          tax_percentage: item.tax_percentage,
+          tax_amount: taxAmountFinalItem,
+          tax_inclusive: item.tax_inclusive,
+          tax_setting_id: item.tax_percentage > 0 ? defaultTax?.id || null : null,
+          line_total: lineTotalFinal,
+          sort_order: index
+        };
+      });
 
       await createCreditNoteWithItems.mutateAsync({
         creditNote: creditNoteData,
