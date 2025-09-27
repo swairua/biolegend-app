@@ -27,6 +27,8 @@ import {
 import { usePayments, useCompanies, useCreatePayment } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface Payment {
   id: string;
@@ -68,19 +70,16 @@ function getMethodColor(method: string) {
   }
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+function useFormatCurrency() {
+  const { currency, rate, format } = useCurrency();
+  return (amount: number) => format(convertAmount(Number(amount)||0, 'KES', currency, rate));
 }
 
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const formatCurrency = useFormatCurrency();
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   
   // Fetch live payments data and company details
@@ -144,7 +143,7 @@ export default function Payments() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      generatePaymentReceiptPDF(payment, companyDetails);
+      generatePaymentReceiptPDF({ ...payment, currency_code: 'KES' }, companyDetails);
       toast.success(`Receipt downloaded for payment ${payment.payment_number}`);
     } catch (error) {
       console.error('Error downloading receipt:', error);
@@ -218,7 +217,7 @@ export default function Payments() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Payments</h1>
           <p className="text-muted-foreground">
-            Track and manage customer payments (All amounts in KES)
+            Track and manage customer payments
           </p>
         </div>
         <div className="flex gap-2">
@@ -327,7 +326,7 @@ export default function Payments() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Invoice</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Amount (KES)</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
