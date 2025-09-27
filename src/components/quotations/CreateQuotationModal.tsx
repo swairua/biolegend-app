@@ -34,6 +34,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
+import { getExchangeRate } from '@/utils/exchangeRates';
 
 interface QuotationItem {
   id: string;
