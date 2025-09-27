@@ -244,6 +244,8 @@ const buildDocumentHTML = (data: DocumentData) => {
     .invoice-terms { width: 100%; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px; }
     .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 15px; background: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; font-size: 10px; color: #111827; text-align: center; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
 .invoice-bank-details .bank-line { margin: 6px 0; }
+    .invoice-qr { display: flex; justify-content: center; align-items: center; margin: 10mm 0 6mm 0; }
+    .invoice-qr img { width: 25mm; height: 25mm; object-fit: contain; }
     .quotation-footer { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 12px; color: #111827; text-align: center; font-weight: 600; font-style: italic; }
   </style>
 </head>
@@ -427,11 +429,14 @@ const buildDocumentHTML = (data: DocumentData) => {
     <div class="invoice-terms-section" style="page-break-before: always;">
       <div class="invoice-terms">
         <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
       </div>
     </div>` : ''}
 
     ${(data.type === 'invoice' || data.type === 'proforma') ? `
+    <div class="invoice-qr">
+      <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
+    </div>
     <div class="invoice-bank-details">
       <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
       <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
@@ -1223,20 +1228,23 @@ export const generatePDF = (data: DocumentData) => {
         <div class="invoice-terms-section" style="page-break-before: always;">
           <div class="invoice-terms">
             <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
           </div>
         </div>
         ` : ''}
 
-        <!-- Bank Details (for invoices and proformas) -->
+        <!-- QR code between Terms and Bank details -->
         ${(data.type === 'invoice' || data.type === 'proforma') ? `
-    <div class="invoice-bank-details">
-      <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
-      <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
-      <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
-      <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
-    </div>
-    ` : ''}
+        <div class="invoice-qr">
+          <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
+        </div>
+        <div class="invoice-bank-details">
+          <div class="bank-line"><strong>MAKE ALL PAYMENTS THROUGH BIOLEGEND SCIENTIFIC LTD:</strong></div>
+          <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
+          <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
+          <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
+        </div>
+        ` : ''}
 
 
       </div>
