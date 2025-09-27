@@ -36,6 +36,7 @@ import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
 
@@ -73,7 +74,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [lpoNumber, setLpoNumber] = useState('');
-  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
+  const { currency: globalCurrency } = useCurrency();
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>(globalCurrency || 'KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const previousRateRef = useRef<number>(1);
   const [notes, setNotes] = useState('');
@@ -124,6 +126,15 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       if (typeof initialDueDate === 'string') setDueDate(initialDueDate);
     }
   }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate]);
+
+  // Inherit global currency selection when opening the modal
+  useEffect(() => {
+    if (!open) return;
+    if (globalCurrency && globalCurrency !== currencyCode) {
+      // Use existing handler to fetch and lock rate for the invoice date and convert existing item prices
+      handleCurrencyChange(globalCurrency);
+    }
+  }, [open, globalCurrency]);
 
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
