@@ -430,7 +430,7 @@ const buildDocumentHTML = (data: DocumentData) => {
     <div class="invoice-terms-section" style="page-break-inside: avoid;">
       <div class="invoice-terms">
         <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
       </div>
     </div>` : ''}
 
@@ -1219,7 +1219,7 @@ export const generatePDF = (data: DocumentData) => {
         <div class="invoice-terms-section" style="page-break-inside: avoid;">
           <div class="invoice-terms">
             <div class="section-subtitle">Terms & Conditions</div>
-        <div class="terms-content" style="max-height: 150mm; overflow: hidden;">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
+        <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
           </div>
         </div>
         ` : ''}
@@ -1298,7 +1298,7 @@ export const generatePDFDownload = async (data: DocumentData) => {
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   // Footer reservation (mm) for types that require a persistent bottom footer
-  const footerReserveMm = (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') ? 18 : 0; // space to keep free at bottom
+  const footerReserveMm = (data.type === 'quotation') ? 18 : 0; // only quotations use reserved footer space
 
   // Helper to draw footer on each page
   const drawFooter = (pageIndex: number) => {
