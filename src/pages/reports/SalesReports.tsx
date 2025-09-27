@@ -146,7 +146,8 @@ export default function SalesReports() {
         invoice.invoice_items.forEach((item: any) => {
           const productId = item.product_id;
           const productName = products.find(p => p.id === productId)?.name || 'Unknown Product';
-          const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+          const itemTotalRaw = (item.quantity || 0) * (item.unit_price || 0);
+          const itemTotal = normalizeInvoiceAmount(itemTotalRaw, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate);
 
           if (productSales.has(productId)) {
             productSales.set(productId, {
