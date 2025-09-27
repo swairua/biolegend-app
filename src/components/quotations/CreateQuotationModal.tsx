@@ -278,7 +278,10 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         total_amount: totalAmount,
         terms_and_conditions: termsAndConditions,
         notes: notes,
-        created_by: profile.id
+        created_by: profile.id,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: quotationDate
       };
       console.log('Quotation data prepared:', quotationData);
 

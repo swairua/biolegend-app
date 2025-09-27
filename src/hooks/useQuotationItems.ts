@@ -194,7 +194,10 @@ export const useConvertQuotationToInvoice = () => {
         total_amount: quotation.total_amount,
         notes: quotation.notes,
         terms_and_conditions: quotation.terms_and_conditions,
-        affects_inventory: true
+        affects_inventory: true,
+        currency_code: (quotation as any).currency_code ?? 'KES',
+        exchange_rate: (quotation as any).exchange_rate ?? 1,
+        fx_date: (quotation as any).quotation_date ?? new Date().toISOString().split('T')[0]
       };
       
       const { data: invoice, error: invoiceError } = await supabase

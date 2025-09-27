@@ -32,6 +32,7 @@ import {
 import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateProforma } from '@/hooks/useProforma';
 import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 
 interface ProformaItem {
@@ -71,6 +72,7 @@ export const CreateProformaModal = ({
   });
 
   const [items, setItems] = useState<ProformaItem[]>([]);
+  const { currency, rate } = useCurrency();
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [proformaNumber, setProformaNumber] = useState('');
@@ -224,6 +226,9 @@ export const CreateProformaModal = ({
         total_amount: totals.total_amount,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: formData.proforma_date
       };
 
       // Create proforma in database

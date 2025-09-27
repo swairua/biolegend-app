@@ -33,6 +33,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useCreateLPO, useGenerateLPONumber, useAllSuppliersAndCustomers, useProducts, useCompanies, useCreateCustomer } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { validateLPO } from '@/utils/lpoValidation';
 import { validateSupplierSelection, ValidationResult } from '@/utils/customerSupplierValidation';
@@ -96,6 +97,7 @@ export const CreateLPOModal = ({
   const { data: supplierData } = useAllSuppliersAndCustomers(currentCompany?.id);
   const suppliers = supplierData?.all || [];
   const { data: products } = useProducts(currentCompany?.id);
+  const { currency, rate } = useCurrency();
   const createLPO = useCreateLPO();
   const generateLPONumber = useGenerateLPONumber();
   const createCustomer = useCreateCustomer();
@@ -318,6 +320,9 @@ export const CreateLPOModal = ({
         contact_phone: formData.contact_phone,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: formData.lpo_date
       };
 
       const lpoItems = items.map(item => ({

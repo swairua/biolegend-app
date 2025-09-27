@@ -115,6 +115,9 @@ export interface Payment {
   payment_method: string;
   reference_number?: string;
   notes?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -201,6 +204,9 @@ export interface LPO {
   delivery_address?: string;
   contact_person?: string;
   contact_phone?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;

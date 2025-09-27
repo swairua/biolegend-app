@@ -183,6 +183,9 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
         status: 'draft' as const,
         notes: formData.notes || null,
         created_by: profile.id,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: formData.date
       };
 
       // Create the remittance advice
