@@ -80,9 +80,9 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center space-x-4">
+          <CurrencySwitcher />
           {isAuthenticated && (
             <>
-              {/* Notifications */}
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-xs text-destructive-foreground flex items-center justify-center">

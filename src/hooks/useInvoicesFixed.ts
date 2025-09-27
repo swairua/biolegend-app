@@ -15,7 +15,8 @@ export const useInvoicesFixed = (companyId?: string) => {
         console.log('Fetching invoices for company:', companyId);
 
         // Step 1: Get invoices without embedded relationships
-        const { data: invoices, error: invoicesError } = await supabase
+        // Try selecting with currency fields; if schema lacks them, fall back
+        let { data: invoices, error: invoicesError } = await supabase
           .from('invoices')
           .select(`
             id,
@@ -43,8 +44,40 @@ export const useInvoicesFixed = (companyId?: string) => {
           .order('created_at', { ascending: false });
 
         if (invoicesError) {
+          const msg = (invoicesError.message || '').toLowerCase();
+          const missingCurrencyCols = msg.includes('currency_code') || msg.includes('exchange_rate') || msg.includes('fx_date');
+          if (missingCurrencyCols) {
+            const fallback = await supabase
+              .from('invoices')
+              .select(`
+                id,
+                company_id,
+                customer_id,
+                invoice_number,
+                invoice_date,
+                due_date,
+                status,
+                subtotal,
+                tax_amount,
+                total_amount,
+                paid_amount,
+                balance_due,
+                notes,
+                terms_and_conditions,
+                lpo_number,
+                created_at,
+                updated_at
+              `)
+              .eq('company_id', companyId)
+              .order('created_at', { ascending: false });
+            invoices = fallback.data as any;
+            invoicesError = fallback.error as any;
+          }
+        }
+
+        if (invoicesError) {
           console.error('Error fetching invoices:', invoicesError);
-          throw new Error(`Failed to fetch invoices: ${invoicesError.message}`);
+          throw new Error(`Failed to fetch invoices: ${invoicesError.message || String(invoicesError)}`);
         }
 
         console.log('Invoices fetched successfully:', invoices?.length || 0);
@@ -148,6 +181,7 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
         console.log('Fetching invoices for customer:', customerId);
 
         // Get invoices for specific customer
+        // Try with currency fields, fallback if missing
         let query = supabase
           .from('invoices')
           .select(`
@@ -179,11 +213,47 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
           query = query.eq('company_id', companyId);
         }
 
-        const { data: invoices, error: invoicesError } = await query;
+        let { data: invoices, error: invoicesError } = await query;
+
+        if (invoicesError) {
+          const msg = (invoicesError.message || '').toLowerCase();
+          const missingCurrencyCols = msg.includes('currency_code') || msg.includes('exchange_rate') || msg.includes('fx_date');
+          if (missingCurrencyCols) {
+            const fallbackQuery = supabase
+              .from('invoices')
+              .select(`
+                id,
+                company_id,
+                customer_id,
+                invoice_number,
+                invoice_date,
+                due_date,
+                status,
+                subtotal,
+                tax_amount,
+                total_amount,
+                paid_amount,
+                balance_due,
+                notes,
+                terms_and_conditions,
+                lpo_number,
+                created_at,
+                updated_at
+              `)
+              .eq('customer_id', customerId)
+              .order('created_at', { ascending: false });
+            if (companyId) {
+              (fallbackQuery as any).eq('company_id', companyId);
+            }
+            const fallback = await fallbackQuery;
+            invoices = fallback.data as any;
+            invoicesError = fallback.error as any;
+          }
+        }
 
         if (invoicesError) {
           console.error('Error fetching customer invoices:', invoicesError);
-          throw new Error(`Failed to fetch customer invoices: ${invoicesError.message}`);
+          throw new Error(`Failed to fetch customer invoices: ${invoicesError.message || String(invoicesError)}`);
         }
 
         if (!invoices || invoices.length === 0) {

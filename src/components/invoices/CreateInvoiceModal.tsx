@@ -325,7 +325,6 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 
   const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
 

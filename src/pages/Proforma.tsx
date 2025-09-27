@@ -36,8 +36,9 @@ import { EditProformaModal } from '@/components/proforma/EditProformaModal';
 import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
-import { formatCurrency } from '@/utils/taxCalculation';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 export default function Proforma() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,6 +56,9 @@ export default function Proforma() {
   // Use proper proforma hooks
   const { data: proformas = [], isLoading, refetch } = useProformas(currentCompany?.id);
   const convertToInvoice = useConvertProformaToInvoice();
+
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const filteredProformas = proformas.filter(proforma =>
     proforma.proforma_number.toLowerCase().includes(searchTerm.toLowerCase()) ||

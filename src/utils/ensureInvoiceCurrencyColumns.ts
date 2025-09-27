@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { executeSQL } from '@/utils/execSQL';
 
 export async function ensureInvoiceCurrencyColumns(): Promise<void> {
   const sql = `
@@ -11,14 +11,8 @@ export async function ensureInvoiceCurrencyColumns(): Promise<void> {
   `;
 
   try {
-    // Prefer RPC if available
-    const { error } = await supabase.rpc('exec_sql', { sql });
-    if (error) {
-      // If RPC is unavailable, attempt direct execution via a SQL function isn't possible here.
-      // Swallow error so UI can proceed; insertion will fail if columns truly don't exist.
-      console.warn('exec_sql RPC not available or failed when ensuring invoice currency columns:', error.message || error);
-    }
+    await executeSQL(sql);
   } catch (e) {
-    console.warn('Failed to run ensureInvoiceCurrencyColumns via RPC:', e);
+    console.warn('ensureInvoiceCurrencyColumns could not run automatically:', e);
   }
 }
