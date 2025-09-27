@@ -112,6 +112,8 @@ export default function Proforma() {
         status: proforma.status,
         notes: proforma.notes || '',
         terms_and_conditions: proforma.terms_and_conditions || 'Payment required before goods are delivered.',
+        currency_code: (proforma as any).currency_code,
+        exchange_rate: (proforma as any).exchange_rate,
       };
 
       // Get current company details for PDF
