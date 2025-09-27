@@ -1,7 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 
-import { supabase } from '@/integrations/supabase/client';
-
 export async function ensureInvoiceCurrencyColumns(): Promise<void> {
   const sql = `
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency_code VARCHAR(3) DEFAULT 'KES';
