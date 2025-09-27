@@ -334,10 +334,10 @@ const buildDocumentHTML = (data: DocumentData) => {
               <th style="width: 15%;">Unit</th>
               <th style="width: 10%;">Status</th>
             ` : data.type === 'statement' ? `
-              <th style="width: 16%;">Date</th>
-              <th style="width: 16%;">LPO No.</th>
+              <th style="width: 16%;">LPO DATE</th>
+              <th style="width: 20%;">Your LPO</th>
               <th style="width: 20%;">Delivery Note</th>
-              <th style="width: 20%;">Invoice No.</th>
+              <th style="width: 20%;">Invoice No</th>
               <th style="width: 16%;">Amount</th>
             ` : data.type === 'remittance' ? `
               <th style="width: 15%;">Date</th>
@@ -360,12 +360,11 @@ const buildDocumentHTML = (data: DocumentData) => {
           ${data.items.map((item, index) => `
             <tr>
               ${data.type === 'statement' ? `
-                <td>${formatDate((item as any).transaction_date)}</td>
-                <td class="description-cell">${item.description}</td>
-                <td>${(item as any).reference}</td>
-                <td class="amount-cell">${(item as any).debit > 0 ? formatCurrency((item as any).debit) : ''}</td>
-                <td class="amount-cell">${(item as any).credit > 0 ? formatCurrency((item as any).credit) : ''}</td>
-                <td class="amount-cell">${formatCurrency(item.line_total)}</td>
+                <td>${formatDate((item as any).lpo_date || (item as any).transaction_date)}</td>
+                <td class="description-cell">${(item as any).lpo_number || ''}</td>
+                <td>${(item as any).delivery_note_number || ''}</td>
+                <td>${(item as any).invoice_number || (item as any).reference || ''}</td>
+                <td class="amount-cell">${formatCurrency((item as any).amount)}</td>
               ` : data.type === 'remittance' ? `
                 <td>${formatDate((item as any).document_date)}</td>
                 <td>${(item as any).description ? (item as any).description.split(':')[0] : 'Payment'}</td>
@@ -1096,12 +1095,11 @@ export const generatePDF = (data: DocumentData) => {
                 <th style="width: 15%;">Unit</th>
                 <th style="width: 10%;">Status</th>
                 ` : data.type === 'statement' ? `
-                <th style="width: 12%;">Date</th>
-                <th style="width: 25%;">Description</th>
-                <th style="width: 15%;">Reference</th>
-                <th style="width: 12%;">Debit</th>
-                <th style="width: 12%;">Credit</th>
-                <th style="width: 12%;">Balance</th>
+                <th style="width: 16%;">LPO DATE</th>
+                <th style="width: 20%;">Your LPO</th>
+                <th style="width: 20%;">Delivery Note</th>
+                <th style="width: 20%;">Invoice No</th>
+                <th style="width: 16%;">Amount</th>
                 ` : data.type === 'remittance' ? `
                 <th style="width: 15%;">Date</th>
                 <th style="width: 15%;">Document Type</th>
@@ -1123,13 +1121,12 @@ export const generatePDF = (data: DocumentData) => {
               ${data.items.map((item, index) => `
                 <tr>
                   ${data.type === 'statement' ? `
-                  <td>${formatDate((item as any).transaction_date)}</td>
-                  <td class="description-cell">${item.description}</td>
-                  <td>${(item as any).reference}</td>
-                  <td class="amount-cell">${(item as any).debit > 0 ? formatCurrency((item as any).debit) : ''}</td>
-                  <td class="amount-cell">${(item as any).credit > 0 ? formatCurrency((item as any).credit) : ''}</td>
-                  <td class="amount-cell">${formatCurrency(item.line_total)}</td>
-                  ` : data.type === 'remittance' ? `
+                <td>${formatDate((item as any).lpo_date || (item as any).transaction_date)}</td>
+                <td class="description-cell">${(item as any).lpo_number || ''}</td>
+                <td>${(item as any).delivery_note_number || ''}</td>
+                <td>${(item as any).invoice_number || (item as any).reference || ''}</td>
+                <td class="amount-cell">${formatCurrency((item as any).amount)}</td>
+              ` : data.type === 'remittance' ? `
                   <td>${formatDate((item as any).document_date)}</td>
                   <td>${(item as any).description ? (item as any).description.split(':')[0] : 'Payment'}</td>
                   <td>${(item as any).description ? (item as any).description.split(':')[1] || (item as any).description : ''}</td>
@@ -1658,6 +1655,9 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
     return daysOverdue > 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
   }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
 
+  // Build quick lookup for delivery notes by invoice id
+  const dnByInvoiceId = new Map((deliveryNotes || []).map((d: any) => [d.invoice_id, (d.delivery_number || d.delivery_note_number || '')]));
+
   // Create all transactions (invoices and payments) with running balance
   const allTransactions = [
     // Add all invoices as debits
@@ -1668,7 +1668,11 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
       description: `Invoice ${inv.invoice_number}`,
       debit: inv.total_amount || 0,
       credit: 0,
-      due_date: inv.due_date
+      due_date: inv.due_date,
+      lpo_number: inv.lpo_number || '',
+      invoice_number: inv.invoice_number || '',
+      delivery_note_number: dnByInvoiceId.get(inv.id) || '',
+      lpo_date: inv.lpo_date || inv.invoice_date
     })),
     // Add all payments as credits
     ...payments.map(pay => ({
@@ -1682,6 +1686,7 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
       lpo_number: '',
       invoice_number: '',
       delivery_note_number: '',
+      lpo_date: pay.payment_date,
       amount: -Number(pay.amount || 0)
     }))
   ];
