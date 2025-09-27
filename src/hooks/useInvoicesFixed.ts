@@ -34,7 +34,10 @@ export const useInvoicesFixed = (companyId?: string) => {
             terms_and_conditions,
             lpo_number,
             created_at,
-            updated_at
+            updated_at,
+            currency_code,
+            exchange_rate,
+            fx_date
           `)
           .eq('company_id', companyId)
           .order('created_at', { ascending: false });
@@ -164,7 +167,10 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
             terms_and_conditions,
             lpo_number,
             created_at,
-            updated_at
+            updated_at,
+            currency_code,
+            exchange_rate,
+            fx_date
           `)
           .eq('customer_id', customerId)
           .order('created_at', { ascending: false });

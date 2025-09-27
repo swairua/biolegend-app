@@ -42,6 +42,7 @@ import {
 } from 'recharts';
 import { useProducts, useStockMovements } from '@/hooks/useDatabase';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 // No sample data - using real database data only
 
@@ -53,6 +54,7 @@ export default function InventoryReports() {
 
   const { data: products } = useProducts();
   const { data: stockMovements } = useStockMovements();
+  const { format } = useCurrency();
 
   // Calculate stock movement data from real movements
   const calculateStockMovementData = () => {
@@ -246,7 +248,7 @@ export default function InventoryReports() {
               <TrendingUp className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Stock Value</p>
-                <p className="text-2xl font-bold text-success">${stats.stockValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-success">{format(stats.stockValue)}</p>
                 <p className="text-xs text-success">At cost price</p>
               </div>
             </div>
@@ -443,19 +445,19 @@ export default function InventoryReports() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Total Stock Value (Cost)</span>
-                  <span className="font-bold">${stats.stockValue.toFixed(2)}</span>
+                  <span className="font-bold">{format(stats.stockValue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Total Stock Value (Retail)</span>
-                  <span className="font-bold">${(stats.stockValue * 1.4).toFixed(2)}</span>
+                  <span className="font-bold">{format(stats.stockValue * 1.4)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Potential Profit</span>
-                  <span className="font-bold text-success">${(stats.stockValue * 0.4).toFixed(2)}</span>
+                  <span className="font-bold text-success">{format(stats.stockValue * 0.4)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Average Cost per Item</span>
-                  <span className="font-bold">${products?.length ? (stats.stockValue / products.length).toFixed(2) : '0.00'}</span>
+                  <span className="font-bold">{products?.length ? format(stats.stockValue / products.length) : format(0)}</span>
                 </div>
               </div>
             </CardContent>
@@ -607,7 +609,7 @@ export default function InventoryReports() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Carrying Cost</span>
-                <span className="font-medium">${(stats.stockValue * 0.02).toFixed(2)}/month</span>
+                <span className="font-medium">{format(stats.stockValue * 0.02)}/month</span>
               </div>
             </div>
           </CardContent>

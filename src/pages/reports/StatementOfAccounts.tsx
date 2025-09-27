@@ -28,9 +28,11 @@ import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import { useCustomers, usePayments, useCompanies, useDeliveryNotes } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 // Helper function to compute customer statements from real data
-const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[], deliveryNotes: any[] = []) => {
+const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[], deliveryNotes: any[] = [], currency: 'KES' | 'USD', rate: number) => {
   if (!customers || !invoices || !payments) return [];
 
   return customers.map(customer => {
@@ -39,7 +41,7 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
     const customerPayments = payments.filter(pay => pay.customer_id === customer.id);
 
     // Calculate totals
-    const totalInvoiced = customerInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+    const totalInvoiced = customerInvoices.reduce((sum, inv) => sum + normalizeInvoiceAmount(Number(inv.total_amount) || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
     const totalPaid = customerPayments.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
     const currentBalance = totalInvoiced - totalPaid;
 
@@ -50,7 +52,8 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
     customerInvoices.forEach(invoice => {
       const dueDate = new Date(invoice.due_date || invoice.invoice_date);
       const daysPastDue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      const unpaidAmount = Number(invoice.total_amount) - Number(invoice.paid_amount || 0);
+      const invAmount = normalizeInvoiceAmount(Number(invoice.total_amount) || 0, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate);
+      const unpaidAmount = invAmount - Number(invoice.paid_amount || 0);
 
       if (daysPastDue <= 0) current += unpaidAmount;
       else if (daysPastDue <= 30) days30 += unpaidAmount;
@@ -70,7 +73,7 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
           type: 'Invoice',
           reference: inv.invoice_number,
           description: `Invoice - ${inv.invoice_number}`,
-          debit: Number(inv.total_amount) || 0,
+          debit: normalizeInvoiceAmount(Number(inv.total_amount) || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate),
           credit: 0,
           balance: 0,
           invoice_number: inv.invoice_number,
@@ -138,12 +141,16 @@ const StatementOfAccounts = () => {
   const { data: payments } = usePayments(currentCompany?.id);
   const { data: deliveryNotes } = useDeliveryNotes(currentCompany?.id);
 
+  const { format, currency, rate } = useCurrency();
+
   // Compute statements from real data
   const computedStatements = computeCustomerStatements(
     customers || [],
     invoices || [],
     payments || [],
-    deliveryNotes || []
+    deliveryNotes || [],
+    currency,
+    rate
   );
 
   const handleDownloadStatement = async (statement: any) => {
@@ -201,13 +208,7 @@ const StatementOfAccounts = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => format(amount);
 
   const totalOutstanding = filteredStatements.reduce((sum, statement) => sum + statement.currentBalance, 0);
   const totalOverdue = filteredStatements.reduce((sum, statement) => sum + statement.overdueAmount, 0);
