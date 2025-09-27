@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getLocaleForCurrency } from '@/utils/exchangeRates';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +59,10 @@ interface EditInvoiceModalProps {
 }
 
 export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: EditInvoiceModalProps) {
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(
+    normalizeInvoiceAmount(Number(amount) || 0, invoice?.currency_code as any, invoice?.exchange_rate as any, currency, rate)
+  );
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
