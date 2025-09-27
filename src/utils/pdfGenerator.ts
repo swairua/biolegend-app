@@ -471,14 +471,6 @@ export const generatePDF = (data: DocumentData) => {
     return cols;
   })();
   const hasStatementLPO = data.type === 'statement' && Array.isArray(data.items) && data.items.some((i: any) => i && (i as any).lpo_number);
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', {
