@@ -82,14 +82,7 @@ export function DashboardStats() {
     );
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => format(amount);
 
   const dashboardStats = [
     {
