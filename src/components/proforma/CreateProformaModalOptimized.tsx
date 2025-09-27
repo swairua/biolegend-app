@@ -35,6 +35,9 @@ import { calculateItemTax, calculateDocumentTotals, formatCurrency, type Taxable
 import { generateNextProformaNumber } from '@/utils/improvedProformaFix';
 import { ProformaErrorSolution } from '@/components/fixes/ProformaErrorSolution';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { getExchangeRate } from '@/utils/exchangeRates';
+import { convertAmount } from '@/utils/currency';
 
 interface CreateProformaModalOptimizedProps {
   open: boolean;
@@ -69,6 +72,7 @@ export const CreateProformaModalOptimized = ({
   const { data: products, isLoading: productsLoading } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
   const createProforma = useCreateProforma();
+  const { currency, rate } = useCurrency();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
@@ -212,6 +216,28 @@ export const CreateProformaModalOptimized = ({
     try {
       const totals = calculateTotals();
 
+      // Lock FX if USD
+      let effectiveRate = currency === 'USD' ? rate : 1;
+      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+        try {
+          const fetched = await getExchangeRate('KES', 'USD', formData.proforma_date);
+          if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
+          effectiveRate = fetched;
+          toast.success(`Locked exchange rate for ${formData.proforma_date}: ${fetched.toFixed(4)}`);
+        } catch (e: any) {
+          toast.error(e?.message || 'Failed to fetch exchange rate');
+          throw e;
+        }
+      }
+
+      // Convert items if USD so stored values are in quote currency
+      const itemsConverted = items.map(item => ({
+        ...item,
+        unit_price: currency === 'USD' ? convertAmount(item.unit_price, 'KES', 'USD', effectiveRate) : item.unit_price,
+        tax_amount: currency === 'USD' ? convertAmount(item.tax_amount, 'KES', 'USD', effectiveRate) : item.tax_amount,
+        line_total: currency === 'USD' ? convertAmount(item.line_total, 'KES', 'USD', effectiveRate) : item.line_total,
+      }));
+
       const proformaData = {
         company_id: companyId,
         customer_id: formData.customer_id,
@@ -219,16 +245,19 @@ export const CreateProformaModalOptimized = ({
         proforma_date: formData.proforma_date,
         valid_until: formData.valid_until,
         status: 'draft' as const,
-        subtotal: totals.subtotal,
-        tax_amount: totals.tax_total,
-        total_amount: totals.total_amount,
+        subtotal: currency === 'USD' ? convertAmount(totals.subtotal, 'KES', 'USD', effectiveRate) : totals.subtotal,
+        tax_amount: currency === 'USD' ? convertAmount(totals.tax_total, 'KES', 'USD', effectiveRate) : totals.tax_total,
+        total_amount: currency === 'USD' ? convertAmount(totals.total_amount, 'KES', 'USD', effectiveRate) : totals.total_amount,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
-      };
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? effectiveRate : 1,
+        fx_date: formData.proforma_date,
+      } as const;
 
       await createProforma.mutateAsync({
-        proforma: proformaData,
-        items: items
+        proforma: proformaData as any,
+        items: itemsConverted as any
       });
 
       onSuccess?.();
