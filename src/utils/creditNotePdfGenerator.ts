@@ -52,18 +52,13 @@ const DEFAULT_COMPANY: CompanyData = {
   logo_url: '' // Will use company settings or fallback gracefully
 };
 
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+
 export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: CompanyData) => {
   // Use company details from parameter or fall back to defaults
   const companyData = company || DEFAULT_COMPANY;
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+
+  const formatCurrency = (amount: number, code: string = 'KES') => formatCurrencyUtil(Number(amount) || 0, code);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
