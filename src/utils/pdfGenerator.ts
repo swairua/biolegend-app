@@ -1507,6 +1507,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
     paid_amount: invoice.paid_amount || 0,
     balance_due: invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)),
     notes: invoice.notes,
+    currency_code: invoice.currency_code || 'KES',
     terms_and_conditions: (documentType === 'INVOICE' || documentType === 'PROFORMA') ? `Terms
 1. PAYMENT.
 Payment terms are cash on delivery, unless credit terms are established at the Seller��s sole discretion. Buyer agrees to pay Seller cost of collection of overdue invoices, including reasonable attorney���s fees. Net 30 days on all credit invoices or “Month Following invoice”. In addition, Buyer shall pay all sales, use, customs, excise or other taxes presently or hereafter payable in regards to this transaction, and Buyer shall reimburse Seller for any such taxes or charges paid by BIOLEGEND SCIENTIFIC LTD (hereafter "Seller."). Including all withholding taxes which should be remitted immediately upon payments.
