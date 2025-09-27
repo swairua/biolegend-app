@@ -53,6 +53,7 @@ export interface DocumentData {
   terms_and_conditions?: string;
   valid_until?: string; // For proforma invoices
   due_date?: string; // For invoices
+  currency_code?: 'KES' | 'USD';
   // Delivery note specific fields
   delivery_date?: string;
   delivery_address?: string;
