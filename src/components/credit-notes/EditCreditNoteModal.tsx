@@ -218,11 +218,7 @@ export function EditCreditNoteModal({
               <div>
                 <div className="text-muted-foreground">Total Amount</div>
                 <div className="font-semibold">
-                  {new Intl.NumberFormat('en-KE', {
-                    style: 'currency',
-                    currency: 'KES',
-                    minimumFractionDigits: 2
-                  }).format(creditNote.total_amount)}
+                  {formatCurrency(creditNote.total_amount)}
                 </div>
               </div>
               <div>
