@@ -38,6 +38,8 @@ import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
 import { EditLPOModal } from '@/components/lpo/EditLPOModal';
 import { DatabaseAuditPanel } from '@/components/DatabaseAuditPanel';
 import { DirectForceMigration } from '@/components/DirectForceMigration';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { LPOCustomerSupplierAudit } from '@/components/LPOCustomerSupplierAudit';
 
 export default function LPOs() {
@@ -84,14 +86,8 @@ export default function LPOs() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const handleView = (lpo: any) => {
     setSelectedLPO(lpo);
