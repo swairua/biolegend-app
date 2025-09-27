@@ -251,7 +251,7 @@ export const ViewProformaModal = ({
                     <CardTitle className="text-sm">Notes</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-xs leading-snug text-muted-foreground whitespace-pre-wrap break-words">
                       {proforma.notes}
                     </p>
                   </CardContent>
@@ -263,7 +263,7 @@ export const ViewProformaModal = ({
                     <CardTitle className="text-sm">Terms & Conditions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-xs leading-snug text-muted-foreground whitespace-pre-wrap break-words">
                       {proforma.terms_and_conditions}
                     </p>
                   </CardContent>
