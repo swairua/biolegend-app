@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -45,10 +46,11 @@ export function ViewInvoiceModal({
 }: ViewInvoiceModalProps) {
   if (!invoice) return null;
 
+  const currencyCode = invoice?.currency_code || 'KES';
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode), {
       style: 'currency',
-      currency: 'KES',
+      currency: currencyCode,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);
