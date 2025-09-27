@@ -23,6 +23,8 @@ import {
   Activity
 } from 'lucide-react';
 import { useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 interface Customer {
   id: string;
