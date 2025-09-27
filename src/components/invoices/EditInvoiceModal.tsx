@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -257,10 +258,11 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
     setItems(items.filter(item => item.id !== itemId));
   };
 
+  const invoiceCurrency = (invoice?.currency_code as string) || 'KES';
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat(getLocaleForCurrency(invoiceCurrency), {
       style: 'currency',
-      currency: 'KES',
+      currency: invoiceCurrency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);
