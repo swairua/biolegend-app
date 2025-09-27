@@ -153,7 +153,7 @@ export const ViewProformaModal = ({
                   <p className="text-sm font-medium text-muted-foreground">Amount</p>
                   <p className="text-sm flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ${proforma.total_amount?.toFixed(2)}
+                    {formatCurrency(proforma.total_amount || 0)}
                   </p>
                 </div>
               </div>
@@ -211,10 +211,10 @@ export const ViewProformaModal = ({
                         <TableCell className="font-medium">{item.product_name}</TableCell>
                         <TableCell>{item.description}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell>{formatCurrency(item.unit_price)}</TableCell>
                         <TableCell>{item.tax_percentage}%</TableCell>
-                        <TableCell>${item.tax_amount.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${item.line_total.toFixed(2)}</TableCell>
+                        <TableCell>{formatCurrency(item.tax_amount)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.line_total)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -226,16 +226,16 @@ export const ViewProformaModal = ({
                 <div className="space-y-2 max-w-sm ml-auto">
                   <div className="flex justify-between">
                     <span className="text-sm">Subtotal:</span>
-                    <span className="text-sm">${proforma.subtotal?.toFixed(2)}</span>
+                    <span className="text-sm">{formatCurrency(proforma.subtotal || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm">VAT:</span>
-                    <span className="text-sm">${proforma.tax_amount?.toFixed(2)}</span>
+                    <span className="text-sm">{formatCurrency(proforma.tax_amount || 0)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-semibold">
                     <span>Total:</span>
-                    <span>${proforma.total_amount?.toFixed(2)}</span>
+                    <span>{formatCurrency(proforma.total_amount || 0)}</span>
                   </div>
                 </div>
               </CardContent>
