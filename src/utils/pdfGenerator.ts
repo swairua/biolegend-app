@@ -1526,6 +1526,7 @@ export const downloadCreditNotePDF = async (creditNote: any, company?: CompanyDe
     number: creditNote.credit_note_number,
     date: creditNote.credit_note_date,
     company: company, // Pass company details
+    currency_code: (creditNote.currency_code === 'USD' || creditNote.currency_code === 'KES' ? creditNote.currency_code : (Number(creditNote.exchange_rate) && Number(creditNote.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: creditNote.customers?.name || 'Unknown Customer',
       email: creditNote.customers?.email,
@@ -1574,6 +1575,7 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
     date: quotation.quotation_date,
     valid_until: quotation.valid_until,
     company: company, // Pass company details
+    currency_code: (quotation.currency_code === 'USD' || quotation.currency_code === 'KES' ? quotation.currency_code : (Number(quotation.exchange_rate) && Number(quotation.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: quotation.customers?.name || 'Unknown Customer',
       email: quotation.customers?.email,
@@ -1785,6 +1787,7 @@ export const generatePaymentReceiptPDF = async (payment: any, company?: CompanyD
     number: payment.number || payment.payment_number || `REC-${Date.now()}`,
     date: payment.date || payment.payment_date || new Date().toISOString().split('T')[0],
     company: company, // Pass company details
+    currency_code: (payment.currency_code === 'USD' || payment.currency_code === 'KES' ? payment.currency_code : (Number(payment.exchange_rate) && Number(payment.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: payment.customer || payment.customers?.name || 'Unknown Customer',
       email: payment.customers?.email,
@@ -1808,6 +1811,7 @@ export const downloadRemittancePDF = async (remittance: any, company?: CompanyDe
     number: remittance.adviceNumber || remittance.advice_number || `REM-${Date.now()}`,
     date: remittance.adviceDate || remittance.advice_date || new Date().toISOString().split('T')[0],
     company: company, // Pass company details
+    currency_code: (remittance.currency_code === 'USD' || remittance.currency_code === 'KES' ? remittance.currency_code : (Number(remittance.exchange_rate) && Number(remittance.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: remittance.customerName || remittance.customers?.name || 'Unknown Customer',
       email: remittance.customers?.email,
@@ -1905,6 +1909,7 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails) => {
     delivery_date: lpo.delivery_date,
     delivery_address: lpo.delivery_address,
     company: company, // Pass company details
+    currency_code: (lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: lpo.suppliers?.name || 'Unknown Supplier',
       email: lpo.suppliers?.email,
