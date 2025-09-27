@@ -41,6 +41,8 @@ import { useCustomers, useProducts } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompanyId } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 export default function SalesReports() {
   const [dateRange, setDateRange] = useState('last_30_days');
