@@ -307,6 +307,8 @@ export const generateLPOPDF = (lpo: LPOPDFData, company: CompanyData) => {
   doc.save(`LPO-${lpo.lpo_number}.pdf`);
 };
 
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -315,11 +317,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+const formatCurrency = (amount: number, code: string = 'KES') => {
+  return formatCurrencyUtil(Number(amount) || 0, code);
 };
