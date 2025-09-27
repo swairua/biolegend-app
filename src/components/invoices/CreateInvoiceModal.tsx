@@ -324,14 +324,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode), {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+
+  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode);
 
   const subtotal = items.reduce((sum, item) => {
     // Calculate subtotal as base amount minus discounts
