@@ -218,13 +218,15 @@ export const useCustomerCities = (companyId?: string) => {
   });
 };
 
-import { formatCurrency } from '@/utils/formatCurrency';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 
 // Memoized currency formatter (returns object with .format for compatibility)
 export const useCurrencyFormatter = () => {
+  const { currency, rate, format } = useCurrency();
   return useMemo(() => ({
-    format: (amount: number) => formatCurrency(Number(amount) || 0, 'KES', 0, 0)
-  }), []);
+    format: (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate))
+  }), [currency, rate, format]);
 };
 
 // Helper for customer status
