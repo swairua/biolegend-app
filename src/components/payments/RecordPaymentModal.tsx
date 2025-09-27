@@ -74,14 +74,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
     inv.total_amount !== null && inv.total_amount !== undefined
   );
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const handleInputChange = (field: string, value: any) => {
     setPaymentData(prev => ({
