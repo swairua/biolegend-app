@@ -51,6 +51,7 @@ export default function SalesReports() {
   const [endDate, setEndDate] = useState('');
 
   const companyId = useCurrentCompanyId();
+  const { currency, rate, format } = useCurrency();
 
   const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
   const { data: customers, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
