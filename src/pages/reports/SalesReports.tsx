@@ -478,7 +478,7 @@ export default function SalesReports() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`$${value}`, 'Sales']} />
+                  <Tooltip formatter={(value) => [format(Number(value)), 'Sales']} />
                   <Legend />
                   <Line type="monotone" dataKey="sales" stroke="#8884d8" strokeWidth={2} />
                 </LineChart>
@@ -529,7 +529,7 @@ export default function SalesReports() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`$${value}`, 'Sales']} />
+                  <Tooltip formatter={(value) => [format(Number(value)), 'Sales']} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -545,7 +545,7 @@ export default function SalesReports() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip formatter={(value) => [`$${value}`, 'Sales']} />
+                  <Tooltip formatter={(value) => [format(Number(value)), 'Sales']} />
                   <Bar dataKey="sales" fill="#8884d8" />
                 </BarChart>
               </ResponsiveContainer>
