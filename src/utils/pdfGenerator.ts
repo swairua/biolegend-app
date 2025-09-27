@@ -125,7 +125,7 @@ const buildDocumentHTML = (data: DocumentData) => {
   const company = data.company || DEFAULT_COMPANY;
   const visibleColumns = (() => {
     const cols: any = analyzeColumns(data.items);
-    if (data.type === 'quotation' || data.type === 'invoice') {
+    if (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') {
       cols.taxPercentage = false;
       cols.taxAmount = false;
       cols.discountPercentage = false;
@@ -242,7 +242,7 @@ const buildDocumentHTML = (data: DocumentData) => {
     .bank-details { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 10px; color: #111827; text-align: center; font-weight: 600; }
     .invoice-terms-section { margin: 30px 0 20px 0; page-break-inside: avoid; }
     .invoice-terms { width: 100%; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px; }
-    .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 0; background: transparent; border-radius: 0; border: none; font-size: 10px; color: #111827; text-align: left; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
+    .invoice-bank-details { margin-top: 12px; margin-bottom: 0; padding: 15px; background: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; font-size: 10px; color: #111827; text-align: center; font-weight: 600; line-height: 1.4; page-break-inside: avoid; }
 .invoice-bank-details .bank-line { margin: 6px 0; }
     .quotation-footer { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; font-size: 12px; color: #111827; text-align: center; font-weight: 600; font-style: italic; }
   </style>
@@ -454,7 +454,7 @@ export const generatePDF = (data: DocumentData) => {
   // Analyze which columns have values
   const visibleColumns = (() => {
     const cols: any = analyzeColumns(data.items);
-    if (data.type === 'quotation' || data.type === 'invoice') {
+    if (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') {
       cols.taxPercentage = false;
       cols.taxAmount = false;
       cols.discountPercentage = false;
@@ -1299,14 +1299,18 @@ export const generatePDFDownload = async (data: DocumentData) => {
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   // Footer reservation (mm) for types that require a persistent bottom footer
-  const footerReserveMm = data.type === 'quotation' ? 18 : 0; // space to keep free at bottom
+  const footerReserveMm = (data.type === 'quotation' || data.type === 'invoice' || data.type === 'proforma') ? 18 : 0; // space to keep free at bottom
 
   // Helper to draw footer on each page
   const drawFooter = (pageIndex: number) => {
-    if (data.type !== 'quotation') return;
+    if (data.type !== 'quotation' && data.type !== 'invoice' && data.type !== 'proforma') return;
     const marginMm = 20;
     const maxWidth = pageWidth - marginMm * 2;
-    const text = 'We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!';
+    const text = data.type === 'quotation'
+      ? 'We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!'
+      : data.type === 'invoice'
+      ? 'Thank you for your business. Please remit payment to the bank details below by the due date.'
+      : 'This is a proforma invoice. Payment confirms order. Thank you for your business.';
     pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(10);
     pdf.setTextColor(17, 24, 39);
