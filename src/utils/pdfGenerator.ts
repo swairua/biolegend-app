@@ -1311,7 +1311,7 @@ export const generatePDFDownload = async (data: DocumentData) => {
     const text = data.type === 'quotation'
       ? 'We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!'
       : data.type === 'invoice'
-      ? 'Thank you for your business. Please remit payment to the bank details below by the due date.'
+      ? ''
       : 'This is a proforma invoice. Payment confirms order. Thank you for your business.';
     pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(10);
