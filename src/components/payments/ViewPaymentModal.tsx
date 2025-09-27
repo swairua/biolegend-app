@@ -46,6 +46,9 @@ interface Payment {
   payment_allocations?: PaymentAllocation[];
 }
 
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
+
 interface ViewPaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
