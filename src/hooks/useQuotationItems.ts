@@ -290,11 +290,27 @@ export const useCreateInvoiceWithItems = () => {
   return useMutation({
     mutationFn: async ({ invoice, items }: { invoice: any; items: InvoiceItem[] }) => {
       // First create the invoice
-      const { data: invoiceData, error: invoiceError } = await supabase
+      let { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert([invoice])
         .select()
         .single();
+
+      // Fallback if schema lacks currency columns (currency_code/exchange_rate/fx_date)
+      if (invoiceError) {
+        const msg = (invoiceError.message || JSON.stringify(invoiceError)).toLowerCase();
+        const code = (invoiceError as any).code || '';
+        if (code === 'PGRST204' || msg.includes('currency_code') || msg.includes('exchange_rate') || msg.includes('fx_date') || msg.includes('column') && msg.includes('does not exist')) {
+          const { currency_code, exchange_rate, fx_date, ...coreInvoice } = invoice || {};
+          const retry = await supabase
+            .from('invoices')
+            .insert([coreInvoice])
+            .select()
+            .single();
+          invoiceData = retry.data as any;
+          invoiceError = retry.error as any;
+        }
+      }
 
       if (invoiceError) throw invoiceError;
 
@@ -437,12 +453,29 @@ export const useUpdateInvoiceWithItems = () => {
       }
 
       // Update the invoice
-      const { data: invoiceData, error: invoiceError } = await supabase
+      let { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .update(invoice)
         .eq('id', invoiceId)
         .select()
         .single();
+
+      // Fallback update without currency fields if schema is missing them
+      if (invoiceError) {
+        const msg = (invoiceError.message || JSON.stringify(invoiceError)).toLowerCase();
+        const code = (invoiceError as any).code || '';
+        if (code === 'PGRST204' || msg.includes('currency_code') || msg.includes('exchange_rate') || msg.includes('fx_date') || msg.includes('column') && msg.includes('does not exist')) {
+          const { currency_code, exchange_rate, fx_date, ...coreInvoice } = invoice || {};
+          const retry = await supabase
+            .from('invoices')
+            .update(coreInvoice)
+            .eq('id', invoiceId)
+            .select()
+            .single();
+          invoiceData = retry.data as any;
+          invoiceError = retry.error as any;
+        }
+      }
 
       if (invoiceError) throw invoiceError;
 
