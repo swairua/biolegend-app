@@ -34,6 +34,7 @@ import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useGenerateCreditNoteNumber } from '@/hooks/useCreditNotes';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { useCreateCreditNoteWithItems } from '@/hooks/useCreditNoteItems';
 import { toast } from 'sonner';
 
@@ -76,7 +77,7 @@ export function CreateCreditNoteModal({
   const [items, setItems] = useState<CreditNoteItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { currency, rate } = useCurrency();
+  const { currency, rate, format } = useCurrency();
 
   const { data: companies, isLoading: loadingCompanies, error: companiesError } = useCompanies();
   const companyId = companies?.[0]?.id;
@@ -245,14 +246,7 @@ export function CreateCreditNoteModal({
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const taxAmount = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0);
