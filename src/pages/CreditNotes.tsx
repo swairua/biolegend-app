@@ -39,6 +39,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import { useCreditNotes } from '@/hooks/useCreditNotes';
 import { toast } from 'sonner';
 import { CreateCreditNoteModal } from '@/components/credit-notes/CreateCreditNoteModal';
