@@ -1510,17 +1510,19 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       city: invoice.customers?.city,
       country: invoice.customers?.country,
     },
-    items: invoice.invoice_items?.map((item: any) => {
+    items: invoice.invoice_items?.map((item: any, index: number) => {
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.unit_price || 0);
       const taxAmount = Number(item.tax_amount || 0);
       const discountAmount = Number(item.discount_amount || 0);
       const computedLineTotal = quantity * unitPrice - discountAmount + taxAmount;
+      const productName = resolveLineItemName(item, index);
+      const description = resolveLineItemDescription(item, productName);
 
       return {
-        product_code: item.products?.product_code || item.product_code || '',
-        product_name: item.product_name || item.products?.name || '',
-        description: item.description || item.product_name || item.products?.name || 'Unknown Item',
+        product_code: resolveLineItemCode(item),
+        product_name: productName,
+        description,
         quantity: quantity,
         unit_price: unitPrice,
         discount_percentage: Number(item.discount_percentage || 0),
@@ -1530,7 +1532,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
         tax_amount: taxAmount,
         tax_inclusive: item.tax_inclusive || false,
         line_total: Number(item.line_total ?? computedLineTotal),
-        unit_of_measure: item.products?.unit_of_measure || item.unit_of_measure || 'pcs',
+        unit_of_measure: resolveLineItemUnit(item),
       };
     }) || [],
     subtotal: invoice.subtotal,
