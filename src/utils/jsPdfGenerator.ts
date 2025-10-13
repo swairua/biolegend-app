@@ -561,10 +561,14 @@ export const downloadQuotationJsPDF = async (quotation: any, company?: CompanyDe
       const discountAmount = Number(item.discount_amount || 0);
       const computedLineTotal = quantity * unitPrice - discountAmount + taxAmount;
 
+      // Proper separation of product name and description
+      const productName = item.products?.name || item.product_name || 'Unknown Product';
+      const productDescription = item.description || item.products?.description || 'No description available';
+
       return {
         product_code: item.products?.product_code || item.product_code || '',
-        product_name: item.product_name || item.products?.name || item.description || 'Unknown Item',
-        description: item.description || item.product_name || item.products?.name || 'Unknown Item',
+        product_name: productName,
+        description: productDescription,
         quantity: quantity,
         unit_price: unitPrice,
         discount_percentage: Number(item.discount_percentage || 0),
