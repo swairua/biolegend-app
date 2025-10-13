@@ -384,7 +384,29 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
           console.error('Unexpected error fetching invoice items (customer):', err && (err.message || JSON.stringify(err)));
         }
 
-        // Group items by invoice
+        // Ensure product fields (fallback join) and group items by invoice
+        try {
+          const missingProdIds = [...new Set((invoiceItems || [])
+            .filter((it: any) => it.product_id && !it.products)
+            .map((it: any) => it.product_id))];
+          if (missingProdIds.length > 0) {
+            const { data: products, error: prodErr } = await supabase
+              .from('products')
+              .select('id, name, description, product_code, unit_of_measure')
+              .in('id', missingProdIds);
+            if (!prodErr && products) {
+              const pmap = new Map(products.map(p => [p.id, p]));
+              invoiceItems = (invoiceItems as any[]).map((it: any) => (
+                it.products ? it : { ...it, products: pmap.get(it.product_id) }
+              ));
+            } else if (prodErr) {
+              console.warn('Products fetch fallback (customer) failed:', prodErr.message || JSON.stringify(prodErr));
+            }
+          }
+        } catch (e) {
+          console.warn('Products merge step (customer) failed:', (e as any)?.message || String(e));
+        }
+
         const itemsMap = new Map();
         (invoiceItems || []).forEach(item => {
           if (!itemsMap.has(item.invoice_id)) {
