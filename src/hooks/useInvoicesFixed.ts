@@ -167,9 +167,32 @@ export const useInvoicesFixed = (companyId?: string) => {
           console.error('Unexpected error fetching invoice items:', err && (err.message || JSON.stringify(err)));
         }
 
-        // Step 6: Group invoice items by invoice_id
+        // Step 6: Ensure product fields are present; if relation missing, fetch products by IDs and merge
+        try {
+          const missingProdIds = [...new Set((invoiceItems || [])
+            .filter((it: any) => it.product_id && !it.products)
+            .map((it: any) => it.product_id))];
+          if (missingProdIds.length > 0) {
+            const { data: products, error: prodErr } = await supabase
+              .from('products')
+              .select('id, name, description, product_code, unit_of_measure')
+              .in('id', missingProdIds);
+            if (!prodErr && products) {
+              const pmap = new Map(products.map(p => [p.id, p]));
+              invoiceItems = (invoiceItems || []).map((it: any) => (
+                it.products ? it : { ...it, products: pmap.get(it.product_id) }
+              ));
+            } else if (prodErr) {
+              console.warn('Products fetch fallback failed:', prodErr.message || JSON.stringify(prodErr));
+            }
+          }
+        } catch (e) {
+          console.warn('Products merge step failed:', (e as any)?.message || String(e));
+        }
+
+        // Step 7: Group invoice items by invoice_id
         const itemsMap = new Map();
-        (invoiceItems || []).forEach(item => {
+        (invoiceItems || []).forEach((item: any) => {
           if (!itemsMap.has(item.invoice_id)) {
             itemsMap.set(item.invoice_id, []);
           }
