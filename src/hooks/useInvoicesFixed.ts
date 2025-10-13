@@ -124,7 +124,8 @@ export const useInvoicesFixed = (companyId?: string) => {
             tax_amount,
             tax_inclusive,
             line_total,
-            sort_order
+            sort_order,
+            products(id, name, description, product_code, unit_of_measure)
           `)
           .in('invoice_id', invoices.map(inv => inv.id));
 
@@ -286,7 +287,8 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
             tax_amount,
             tax_inclusive,
             line_total,
-            sort_order
+            sort_order,
+            products(id, name, description, product_code, unit_of_measure)
           `)
           .in('invoice_id', invoices.map(inv => inv.id));
 
