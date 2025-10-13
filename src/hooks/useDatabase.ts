@@ -609,7 +609,7 @@ export const useInvoices = (companyId?: string) => {
             tax_inclusive,
             line_total,
             sort_order,
-            products(id, name, product_code, unit_of_measure)
+            products(id, name, description, product_code, unit_of_measure)
           `)
           .in('invoice_id', invoices.map(inv => inv.id));
 
