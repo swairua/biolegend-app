@@ -305,28 +305,60 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
           console.error('Error fetching customer:', customerError);
         }
 
-        // Get invoice items
-        const { data: invoiceItems, error: itemsError } = await supabase
-          .from('invoice_items')
-          .select(`
-            id,
-            invoice_id,
-            product_id,
-            description,
-            quantity,
-            unit_price,
-            discount_before_vat,
-            tax_percentage,
-            tax_amount,
-            tax_inclusive,
-            line_total,
-            sort_order,
-            products(id, name, description, product_code, unit_of_measure)
-          `)
-          .in('invoice_id', invoices.map(inv => inv.id));
+             // Get invoice items (try with products relation, then fallback)
+        let invoiceItems = [];
+        let itemsError = null;
+        try {
+          const resp = await supabase
+            .from('invoice_items')
+            .select(`
+              id,
+              invoice_id,
+              product_id,
+              description,
+              quantity,
+              unit_price,
+              discount_before_vat,
+              tax_percentage,
+              tax_amount,
+              tax_inclusive,
+              line_total,
+              sort_order,
+              products(id, name, description, product_code, unit_of_measure)
+            `)
+            .in('invoice_id', invoices.map(inv => inv.id));
 
-        if (itemsError) {
-          console.error('Error fetching invoice items:', itemsError);
+          invoiceItems = resp.data || [];
+          itemsError = resp.error;
+
+          if (itemsError) {
+            console.warn('Invoice items query (customer) failed with product relation, retrying without relation:', itemsError.message || JSON.stringify(itemsError));
+            const fallback = await supabase
+              .from('invoice_items')
+              .select(`
+                id,
+                invoice_id,
+                product_id,
+                description,
+                quantity,
+                unit_price,
+                discount_before_vat,
+                tax_percentage,
+                tax_amount,
+                tax_inclusive,
+                line_total,
+                sort_order
+              `)
+              .in('invoice_id', invoices.map(inv => inv.id));
+
+            invoiceItems = fallback.data || [];
+            itemsError = fallback.error;
+            if (itemsError) {
+              console.error('Error fetching invoice items (customer) even after fallback:', itemsError.message || JSON.stringify(itemsError));
+            }
+          }
+        } catch (err) {
+          console.error('Unexpected error fetching invoice items (customer):', err && (err.message || JSON.stringify(err)));
         }
 
         // Group items by invoice
