@@ -220,8 +220,8 @@ export const generateJsPDF = (data: DocumentData) => {
   if (data.items && data.items.length > 0) {
     const tableData = data.items.map((item, index) => [
       String(index + 1),
-      sanitizeText(item.product_name || item.description),
-      sanitizeText(item.description),
+      sanitizeText(item.product_name || 'N/A'),
+      sanitizeText(item.description || 'N/A'),
       `${item.quantity} ${item.unit_of_measure || 'pcs'}`,
       formatCurrency(item.unit_price),
       formatCurrency(item.line_total)
@@ -229,26 +229,32 @@ export const generateJsPDF = (data: DocumentData) => {
 
     autoTable(doc, {
       startY: yPosition,
-      head: [['Item Number', 'Item Name', 'Description', 'Units', 'Unit Price', 'Line Total']],
+      head: [['#', 'Product Name', 'Description', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
       margin: { left: margin, right: margin, bottom: 12 },
       styles: {
         fontSize: 9,
-        cellPadding: 3,
+        cellPadding: 4,
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: [243, 244, 246],
-        textColor: [17, 24, 39],
+        fillColor: [75, 33, 182],
+        textColor: [255, 255, 255],
         fontSize: 10,
         fontStyle: 'bold',
+        halign: 'center',
       },
       columnStyles: {
-        0: { cellWidth: 30 }, // Item Number
-        1: { cellWidth: 40 }, // Item Name
-        2: { cellWidth: 55 }, // Description
-        3: { halign: 'center', cellWidth: 20 }, // Units
-        4: { halign: 'right', cellWidth: 26 }, // Unit Price
-        5: { halign: 'right', cellWidth: 28 }, // Line Total
+        0: { cellWidth: 15, halign: 'center' }, // Item Number
+        1: { cellWidth: 50, halign: 'left' }, // Product Name
+        2: { cellWidth: 60, halign: 'left' }, // Description
+        3: { halign: 'center', cellWidth: 20 }, // Quantity
+        4: { halign: 'right', cellWidth: 25 }, // Unit Price
+        5: { halign: 'right', cellWidth: 25 }, // Line Total
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250]
       }
     });
 
