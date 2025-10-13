@@ -386,8 +386,8 @@ const buildDocumentHTML = (data: DocumentData) => {
               <th style="width: 18%;">Payment Amount</th>
             ` : `
               <th style="width: 16%;">Item Number</th>
-              <th style="width: 20%;">Item Name</th>
-              <th style="width: 34%;">Description</th>
+              <th style="width: 20%;">Product Name</th>
+              <th style="width: 34%;">Product Description</th>
               <th style="width: 10%;">Units</th>
               <th style="width: 10%;">Unit Price</th>
               <th style="width: 10%;">Line Total</th>
@@ -1147,8 +1147,8 @@ export const generatePDF = (data: DocumentData) => {
                 <th style="width: 18%;">Payment Amount</th>
                 ` : `
                 <th style="width: 16%;">Item Number</th>
-              <th style="width: 20%;">Item Name</th>
-              <th style="width: 34%;">Description</th>
+              <th style="width: 20%;">Product Name</th>
+              <th style="width: 34%;">Product Description</th>
               <th style="width: 10%;">Units</th>
               <th style="width: 10%;">Unit Price</th>
               <th style="width: 10%;">Line Total</th>
