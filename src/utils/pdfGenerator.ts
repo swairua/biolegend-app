@@ -90,6 +90,44 @@ const DEFAULT_COMPANY: CompanyDetails = {
   logo_url: '' // Will use company settings or fallback gracefully
 };
 
+const toTrimmedString = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value).trim();
+};
+
+const resolveLineItemName = (item: any, index: number): string => {
+  const candidates = [
+    toTrimmedString(item?.product_name),
+    toTrimmedString(item?.products?.name),
+    toTrimmedString(item?.description),
+    toTrimmedString(item?.product_code ?? item?.products?.product_code),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return `Item ${index + 1}`;
+};
+
+const resolveLineItemDescription = (item: any, fallbackName: string): string => {
+  const description = toTrimmedString(item?.description);
+  return description || fallbackName;
+};
+
+const resolveLineItemUnit = (item: any): string => {
+  const unit = toTrimmedString(item?.unit_of_measure ?? item?.products?.unit_of_measure);
+  return unit || 'pcs';
+};
+
+const resolveLineItemCode = (item: any): string => {
+  return toTrimmedString(item?.products?.product_code ?? item?.product_code);
+};
+
 // Helper function to determine which columns have values
 const analyzeColumns = (items: DocumentData['items']) => {
   if (!items || items.length === 0) return {};
