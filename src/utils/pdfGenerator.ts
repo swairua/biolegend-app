@@ -1527,8 +1527,8 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       const taxAmount = Number(item.tax_amount || 0);
       const discountAmount = Number(item.discount_amount || 0);
       const computedLineTotal = quantity * unitPrice - discountAmount + taxAmount;
-      const productName = resolveLineItemName(item, index);
-      const description = resolveLineItemDescription(item, productName);
+      const productName = toTrimmedString(item?.products?.name) || toTrimmedString(item?.product_name) || `Item ${index + 1}`;
+      const description = toTrimmedString(item?.products?.description) || toTrimmedString(item?.description) || '';
 
       return {
         product_code: resolveLineItemCode(item),
