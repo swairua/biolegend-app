@@ -110,28 +110,61 @@ export const useInvoicesFixed = (companyId?: string) => {
         });
 
         // Step 5: Get invoice items for each invoice
-        const { data: invoiceItems, error: itemsError } = await supabase
-          .from('invoice_items')
-          .select(`
-            id,
-            invoice_id,
-            product_id,
-            description,
-            quantity,
-            unit_price,
-            discount_before_vat,
-            tax_percentage,
-            tax_amount,
-            tax_inclusive,
-            line_total,
-            sort_order,
-            products(id, name, description, product_code, unit_of_measure)
-          `)
-          .in('invoice_id', invoices.map(inv => inv.id));
+        // Step 5: Get invoice items for each invoice. Try including product relationship first, then fallback to flat items if that fails.
+        let invoiceItems = [];
+        let itemsError = null;
+        try {
+          const resp = await supabase
+            .from('invoice_items')
+            .select(`
+              id,
+              invoice_id,
+              product_id,
+              description,
+              quantity,
+              unit_price,
+              discount_before_vat,
+              tax_percentage,
+              tax_amount,
+              tax_inclusive,
+              line_total,
+              sort_order,
+              products(id, name, description, product_code, unit_of_measure)
+            `)
+            .in('invoice_id', invoices.map(inv => inv.id));
 
-        if (itemsError) {
-          console.error('Error fetching invoice items (non-fatal):', itemsError);
-          // Don't throw here, invoices can exist without items
+          invoiceItems = resp.data || [];
+          itemsError = resp.error;
+
+          if (itemsError) {
+            // Log structured error and attempt a safe fallback without nested products
+            console.warn('Invoice items query failed with product relation, retrying without relation:', itemsError.message || JSON.stringify(itemsError));
+            const fallback = await supabase
+              .from('invoice_items')
+              .select(`
+                id,
+                invoice_id,
+                product_id,
+                description,
+                quantity,
+                unit_price,
+                discount_before_vat,
+                tax_percentage,
+                tax_amount,
+                tax_inclusive,
+                line_total,
+                sort_order
+              `)
+              .in('invoice_id', invoices.map(inv => inv.id));
+
+            invoiceItems = fallback.data || [];
+            itemsError = fallback.error;
+            if (itemsError) {
+              console.error('Error fetching invoice items even after fallback:', itemsError.message || JSON.stringify(itemsError));
+            }
+          }
+        } catch (err) {
+          console.error('Unexpected error fetching invoice items:', err && (err.message || JSON.stringify(err)));
         }
 
         // Step 6: Group invoice items by invoice_id
