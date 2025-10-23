@@ -430,11 +430,12 @@ const buildDocumentHTML = (data: DocumentData) => {
                 <td class="amount-cell" style="font-weight: bold;">${formatCurrency(item.line_total)}</td>
               ` : `
                 ${data.type === 'delivery' ? `
-                  <td>${(item as any).quantity_ordered || item.quantity}</td>
-                  <td style="font-weight: bold; color: ${(item as any).quantity_delivered >= (item as any).quantity_ordered ? '#10B981' : '#F59E0B'};">${(item as any).quantity_delivered || item.quantity}</td>
-                  <td>${(item as any).unit_of_measure || 'pcs'}</td>
+                  <td>${sanitizeAndEscape(resolveLineItemDescription(item, resolveLineItemName(item, index)))}</td>
+                  <td>${formatQuantity((item as any).quantity_ordered ?? (item as any).quantity ?? 0)}</td>
+                  <td>${sanitizeAndEscape(resolveLineItemUnit(item))}</td>
+                  <td style="font-weight: bold; color: ${(Number((item as any).quantity_delivered ?? (item as any).quantity ?? 0) >= Number((item as any).quantity_ordered ?? 0)) ? '#10B981' : '#F59E0B'};">${formatQuantity((item as any).quantity_delivered ?? (item as any).quantity ?? 0)}</td>
                   <td style="font-size: 10px;">
-                    ${(item as any).quantity_delivered >= (item as any).quantity_ordered ? '<span style="color: #111827; font-weight: bold;">✓ Complete</span>' : '<span style="color: #111827; font-weight: bold;">⚠ Partial</span>'}
+                    ${(Number((item as any).quantity_delivered ?? (item as any).quantity ?? 0) >= Number((item as any).quantity_ordered ?? 0)) ? '<span style="color: #111827; font-weight: bold;">✓ Complete</span>' : '<span style="color: #111827; font-weight: bold;">⚠ Partial</span>'}
                   </td>
                 ` : `
                   <td class="center">${index + 1}</td>
