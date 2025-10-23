@@ -116,18 +116,18 @@ const resolveLineItemName = (item: any, index: number): string => {
 
 const resolveLineItemDescription = (item: any, fallbackName: string): string => {
   const description = toTrimmedString(item?.description);
-  // If description exists and is not the same as the product name, use it
-  if (description && description.toLowerCase() !== toTrimmedString(fallbackName).toLowerCase()) {
+  // Prefer explicit description if provided
+  if (description) {
     return description;
   }
   // Otherwise, try product description if available
   const productDescription = toTrimmedString(item?.products?.description);
-  if (productDescription && productDescription.toLowerCase() !== toTrimmedString(fallbackName).toLowerCase()) {
+  if (productDescription) {
     return productDescription;
   }
-  // Finally, fall back to a meaningful identifier like product code; never the name again
+  // Finally, fall back to a meaningful identifier like product code, or the product name
   const code = toTrimmedString(item?.products?.product_code ?? item?.product_code);
-  return code || '';
+  return code || toTrimmedString(fallbackName) || '';
 };
 
 const resolveLineItemUnit = (item: any): string => {
