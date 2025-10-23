@@ -701,13 +701,40 @@ export const useCreateDeliveryNote = () => {
           lastError = deliveryError;
           const msg = (deliveryError && (deliveryError.message || JSON.stringify(deliveryError)) || '').toString().toLowerCase();
 
-          // If the schema is missing delivery_note_number/delivery_number columns, remove them and retry
+          // If the schema is missing delivery_note_number/delivery_number columns, ensure we set a valid delivery_number and retry
           if ((msg.includes('could not find') || msg.includes('does not exist') || msg.includes('schema cache')) && (msg.includes('delivery_note_number') || msg.includes('delivery_number'))) {
-            // Remove fragile fields that may not exist in older schemas and retry
-            const sanitized = { ...note };
-            delete sanitized.delivery_note_number;
-            delete sanitized.delivery_number;
-            note = sanitized;
+            try {
+              const { data: latest, error: latestError } = await supabase
+                .from('delivery_notes')
+                .select('delivery_number, delivery_note_number, created_at')
+                .eq('company_id', note.company_id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+              // Try to compute a next delivery number
+              let nextNum = Number(note.delivery_number) || Number(note.delivery_note_number) || NaN;
+
+              if (!Number.isFinite(nextNum)) {
+                if (!latestError && latest && latest.length > 0) {
+                  const latestVal = latest[0].delivery_number || latest[0].delivery_note_number || '';
+                  const match = String(latestVal).match(/(\d+)/g);
+                  const lastNumeric = match && match.length > 0 ? parseInt(match[match.length - 1], 10) : NaN;
+                  const base = 500;
+                  nextNum = Number.isFinite(lastNumeric) ? Math.max(base, lastNumeric + 1) : base;
+                } else {
+                  nextNum = 500;
+                }
+              } else {
+                nextNum = nextNum + 1;
+              }
+
+              note.delivery_number = String(nextNum);
+              note.delivery_note_number = String(nextNum);
+            } catch (e) {
+              const currentNum = Number(note.delivery_number) || Number(note.delivery_note_number) || 500;
+              note.delivery_number = String(currentNum || 500);
+              note.delivery_note_number = String(currentNum || 500);
+            }
 
             // brief pause before retry
             await new Promise(res => setTimeout(res, 100));
