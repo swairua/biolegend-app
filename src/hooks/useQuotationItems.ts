@@ -1,6 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper to normalize Supabase/PostgREST errors into Error instances with readable messages
+const normalizeError = (err: any): Error => {
+  if (!err) return new Error('Unknown error');
+  if (typeof err === 'string') return new Error(err);
+  if (err instanceof Error) return err;
+  if ((err as any).message) return new Error((err as any).message);
+  try {
+    return new Error(JSON.stringify(err));
+  } catch (e) {
+    return new Error(String(err));
+  }
+};
+
 export interface QuotationItem {
   quotation_id: string;
   product_id?: string;
@@ -101,7 +114,7 @@ export const useRestockProduct = () => {
         .select()
         .single();
       
-      if (movementError) throw movementError;
+      if (movementError) throw normalizeError(movementError);
       
       // Update product stock quantity
       const { error: stockError } = await supabase.rpc('update_product_stock', {
@@ -110,7 +123,7 @@ export const useRestockProduct = () => {
         quantity: quantity
       });
       
-      if (stockError) throw stockError;
+      if (stockError) throw normalizeError(stockError);
       
       return movement;
     },
@@ -133,7 +146,7 @@ export const useCreateQuotationWithItems = () => {
         .select()
         .single();
       
-      if (quotationError) throw quotationError;
+      if (quotationError) throw normalizeError(quotationError);
       
       // Then create the quotation items if any
       if (items.length > 0) {
@@ -147,7 +160,7 @@ export const useCreateQuotationWithItems = () => {
           .from('quotation_items')
           .insert(quotationItems);
         
-        if (itemsError) throw itemsError;
+        if (itemsError) throw normalizeError(itemsError);
       }
       
       return quotationData;
@@ -174,7 +187,7 @@ export const useConvertQuotationToInvoice = () => {
         .eq('id', quotationId)
         .single();
       
-      if (quotationError) throw quotationError;
+      if (quotationError) throw normalizeError(quotationError);
       
       // Generate invoice number
       const { data: invoiceNumber } = await supabase.rpc('generate_invoice_number', {
@@ -206,7 +219,7 @@ export const useConvertQuotationToInvoice = () => {
         .select()
         .single();
       
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) throw normalizeError(invoiceError);
       
       // Create invoice items from quotation items
       if (quotation.quotation_items && quotation.quotation_items.length > 0) {
@@ -229,7 +242,7 @@ export const useConvertQuotationToInvoice = () => {
           .from('invoice_items')
           .insert(invoiceItems);
         
-        if (itemsError) throw itemsError;
+        if (itemsError) throw normalizeError(itemsError);
         
         // Create stock movements
         const stockMovements = invoiceItems
@@ -315,7 +328,7 @@ export const useCreateInvoiceWithItems = () => {
         }
       }
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) throw normalizeError(invoiceError);
 
       // Then create the invoice items if any
       if (items.length > 0) {
@@ -329,7 +342,7 @@ export const useCreateInvoiceWithItems = () => {
           .from('invoice_items')
           .insert(invoiceItems);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) throw normalizeError(itemsError);
 
         // Create stock movements for products that affect inventory
         if (invoice.affects_inventory !== false) {
@@ -480,7 +493,7 @@ export const useUpdateInvoiceWithItems = () => {
         }
       }
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) throw normalizeError(invoiceError);
 
       // Delete existing invoice items
       const { error: deleteError } = await supabase
@@ -488,7 +501,7 @@ export const useUpdateInvoiceWithItems = () => {
         .delete()
         .eq('invoice_id', invoiceId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) throw normalizeError(deleteError);
 
       // Create new invoice items
       if (items.length > 0) {
@@ -502,7 +515,7 @@ export const useUpdateInvoiceWithItems = () => {
           .from('invoice_items')
           .insert(invoiceItems);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) throw normalizeError(itemsError);
 
         // Create new stock movements if affects inventory
         if (invoice.affects_inventory !== false) {
@@ -568,7 +581,7 @@ export const useCreateProformaWithItems = () => {
         .select()
         .single();
 
-      if (proformaError) throw proformaError;
+      if (proformaError) throw normalizeError(proformaError);
 
       // Then create the proforma items if any
       if (items.length > 0) {
@@ -596,7 +609,7 @@ export const useCreateProformaWithItems = () => {
           if (msg.includes('discount_percentage')) {
             const minimalItems = proformaItems.map(({ discount_percentage, ...rest }) => rest);
             const retry = await supabase.from('proforma_items').insert(minimalItems);
-            if (retry.error) throw retry.error;
+            if (retry.error) throw normalizeError(retry.error);
           } else {
             throw itemsError;
           }
@@ -678,7 +691,7 @@ export const useCreateDeliveryNote = () => {
         .select()
         .single();
       
-      if (deliveryError) throw deliveryError;
+      if (deliveryError) throw normalizeError(deliveryError);
       
       // Create delivery note items
       if (items.length > 0) {
@@ -692,7 +705,7 @@ export const useCreateDeliveryNote = () => {
           .from('delivery_note_items')
           .insert(deliveryItems);
         
-        if (itemsError) throw itemsError;
+        if (itemsError) throw normalizeError(itemsError);
         
         // Create stock movements for delivered items
         const stockMovements = items
