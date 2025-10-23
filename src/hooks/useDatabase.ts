@@ -2,6 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ensureDocumentStatusEnum } from '@/utils/ensureDocumentStatusEnum';
 
+// Helper to normalize Supabase/PostgREST errors into Error instances with readable messages
+const normalizeError = (err: any): Error => {
+  if (!err) return new Error('Unknown error');
+  if (typeof err === 'string') return new Error(err);
+  if (err instanceof Error) return err;
+  if ((err as any).message) return new Error((err as any).message);
+  try {
+    return new Error(JSON.stringify(err));
+  } catch (e) {
+    return new Error(String(err));
+  }
+};
+
 // Types
 export interface Company {
   id: string;
@@ -250,7 +263,7 @@ export const useCompanies = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data as Company[];
     },
   });
@@ -267,7 +280,7 @@ export const useCreateCompany = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -288,7 +301,7 @@ export const useUpdateCompany = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -313,7 +326,7 @@ export const useCustomers = (companyId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data as Customer[];
     },
   });
@@ -330,7 +343,7 @@ export const useCreateCustomer = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -351,7 +364,7 @@ export const useUpdateCustomer = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -370,7 +383,7 @@ export const useDeleteCustomer = () => {
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -397,7 +410,7 @@ export const useProducts = (companyId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
   });
@@ -414,7 +427,7 @@ export const useCreateProduct = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -435,7 +448,7 @@ export const useUpdateProduct = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -456,7 +469,7 @@ export const useCreateStockMovement = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -482,7 +495,7 @@ export const useTaxSettings = (companyId?: string) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data as TaxSetting[];
     },
   });
@@ -499,7 +512,7 @@ export const useCreateTaxSetting = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -520,7 +533,7 @@ export const useUpdateTaxSetting = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -539,7 +552,7 @@ export const useDeleteTaxSetting = () => {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tax_settings'] });
@@ -748,7 +761,7 @@ export const useCreateInvoice = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -870,7 +883,7 @@ export const useCustomerPayments = (customerId?: string, companyId?: string) => 
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     enabled: !!customerId,
@@ -1226,7 +1239,7 @@ export const useRemittanceAdvice = (companyId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
   });
@@ -1243,7 +1256,7 @@ export const useCreateRemittanceAdvice = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1265,7 +1278,7 @@ export const useUpdateRemittanceAdvice = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1296,7 +1309,7 @@ export const useCreateRemittanceAdviceItems = () => {
         .insert(items)
         .select();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1353,7 +1366,7 @@ export const useUpdateRemittanceAdviceItems = () => {
           .insert(itemsToInsert)
           .select();
 
-        if (error) throw error;
+        if (error) throw normalizeError(error);
         return data;
       }
       return [];
@@ -1494,7 +1507,7 @@ export const useCreateQuotation = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1522,7 +1535,7 @@ export const useStockMovements = (companyId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
   });
@@ -1535,7 +1548,7 @@ export const useGenerateDocumentNumber = () => {
       const functionName = `generate_${type}_number`;
       const { data, error } = await supabase.rpc(functionName, { company_uuid: companyId });
       
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
   });
@@ -1562,7 +1575,7 @@ export const useDeliveryNotes = (companyId?: string) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
   });
@@ -1601,7 +1614,7 @@ export const useCreateDeliveryNote = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1622,7 +1635,7 @@ export const useUpdateDeliveryNote = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1700,7 +1713,7 @@ export const useLPOs = (companyId?: string) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     enabled: !!companyId,
@@ -1721,7 +1734,7 @@ export const useLPO = (lpoId?: string) => {
         .eq('id', lpoId)
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     enabled: !!lpoId,
@@ -1791,7 +1804,7 @@ export const useUpdateLPO = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
@@ -1811,7 +1824,7 @@ export const useDeleteLPO = () => {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lpos'] });
@@ -2005,7 +2018,7 @@ export const useCreateLPOItem = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: (data) => {
@@ -2027,7 +2040,7 @@ export const useUpdateLPOItem = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: (data) => {
@@ -2047,7 +2060,7 @@ export const useDeleteLPOItem = () => {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) throw normalizeError(error);
       return id;
     },
     onSuccess: () => {
