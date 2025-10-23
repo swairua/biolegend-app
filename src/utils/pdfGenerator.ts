@@ -430,6 +430,7 @@ const buildDocumentHTML = (data: DocumentData) => {
                 <td class="amount-cell" style="font-weight: bold;">${formatCurrency(item.line_total)}</td>
               ` : `
                 ${data.type === 'delivery' ? `
+                  <td class="center">${index + 1}</td>
                   <td>${sanitizeAndEscape(resolveLineItemDescription(item, resolveLineItemName(item, index)))}</td>
                   <td>${formatQuantity((item as any).quantity_ordered ?? (item as any).quantity ?? 0)}</td>
                   <td>${sanitizeAndEscape(resolveLineItemUnit(item))}</td>
