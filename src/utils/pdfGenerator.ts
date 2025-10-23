@@ -135,6 +135,13 @@ const resolveLineItemUnit = (item: any): string => {
   return unit || 'pcs';
 };
 
+const formatQuantity = (value: any) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0';
+  // Remove trailing .0 for whole numbers
+  return n % 1 === 0 ? String(n) : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+};
+
 const resolveLineItemCode = (item: any): string => {
   return toTrimmedString(item?.products?.product_code ?? item?.product_code);
 };
