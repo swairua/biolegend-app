@@ -701,8 +701,21 @@ export const useCreateDeliveryNote = () => {
           lastError = deliveryError;
           const msg = (deliveryError && (deliveryError.message || JSON.stringify(deliveryError)) || '').toString().toLowerCase();
 
+          // If the schema is missing delivery_note_number/delivery_number columns, remove them and retry
+          if ((msg.includes('could not find') || msg.includes('does not exist') || msg.includes('schema cache')) && (msg.includes('delivery_note_number') || msg.includes('delivery_number'))) {
+            // Remove fragile fields that may not exist in older schemas and retry
+            const sanitized = { ...note };
+            delete sanitized.delivery_note_number;
+            delete sanitized.delivery_number;
+            note = sanitized;
+
+            // brief pause before retry
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+
           // If it's a duplicate key on delivery number, try to generate a new number and retry
-          if (msg.includes('duplicate') || msg.includes('delivery_notes_delivery_number_key') || (deliveryError && (deliveryError.code === '23505' || deliveryError.code === 'PGRST116')) ) {
+          if (msg.includes('duplicate') || msg.includes('delivery_notes_delivery_number_key') || (deliveryError && (deliveryError.code === '23505' || deliveryError.code === 'pgrst116' || deliveryError.code === 'PGRST116')) ) {
             try {
               const { data: latest, error: latestError } = await supabase
                 .from('delivery_notes')
@@ -735,7 +748,7 @@ export const useCreateDeliveryNote = () => {
             continue; // retry
           }
 
-          // If it's not a duplicate key error, throw normalized error
+          // If it's not a handled error, throw normalized error
           throw normalizeError(deliveryError);
         }
 
