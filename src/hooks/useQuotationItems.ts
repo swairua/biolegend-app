@@ -684,14 +684,65 @@ export const useCreateDeliveryNote = () => {
         }
       }
 
-      // Create delivery note
-      const { data: deliveryData, error: deliveryError } = await supabase
-        .from('delivery_notes')
-        .insert([deliveryNote])
-        .select()
-        .single();
-      
-      if (deliveryError) throw normalizeError(deliveryError);
+      // Create delivery note with retry on duplicate delivery number
+      const insertDeliveryNoteWithRetry = async (note: any, attempts = 5) => {
+        let lastError: any = null;
+        for (let attempt = 0; attempt < attempts; attempt++) {
+          const { data: deliveryData, error: deliveryError } = await supabase
+            .from('delivery_notes')
+            .insert([note])
+            .select()
+            .single();
+
+          if (!deliveryError && deliveryData) {
+            return { data: deliveryData };
+          }
+
+          lastError = deliveryError;
+          const msg = (deliveryError && (deliveryError.message || JSON.stringify(deliveryError)) || '').toString().toLowerCase();
+
+          // If it's a duplicate key on delivery number, try to generate a new number and retry
+          if (msg.includes('duplicate') || msg.includes('delivery_notes_delivery_number_key') || (deliveryError && (deliveryError.code === '23505' || deliveryError.code === 'PGRST116')) ) {
+            try {
+              const { data: latest, error: latestError } = await supabase
+                .from('delivery_notes')
+                .select('delivery_number, delivery_note_number, created_at')
+                .eq('company_id', note.company_id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+              if (!latestError && latest && latest.length > 0) {
+                const latestVal = latest[0].delivery_number || latest[0].delivery_note_number || '';
+                const match = String(latestVal).match(/(\d+)/g);
+                const lastNumeric = match && match.length > 0 ? parseInt(match[match.length - 1], 10) : NaN;
+                const base = Number(note.delivery_note_number) || 500;
+                const next = Number.isFinite(lastNumeric) ? Math.max(base, lastNumeric + 1) : base;
+                // Increment by attempt to avoid race
+                note.delivery_note_number = String(next + attempt + 1);
+              } else {
+                // Fallback increment using current value
+                const currentNum = Number(note.delivery_note_number) || 500;
+                note.delivery_note_number = String(currentNum + attempt + 1);
+              }
+            } catch (e) {
+              // ignore and retry with increment
+              const currentNum = Number(note.delivery_note_number) || 500;
+              note.delivery_note_number = String(currentNum + attempt + 1);
+            }
+
+            // small pause to reduce race collisions
+            await new Promise(res => setTimeout(res, 100 * (attempt + 1)));
+            continue; // retry
+          }
+
+          // If it's not a duplicate key error, throw normalized error
+          throw normalizeError(deliveryError);
+        }
+
+        throw normalizeError(lastError);
+      };
+
+      const { data: deliveryData } = await insertDeliveryNoteWithRetry(deliveryNote);
       
       // Create delivery note items
       if (items.length > 0) {
