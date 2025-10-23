@@ -280,8 +280,25 @@ export const CreateDeliveryNoteModal = ({
       onSuccess?.();
       handleClose();
     } catch (error) {
+      // Normalize error message for better user feedback
       console.error('Error creating delivery note:', error);
-      toast.error('Failed to create delivery note');
+      let message = 'Failed to create delivery note';
+      try {
+        if (!error) {
+          message = 'Unknown error';
+        } else if (typeof error === 'string') {
+          message = error;
+        } else if (error instanceof Error && error.message) {
+          message = error.message;
+        } else if ((error as any).message) {
+          message = (error as any).message;
+        } else {
+          message = JSON.stringify(error);
+        }
+      } catch (e) {
+        message = 'Failed to parse error';
+      }
+      toast.error(message);
     }
   };
 
