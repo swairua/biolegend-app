@@ -385,9 +385,9 @@ const buildDocumentHTML = (data: DocumentData) => {
             ${data.type === 'delivery' ? `
               <th style="width: 5%;">#</th>
               <th style="width: 40%;">Item Description</th>
-              <th style="width: 15%;">Ordered Qty</th>
+              <th style="width: 12%;">Ordered Qty</th>
+              <th style="width: 8%;">Unit</th>
               <th style="width: 15%;">Delivered Qty</th>
-              <th style="width: 15%;">Unit</th>
               <th style="width: 10%;">Status</th>
             ` : data.type === 'statement' ? `
               <th style="width: 16%;">LPO DATE</th>
@@ -1146,10 +1146,10 @@ export const generatePDF = (data: DocumentData) => {
                 ${data.type === 'delivery' ? `
                 <th style="width: 5%;">#</th>
                 <th style="width: 40%;">Item Description</th>
-                <th style="width: 15%;">Ordered Qty</th>
-                <th style="width: 15%;">Delivered Qty</th>
-                <th style="width: 15%;">Unit</th>
-                <th style="width: 10%;">Status</th>
+              <th style="width: 12%;">Ordered Qty</th>
+              <th style="width: 8%;">Unit</th>
+              <th style="width: 15%;">Delivered Qty</th>
+              <th style="width: 10%;">Status</th>
                 ` : data.type === 'statement' ? `
                 <th style="width: 16%;">LPO DATE</th>
                 <th style="width: 20%;">Your LPO</th>
