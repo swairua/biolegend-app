@@ -254,7 +254,7 @@ export const useConvertQuotationToInvoice = () => {
             movement_type: 'OUT' as const,
             reference_type: 'INVOICE' as const,
             reference_id: invoice.id,
-            quantity: -item.quantity,
+            quantity: item.quantity,
             cost_per_unit: item.unit_price,
             notes: `Stock reduction for invoice ${invoice.invoice_number} (converted from quotation ${quotation.quotation_number})`
           }));
