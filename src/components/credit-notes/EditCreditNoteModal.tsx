@@ -43,7 +43,6 @@ export function EditCreditNoteModal({
   creditNote,
   onSuccess 
 }: EditCreditNoteModalProps) {
-  if (!creditNote) return null;
   const [creditNoteDate, setCreditNoteDate] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -66,6 +65,8 @@ export function EditCreditNoteModal({
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+
+  if (!creditNote) return null;
 
   // Only allow editing draft credit notes
   if (creditNote.status !== 'draft') {
