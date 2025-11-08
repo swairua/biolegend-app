@@ -53,10 +53,11 @@ export function ViewQuotationModal({
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
-  if (!quotation) return null;
-
+  // Call currency hook unconditionally to preserve hooks order
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+
+  if (!quotation) return null;
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', {
