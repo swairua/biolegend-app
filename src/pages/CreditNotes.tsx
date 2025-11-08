@@ -25,9 +25,9 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
@@ -36,7 +36,8 @@ import {
   Send,
   Calendar,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Undo2
 } from 'lucide-react';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -52,6 +53,7 @@ import { SimpleForeignKeyPatch } from '@/components/credit-notes/SimpleForeignKe
 import { CreditNotesConnectionStatus } from '@/components/credit-notes/CreditNotesConnectionStatus';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
 import type { CreditNote } from '@/hooks/useCreditNotes';
+import { useReverseCreditNote } from '@/hooks/useReverseCreditNote';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -88,6 +90,7 @@ export default function CreditNotes() {
   const currentCompany = companies?.[0];
   const { data: creditNotes, isLoading, error, refetch } = useCreditNotes(currentCompany?.id);
   const downloadPDF = useCreditNotePDFDownload();
+  const reverseCreditNote = useReverseCreditNote();
 
   // Filter and search logic
   const filteredCreditNotes = creditNotes?.filter(creditNote => {
@@ -478,6 +481,26 @@ export default function CreditNotes() {
                           >
                             <DollarSign className="h-4 w-4 mr-1" />
                             Apply
+                          </Button>
+                        )}
+                        {creditNote.status !== 'cancelled' && (creditNote.applied_amount || 0) === 0 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              const ok = window.confirm(`Reverse credit note ${creditNote.credit_note_number}? This will cancel it${creditNote.affects_inventory ? ' and reverse stock movements' : ''}.`);
+                              if (!ok) return;
+                              try {
+                                await reverseCreditNote.mutateAsync({ creditNoteId: creditNote.id });
+                                refetch();
+                              } catch (e) {
+                                // handled in hook toast
+                              }
+                            }}
+                            title="Reverse credit note"
+                            disabled={reverseCreditNote.isPending}
+                          >
+                            <Undo2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>

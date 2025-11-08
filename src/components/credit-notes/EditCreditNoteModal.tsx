@@ -63,10 +63,10 @@ export function EditCreditNoteModal({
     }
   }, [creditNote, open]);
 
-  if (!creditNote) return null;
-
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+
+  if (!creditNote) return null;
 
   // Only allow editing draft credit notes
   if (creditNote.status !== 'draft') {
