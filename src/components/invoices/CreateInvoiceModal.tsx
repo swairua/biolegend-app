@@ -130,14 +130,15 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
   }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate]);
 
-  // Inherit global currency selection when opening the modal
+  // Inherit global currency selection when opening the modal (unless initial currency was specified)
   useEffect(() => {
     if (!open) return;
-    if (globalCurrency && globalCurrency !== currencyCode) {
+    // Only change currency if no initial currency was provided and global currency differs
+    if (!initialCurrencyCode && globalCurrency && globalCurrency !== currencyCode) {
       // Use existing handler to fetch and lock rate for the invoice date and convert existing item prices
       handleCurrencyChange(globalCurrency);
     }
-  }, [open, globalCurrency]);
+  }, [open, globalCurrency, initialCurrencyCode]);
 
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
