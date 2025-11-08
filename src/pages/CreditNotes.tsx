@@ -53,6 +53,7 @@ import { SimpleForeignKeyPatch } from '@/components/credit-notes/SimpleForeignKe
 import { CreditNotesConnectionStatus } from '@/components/credit-notes/CreditNotesConnectionStatus';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
 import type { CreditNote } from '@/hooks/useCreditNotes';
+import { useReverseCreditNote } from '@/hooks/useReverseCreditNote';
 
 function getStatusColor(status: string) {
   switch (status) {
