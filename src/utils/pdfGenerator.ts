@@ -1797,6 +1797,7 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
     number: `STMT-${customer.customer_code || customer.id}-${statementDate}`,
     date: statementDate,
     company: company, // Pass company details
+    currency_code: 'KES', // Customer statements default to KES (company currency)
     customer: {
       name: customer.name,
       email: customer.email,
@@ -1932,6 +1933,7 @@ export const downloadDeliveryNotePDF = async (deliveryNote: any, company?: Compa
     // Add invoice reference for delivery notes
     lpo_number: `Related Invoice: ${invoiceNumber}`,
     company: company, // Pass company details
+    currency_code: (deliveryNote.currency_code === 'USD' || deliveryNote.currency_code === 'KES' ? deliveryNote.currency_code : (Number(deliveryNote.exchange_rate) && Number(deliveryNote.exchange_rate) !== 1 ? 'USD' : 'KES')),
     customer: {
       name: deliveryNote.customers?.name || 'Unknown Customer',
       email: deliveryNote.customers?.email,

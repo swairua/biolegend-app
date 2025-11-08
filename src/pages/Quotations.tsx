@@ -23,7 +23,7 @@ import {
   Calendar,
   Send
 } from 'lucide-react';
-import { useQuotations, useCompanies } from '@/hooks/useDatabase';
+import { useQuotations, useCompanies, useUpdateQuotationStatus } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +34,7 @@ import { EditQuotationModal } from '@/components/quotations/EditQuotationModal';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle, X } from 'lucide-react';
 
 interface Quotation {
   id: string;
@@ -55,6 +56,8 @@ interface Quotation {
   tax_amount?: number;
   notes?: string;
   terms_and_conditions?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
 }
 
 function getStatusColor(status: string) {
@@ -76,6 +79,11 @@ function getStatusColor(status: string) {
   }
 }
 
+function isQuotationExpired(quotation: Quotation): boolean {
+  if (!quotation.valid_until) return false;
+  return new Date(quotation.valid_until) < new Date();
+}
+
 export default function Quotations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -90,6 +98,7 @@ export default function Quotations() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
   const { data: quotations, isLoading, error, refetch } = useQuotations(currentCompany?.id);
+  const updateQuotationStatus = useUpdateQuotationStatus();
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -171,12 +180,14 @@ Website: www.biolegendscientific.co.ke`;
       const emailUrl = `mailto:${quotation.customers.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(emailUrl, '_blank');
 
-      // TODO: In a real app, this would actually send the email via API and update the quotation status
-      toast.success(`Email client opened with quotation ${quotation.quotation_number} for ${quotation.customers.email}`);
+      // Update quotation status to 'sent'
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'sent',
+      });
 
-      // Update quotation status to 'sent' (simulated)
-      // await updateQuotationStatus(quotation.id, 'sent');
-
+      toast.success(`Quotation ${quotation.quotation_number} sent and status updated to "Sent"`);
+      refetch();
     } catch (error) {
       console.error('Error sending quotation:', error);
 
@@ -197,7 +208,39 @@ Website: www.biolegendscientific.co.ke`;
         }
       }
 
-      toast.error(`Failed to send quotation email: ${errorMessage}`);
+      toast.error(`Failed to send quotation: ${errorMessage}`);
+    }
+  };
+
+  const handleAcceptQuotation = async (quotation: Quotation) => {
+    try {
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'accepted',
+      });
+
+      toast.success(`Quotation ${quotation.quotation_number} marked as accepted`);
+      refetch();
+      setShowViewModal(false);
+    } catch (error) {
+      console.error('Error accepting quotation:', error);
+      toast.error('Failed to accept quotation');
+    }
+  };
+
+  const handleRejectQuotation = async (quotation: Quotation) => {
+    try {
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'rejected',
+      });
+
+      toast.success(`Quotation ${quotation.quotation_number} marked as rejected`);
+      refetch();
+      setShowViewModal(false);
+    } catch (error) {
+      console.error('Error rejecting quotation:', error);
+      toast.error('Failed to reject quotation');
     }
   };
 
@@ -424,14 +467,16 @@ Website: www.biolegendscientific.co.ke`;
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditQuotation(quotation)}
-                            title="Edit quotation"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {quotation.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditQuotation(quotation)}
+                              title="Edit quotation"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -455,7 +500,31 @@ Website: www.biolegendscientific.co.ke`;
                               <span className="hidden sm:inline">Send</span>
                             </Button>
                           )}
-                          {quotation.status !== 'converted' && (
+                          {quotation.status === 'sent' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAcceptQuotation(quotation)}
+                                className="bg-success-light text-success border-success/20 hover:bg-success hover:text-success-foreground"
+                                title="Accept quotation"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Accept</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRejectQuotation(quotation)}
+                                className="bg-destructive-light text-destructive border-destructive/20 hover:bg-destructive hover:text-destructive-foreground"
+                                title="Reject quotation"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Reject</span>
+                              </Button>
+                            </>
+                          )}
+                          {quotation.status !== 'converted' && quotation.status !== 'rejected' && quotation.status !== 'expired' && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -492,6 +561,8 @@ Website: www.biolegendscientific.co.ke`;
         onEdit={() => selectedQuotation && handleEditQuotation(selectedQuotation)}
         onDownload={() => selectedQuotation && handleDownloadQuotation(selectedQuotation)}
         onSend={() => selectedQuotation && handleSendQuotation(selectedQuotation)}
+        onAccept={() => selectedQuotation && handleAcceptQuotation(selectedQuotation)}
+        onReject={() => selectedQuotation && handleRejectQuotation(selectedQuotation)}
       />
 
       <EditQuotationModal

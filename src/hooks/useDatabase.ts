@@ -2134,3 +2134,31 @@ export const useUpdateLPOWithItems = () => {
     },
   });
 };
+
+// Update Quotation Status
+export const useUpdateQuotationStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      quotationId,
+      status,
+    }: {
+      quotationId: string;
+      status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted';
+    }) => {
+      const { data, error } = await supabase
+        .from('quotations')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', quotationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['quotation', variables.quotationId] });
+    },
+  });
+};
