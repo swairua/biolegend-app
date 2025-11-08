@@ -1797,6 +1797,7 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
     number: `STMT-${customer.customer_code || customer.id}-${statementDate}`,
     date: statementDate,
     company: company, // Pass company details
+    currency_code: 'KES', // Customer statements default to KES (company currency)
     customer: {
       name: customer.name,
       email: customer.email,
