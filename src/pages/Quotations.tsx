@@ -12,18 +12,19 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
   FileText,
   Download,
   Calendar,
-  Send
+  Send,
+  Trash2
 } from 'lucide-react';
-import { useQuotations, useCompanies, useUpdateQuotationStatus } from '@/hooks/useDatabase';
+import { useQuotations, useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,6 +100,7 @@ export default function Quotations() {
   const currentCompany = companies?.[0];
   const { data: quotations, isLoading, error, refetch } = useQuotations(currentCompany?.id);
   const updateQuotationStatus = useUpdateQuotationStatus();
+  const deleteQuotation = useDeleteQuotation();
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -241,6 +243,23 @@ Website: www.biolegendscientific.co.ke`;
     } catch (error) {
       console.error('Error rejecting quotation:', error);
       toast.error('Failed to reject quotation');
+    }
+  };
+
+  const handleDeleteQuotation = async (quotation: Quotation) => {
+    if (quotation.status === 'converted') {
+      toast.error('Cannot delete a converted quotation');
+      return;
+    }
+    const confirm = window.confirm(`Delete quotation ${quotation.quotation_number}? This action cannot be undone.`);
+    if (!confirm) return;
+    try {
+      await deleteQuotation.mutateAsync(quotation.id);
+      toast.success('Quotation deleted successfully');
+      refetch();
+    } catch (error) {
+      console.error('Error deleting quotation:', error);
+      toast.error('Failed to delete quotation');
     }
   };
 
@@ -487,6 +506,15 @@ Website: www.biolegendscientific.co.ke`;
                           >
                             <Download className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteQuotation(quotation)}
+                            title="Delete quotation"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
 
                         {/* Conditional Action Buttons */}
@@ -526,7 +554,7 @@ Website: www.biolegendscientific.co.ke`;
                               </Button>
                             </>
                           )}
-                          {quotation.status === 'accepted' && (
+                          {(quotation.status === 'accepted' || quotation.status === 'draft') && (
                             <Button
                               variant="outline"
                               size="sm"
