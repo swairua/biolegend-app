@@ -275,7 +275,9 @@ Website: www.biolegendscientific.co.ke`;
         notes: `Converted from quotation ${quotation.quotation_number}`,
         terms: quotation.terms_and_conditions || 'Payment due within 30 days of invoice date.',
         invoiceDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        currencyCode: quotation.currency_code || 'KES',
+        exchangeRate: quotation.exchange_rate || 1
       });
       setSelectedQuotation(quotation);
       setShowCreateInvoiceModal(true);
