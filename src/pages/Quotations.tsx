@@ -91,7 +91,7 @@ export default function Quotations() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
-  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
+  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string; currencyCode?: 'KES' | 'USD'; exchangeRate?: number } | null>(null);
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
