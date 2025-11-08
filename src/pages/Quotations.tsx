@@ -91,7 +91,7 @@ export default function Quotations() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
-  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
+  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string; currencyCode?: 'KES' | 'USD'; exchangeRate?: number } | null>(null);
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -275,7 +275,9 @@ Website: www.biolegendscientific.co.ke`;
         notes: `Converted from quotation ${quotation.quotation_number}`,
         terms: quotation.terms_and_conditions || 'Payment due within 30 days of invoice date.',
         invoiceDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        currencyCode: quotation.currency_code || 'KES',
+        exchangeRate: quotation.exchange_rate || 1
       });
       setSelectedQuotation(quotation);
       setShowCreateInvoiceModal(true);
@@ -598,6 +600,8 @@ Website: www.biolegendscientific.co.ke`;
           sourceQuotationId={selectedQuotation?.id}
           preSelectedCustomer={invoicePrefill.customer}
           initialItems={invoicePrefill.items}
+          initialCurrencyCode={invoicePrefill.currencyCode}
+          initialExchangeRate={invoicePrefill.exchangeRate}
           initialNotes={invoicePrefill.notes}
           initialTerms={invoicePrefill.terms}
           initialInvoiceDate={invoicePrefill.invoiceDate}
