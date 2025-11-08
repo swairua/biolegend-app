@@ -212,6 +212,38 @@ Website: www.biolegendscientific.co.ke`;
     }
   };
 
+  const handleAcceptQuotation = async (quotation: Quotation) => {
+    try {
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'accepted',
+      });
+
+      toast.success(`Quotation ${quotation.quotation_number} marked as accepted`);
+      refetch();
+      setShowViewModal(false);
+    } catch (error) {
+      console.error('Error accepting quotation:', error);
+      toast.error('Failed to accept quotation');
+    }
+  };
+
+  const handleRejectQuotation = async (quotation: Quotation) => {
+    try {
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'rejected',
+      });
+
+      toast.success(`Quotation ${quotation.quotation_number} marked as rejected`);
+      refetch();
+      setShowViewModal(false);
+    } catch (error) {
+      console.error('Error rejecting quotation:', error);
+      toast.error('Failed to reject quotation');
+    }
+  };
+
   const handleConvertToInvoice = async (quotation: Quotation) => {
     try {
       if (!currentCompany?.id) {
