@@ -66,9 +66,11 @@ interface CreateInvoiceModalProps {
   initialInvoiceDate?: string;
   initialDueDate?: string;
   sourceQuotationId?: string;
+  initialCurrencyCode?: 'KES' | 'USD';
+  initialExchangeRate?: number;
 }
 
-export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, sourceQuotationId }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, sourceQuotationId, initialCurrencyCode, initialExchangeRate }: CreateInvoiceModalProps) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(preSelectedCustomer?.id || '');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(
@@ -76,8 +78,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   );
   const [lpoNumber, setLpoNumber] = useState('');
   const { currency: globalCurrency } = useCurrency();
-  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>(globalCurrency || 'KES');
-  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>(initialCurrencyCode || globalCurrency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(initialExchangeRate || 1);
   const previousRateRef = useRef<number>(1);
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
