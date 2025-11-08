@@ -46,6 +46,7 @@ export function ApplyCreditNoteModal({
   onSuccess, 
   creditNote 
 }: ApplyCreditNoteModalProps) {
+  if (!creditNote) return null;
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [amountToApply, setAmountToApply] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,10 +151,6 @@ export function ApplyCreditNoteModal({
     }
   };
 
-  if (!creditNote) {
-    return null;
-  }
-
   const maxApplicableAmount = selectedInvoice 
     ? Math.min(creditNote.balance || 0, selectedInvoice.balance_due || 0)
     : creditNote.balance || 0;
@@ -217,7 +214,7 @@ export function ApplyCreditNoteModal({
                         <div className="flex items-center justify-between w-full">
                           <span>{invoice.invoice_number}</span>
                           <Badge variant="outline" className="ml-2">
-                            {formatCurrency(invoice.balance_due || 0)} due
+                            {fmtInvoice(invoice.balance_due || 0, invoice)} due
                           </Badge>
                         </div>
                       </SelectItem>
@@ -233,11 +230,11 @@ export function ApplyCreditNoteModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm text-muted-foreground">Invoice Total</Label>
-                      <p className="font-medium">{formatCurrency(selectedInvoice.total_amount || 0)}</p>
+                      <p className="font-medium">{fmtInvoice(selectedInvoice.total_amount || 0, selectedInvoice)}</p>
                     </div>
                     <div>
                       <Label className="text-sm text-muted-foreground">Balance Due</Label>
-                      <p className="font-medium text-warning">{formatCurrency(selectedInvoice.balance_due || 0)}</p>
+                      <p className="font-medium text-warning">{fmtInvoice(selectedInvoice.balance_due || 0, selectedInvoice)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -261,7 +258,7 @@ export function ApplyCreditNoteModal({
             />
             {selectedInvoiceId && (
               <p className="text-sm text-muted-foreground">
-                Maximum: {formatCurrency(maxApplicableAmount)}
+                Maximum: {fmtInvoice(maxApplicableAmount, selectedInvoice)}
               </p>
             )}
           </div>
@@ -298,7 +295,7 @@ export function ApplyCreditNoteModal({
             }
             className="gradient-primary text-primary-foreground"
           >
-            {isSubmitting ? 'Applying...' : `Apply ${formatCurrency(amountToApply)}`}
+            {isSubmitting ? 'Applying...' : `Apply ${fmtInvoice(amountToApply, selectedInvoice)}`}
           </Button>
         </DialogFooter>
       </DialogContent>

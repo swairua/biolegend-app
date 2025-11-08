@@ -43,6 +43,7 @@ export function EditCreditNoteModal({
   creditNote,
   onSuccess 
 }: EditCreditNoteModalProps) {
+  if (!creditNote) return null;
   const [creditNoteDate, setCreditNoteDate] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -62,8 +63,6 @@ export function EditCreditNoteModal({
       setAffectsInventory(creditNote.affects_inventory);
     }
   }, [creditNote, open]);
-
-  if (!creditNote) return null;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
