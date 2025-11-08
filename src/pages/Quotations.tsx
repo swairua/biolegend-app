@@ -55,6 +55,8 @@ interface Quotation {
   tax_amount?: number;
   notes?: string;
   terms_and_conditions?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
 }
 
 function getStatusColor(status: string) {
