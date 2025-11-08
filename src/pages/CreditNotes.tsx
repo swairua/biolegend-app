@@ -25,9 +25,9 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
@@ -36,7 +36,8 @@ import {
   Send,
   Calendar,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Undo2
 } from 'lucide-react';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
