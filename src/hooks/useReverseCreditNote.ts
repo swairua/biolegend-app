@@ -46,18 +46,35 @@ export function useReverseCreditNote() {
         if (allocations && allocations.length > 0) {
           for (const allocation of allocations) {
             try {
-              // Update invoice to remove the applied credit
-              const { error: invoiceErr } = await supabase
+              // Fetch current invoice values
+              const { data: invoice, error: invoiceFetchErr } = await supabase
                 .from('invoices')
-                .update({
-                  paid_amount: supabase.raw(`paid_amount - ${allocation.allocated_amount}`),
-                  balance_due: supabase.raw(`balance_due + ${allocation.allocated_amount}`),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', allocation.invoice_id);
+                .select('paid_amount, balance_due')
+                .eq('id', allocation.invoice_id)
+                .single();
 
-              if (invoiceErr) {
-                console.error('Error updating invoice after allocation reversal:', invoiceErr);
+              if (invoiceFetchErr) {
+                console.error('Error fetching invoice:', invoiceFetchErr);
+                continue;
+              }
+
+              if (invoice) {
+                // Update invoice to remove the applied credit
+                const newPaidAmount = Math.max(0, (invoice.paid_amount || 0) - allocation.allocated_amount);
+                const newBalanceDue = (invoice.balance_due || 0) + allocation.allocated_amount;
+
+                const { error: invoiceErr } = await supabase
+                  .from('invoices')
+                  .update({
+                    paid_amount: newPaidAmount,
+                    balance_due: newBalanceDue,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', allocation.invoice_id);
+
+                if (invoiceErr) {
+                  console.error('Error updating invoice after allocation reversal:', invoiceErr);
+                }
               }
             } catch (error) {
               console.error('Error processing allocation reversal:', error);
