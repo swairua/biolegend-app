@@ -79,6 +79,11 @@ function getStatusColor(status: string) {
   }
 }
 
+function isQuotationExpired(quotation: Quotation): boolean {
+  if (!quotation.valid_until) return false;
+  return new Date(quotation.valid_until) < new Date();
+}
+
 export default function Quotations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
