@@ -600,6 +600,8 @@ Website: www.biolegendscientific.co.ke`;
           sourceQuotationId={selectedQuotation?.id}
           preSelectedCustomer={invoicePrefill.customer}
           initialItems={invoicePrefill.items}
+          initialCurrencyCode={invoicePrefill.currencyCode}
+          initialExchangeRate={invoicePrefill.exchangeRate}
           initialNotes={invoicePrefill.notes}
           initialTerms={invoicePrefill.terms}
           initialInvoiceDate={invoicePrefill.invoiceDate}
