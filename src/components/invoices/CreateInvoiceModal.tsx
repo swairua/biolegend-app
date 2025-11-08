@@ -65,9 +65,10 @@ interface CreateInvoiceModalProps {
   initialLpoNumber?: string;
   initialInvoiceDate?: string;
   initialDueDate?: string;
+  sourceQuotationId?: string;
 }
 
-export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, sourceQuotationId }: CreateInvoiceModalProps) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(preSelectedCustomer?.id || '');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(
@@ -448,6 +449,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         invoice_date: invoiceDate,
         due_date: dueDate,
         lpo_number: lpoNumber || null,
+        quotation_id: sourceQuotationId || null,
         status: 'draft',
         subtotal: adjustedSubtotal,
         tax_amount: adjustedTaxAmount,

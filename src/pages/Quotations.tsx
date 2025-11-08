@@ -50,7 +50,7 @@ interface Quotation {
   quotation_date: string;
   valid_until?: string;
   total_amount: number;
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted';
   quotation_items?: any[];
   subtotal?: number;
   tax_amount?: number;
@@ -524,7 +524,7 @@ Website: www.biolegendscientific.co.ke`;
                               </Button>
                             </>
                           )}
-                          {quotation.status !== 'converted' && quotation.status !== 'rejected' && quotation.status !== 'expired' && (
+                          {quotation.status === 'accepted' && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -583,7 +583,7 @@ Website: www.biolegendscientific.co.ke`;
           onSuccess={async () => {
             try {
               if (selectedQuotation?.id) {
-                await supabase.from('quotations').update({ status: 'converted' }).eq('id', selectedQuotation.id);
+                await updateQuotationStatus.mutateAsync({ quotationId: selectedQuotation.id, status: 'converted' });
               }
               toast.success('Invoice created and inventory updated.');
               setSelectedQuotation(null);
@@ -595,6 +595,7 @@ Website: www.biolegendscientific.co.ke`;
               refetch();
             }
           }}
+          sourceQuotationId={selectedQuotation?.id}
           preSelectedCustomer={invoicePrefill.customer}
           initialItems={invoicePrefill.items}
           initialNotes={invoicePrefill.notes}

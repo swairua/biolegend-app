@@ -78,6 +78,8 @@ export function ViewQuotationModal({
         return 'bg-destructive-light text-destructive border-destructive/20';
       case 'expired':
         return 'bg-destructive-light text-destructive border-destructive/20';
+      case 'converted':
+        return 'bg-primary-light text-primary border-primary/20';
       default:
         return 'bg-muted text-muted-foreground border-muted-foreground/20';
     }
