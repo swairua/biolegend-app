@@ -484,54 +484,57 @@ export default function CreditNotes() {
                           </Button>
                         )}
                         {creditNote.status !== 'cancelled' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={async () => {
-                              // Show detailed confirmation based on credit note state
-                              let confirmationMessage = `Reverse credit note ${creditNote.credit_note_number}?\n\n`;
-                              confirmationMessage += `Status: ${creditNote.status.toUpperCase()}\n`;
-                              confirmationMessage += `Amount: ${formatCurrency(creditNote.total_amount)}\n`;
-                              confirmationMessage += `Applied: ${formatCurrency(creditNote.applied_amount || 0)}\n`;
-                              confirmationMessage += `Balance: ${formatCurrency(creditNote.balance || 0)}\n\n`;
+                          <div className="group relative">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                // Show detailed confirmation based on credit note state
+                                let confirmationMessage = `Reverse credit note ${creditNote.credit_note_number}?\n\n`;
+                                confirmationMessage += `Status: ${creditNote.status.toUpperCase()}\n`;
+                                confirmationMessage += `Amount: ${formatCurrency(creditNote.total_amount)}\n`;
+                                confirmationMessage += `Applied: ${formatCurrency(creditNote.applied_amount || 0)}\n`;
+                                confirmationMessage += `Balance: ${formatCurrency(creditNote.balance || 0)}\n\n`;
 
-                              if ((creditNote.applied_amount || 0) > 0) {
-                                confirmationMessage += `⚠️ This credit note has been applied to ${creditNote.applied_amount ? '1 or more' : '0'} invoice(s).\n`;
-                                confirmationMessage += `Reversing will:\n`;
-                                confirmationMessage += `• Cancel the credit note\n`;
-                                confirmationMessage += `• Remove all allocations\n`;
-                                confirmationMessage += `• Restore invoice balances\n`;
-                              } else {
-                                confirmationMessage += `This credit note hasn't been applied yet.\n`;
-                                confirmationMessage += `Reversing will:\n`;
-                                confirmationMessage += `• Cancel the credit note\n`;
-                              }
+                                if ((creditNote.applied_amount || 0) > 0) {
+                                  confirmationMessage += `⚠️ This credit note has been applied to invoices.\n`;
+                                  confirmationMessage += `Reversing will:\n`;
+                                  confirmationMessage += `• Cancel the credit note\n`;
+                                  confirmationMessage += `• Remove all allocations\n`;
+                                  confirmationMessage += `• Restore invoice balances\n`;
+                                } else {
+                                  confirmationMessage += `This credit note hasn't been applied yet.\n`;
+                                  confirmationMessage += `Reversing will:\n`;
+                                  confirmationMessage += `• Cancel the credit note\n`;
+                                }
 
-                              if (creditNote.affects_inventory) {
-                                confirmationMessage += `• Reverse stock movements\n`;
-                              }
+                                if (creditNote.affects_inventory) {
+                                  confirmationMessage += `• Reverse stock movements\n`;
+                                }
 
-                              confirmationMessage += `\nThis action cannot be undone.`;
+                                confirmationMessage += `\nThis action cannot be undone.`;
 
-                              const ok = window.confirm(confirmationMessage);
-                              if (!ok) return;
+                                const ok = window.confirm(confirmationMessage);
+                                if (!ok) return;
 
-                              try {
-                                await reverseCreditNote.mutateAsync({ creditNoteId: creditNote.id });
-                                refetch();
-                              } catch (e) {
-                                // handled in hook toast
-                              }
-                            }}
-                            title={
-                              (creditNote.applied_amount || 0) > 0
-                                ? 'Reverse credit note and remove allocations'
-                                : 'Reverse credit note'
-                            }
-                            disabled={reverseCreditNote.isPending}
-                          >
-                            <Undo2 className="h-4 w-4" />
-                          </Button>
+                                try {
+                                  await reverseCreditNote.mutateAsync({ creditNoteId: creditNote.id });
+                                  refetch();
+                                } catch (e) {
+                                  // handled in hook toast
+                                }
+                              }}
+                              className="text-muted-foreground hover:text-destructive"
+                              disabled={reverseCreditNote.isPending}
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10">
+                              <div className="bg-foreground text-background text-xs rounded py-1 px-2 whitespace-nowrap">
+                                {(creditNote.applied_amount || 0) > 0 ? 'Reverse & remove allocations' : 'Reverse credit note'}
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </TableCell>
