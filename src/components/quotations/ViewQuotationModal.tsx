@@ -33,6 +33,8 @@ interface ViewQuotationModalProps {
   onEdit: () => void;
   onDownload: () => void;
   onSend: () => void;
+  onAccept?: () => void;
+  onReject?: () => void;
 }
 
 export function ViewQuotationModal({
