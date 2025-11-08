@@ -180,12 +180,14 @@ Website: www.biolegendscientific.co.ke`;
       const emailUrl = `mailto:${quotation.customers.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(emailUrl, '_blank');
 
-      // TODO: In a real app, this would actually send the email via API and update the quotation status
-      toast.success(`Email client opened with quotation ${quotation.quotation_number} for ${quotation.customers.email}`);
+      // Update quotation status to 'sent'
+      await updateQuotationStatus.mutateAsync({
+        quotationId: quotation.id,
+        status: 'sent',
+      });
 
-      // Update quotation status to 'sent' (simulated)
-      // await updateQuotationStatus(quotation.id, 'sent');
-
+      toast.success(`Quotation ${quotation.quotation_number} sent and status updated to "Sent"`);
+      refetch();
     } catch (error) {
       console.error('Error sending quotation:', error);
 
@@ -206,7 +208,7 @@ Website: www.biolegendscientific.co.ke`;
         }
       }
 
-      toast.error(`Failed to send quotation email: ${errorMessage}`);
+      toast.error(`Failed to send quotation: ${errorMessage}`);
     }
   };
 
