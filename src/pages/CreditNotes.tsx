@@ -483,13 +483,39 @@ export default function CreditNotes() {
                             Apply
                           </Button>
                         )}
-                        {creditNote.status !== 'cancelled' && (creditNote.applied_amount || 0) === 0 && (
+                        {creditNote.status !== 'cancelled' && (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={async () => {
-                              const ok = window.confirm(`Reverse credit note ${creditNote.credit_note_number}? This will cancel it${creditNote.affects_inventory ? ' and reverse stock movements' : ''}.`);
+                              // Show detailed confirmation based on credit note state
+                              let confirmationMessage = `Reverse credit note ${creditNote.credit_note_number}?\n\n`;
+                              confirmationMessage += `Status: ${creditNote.status.toUpperCase()}\n`;
+                              confirmationMessage += `Amount: ${formatCurrency(creditNote.total_amount)}\n`;
+                              confirmationMessage += `Applied: ${formatCurrency(creditNote.applied_amount || 0)}\n`;
+                              confirmationMessage += `Balance: ${formatCurrency(creditNote.balance || 0)}\n\n`;
+
+                              if ((creditNote.applied_amount || 0) > 0) {
+                                confirmationMessage += `⚠️ This credit note has been applied to ${creditNote.applied_amount ? '1 or more' : '0'} invoice(s).\n`;
+                                confirmationMessage += `Reversing will:\n`;
+                                confirmationMessage += `• Cancel the credit note\n`;
+                                confirmationMessage += `• Remove all allocations\n`;
+                                confirmationMessage += `• Restore invoice balances\n`;
+                              } else {
+                                confirmationMessage += `This credit note hasn't been applied yet.\n`;
+                                confirmationMessage += `Reversing will:\n`;
+                                confirmationMessage += `• Cancel the credit note\n`;
+                              }
+
+                              if (creditNote.affects_inventory) {
+                                confirmationMessage += `• Reverse stock movements\n`;
+                              }
+
+                              confirmationMessage += `\nThis action cannot be undone.`;
+
+                              const ok = window.confirm(confirmationMessage);
                               if (!ok) return;
+
                               try {
                                 await reverseCreditNote.mutateAsync({ creditNoteId: creditNote.id });
                                 refetch();
@@ -497,7 +523,11 @@ export default function CreditNotes() {
                                 // handled in hook toast
                               }
                             }}
-                            title="Reverse credit note"
+                            title={
+                              (creditNote.applied_amount || 0) > 0
+                                ? 'Reverse credit note and remove allocations'
+                                : 'Reverse credit note'
+                            }
                             disabled={reverseCreditNote.isPending}
                           >
                             <Undo2 className="h-4 w-4" />
