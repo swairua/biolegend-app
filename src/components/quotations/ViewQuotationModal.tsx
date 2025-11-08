@@ -43,7 +43,9 @@ export function ViewQuotationModal({
   quotation,
   onEdit,
   onDownload,
-  onSend
+  onSend,
+  onAccept,
+  onReject
 }: ViewQuotationModalProps) {
   // Get company data for logo (hooks must be called unconditionally)
   const { data: companies } = useCompanies();
