@@ -500,7 +500,31 @@ Website: www.biolegendscientific.co.ke`;
                               <span className="hidden sm:inline">Send</span>
                             </Button>
                           )}
-                          {quotation.status !== 'converted' && (
+                          {quotation.status === 'sent' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAcceptQuotation(quotation)}
+                                className="bg-success-light text-success border-success/20 hover:bg-success hover:text-success-foreground"
+                                title="Accept quotation"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Accept</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRejectQuotation(quotation)}
+                                className="bg-destructive-light text-destructive border-destructive/20 hover:bg-destructive hover:text-destructive-foreground"
+                                title="Reject quotation"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Reject</span>
+                              </Button>
+                            </>
+                          )}
+                          {quotation.status !== 'converted' && quotation.status !== 'rejected' && quotation.status !== 'expired' && (
                             <Button
                               variant="outline"
                               size="sm"
