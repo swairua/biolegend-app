@@ -46,7 +46,6 @@ export function ApplyCreditNoteModal({
   onSuccess, 
   creditNote 
 }: ApplyCreditNoteModalProps) {
-  if (!creditNote) return null;
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [amountToApply, setAmountToApply] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +55,8 @@ export function ApplyCreditNoteModal({
   const { user } = useAuth();
 
   const { currency, rate, format } = useCurrency();
+
+  if (!creditNote) return null;
 
   // Filter invoices for the same customer with outstanding balance
   const availableInvoices = invoices.filter(inv => 
