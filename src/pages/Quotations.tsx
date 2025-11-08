@@ -98,6 +98,7 @@ export default function Quotations() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
   const { data: quotations, isLoading, error, refetch } = useQuotations(currentCompany?.id);
+  const updateQuotationStatus = useUpdateQuotationStatus();
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
