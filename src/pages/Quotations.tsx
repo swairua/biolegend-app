@@ -23,7 +23,7 @@ import {
   Calendar,
   Send
 } from 'lucide-react';
-import { useQuotations, useCompanies } from '@/hooks/useDatabase';
+import { useQuotations, useCompanies, useUpdateQuotationStatus } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +34,7 @@ import { EditQuotationModal } from '@/components/quotations/EditQuotationModal';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle, X } from 'lucide-react';
 
 interface Quotation {
   id: string;
