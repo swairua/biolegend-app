@@ -32,11 +32,11 @@ interface ViewCreditNoteModalProps {
 }
 
 export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCreditNoteModalProps) {
-  if (!creditNote) return null;
-
   const downloadPDF = useCreditNotePDFDownload();
 
   const { currency, rate, format } = useCurrency();
+
+  if (!creditNote) return null;
   const fmt = (amount: number) => format(
     normalizeInvoiceAmount(Number(amount) || 0, (creditNote as any).currency_code as any, (creditNote as any).exchange_rate as any, currency, rate)
   );
