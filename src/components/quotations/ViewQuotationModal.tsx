@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  FileText, 
+import {
+  FileText,
   Calendar,
   User,
   Mail,
@@ -19,7 +19,9 @@ import {
   MapPin,
   Download,
   Edit,
-  Send
+  Send,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import { BiolegendLogo } from '@/components/ui/biolegend-logo';
 import { useCompanies } from '@/hooks/useDatabase';
