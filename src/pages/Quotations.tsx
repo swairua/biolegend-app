@@ -467,14 +467,16 @@ Website: www.biolegendscientific.co.ke`;
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditQuotation(quotation)}
-                            title="Edit quotation"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {quotation.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditQuotation(quotation)}
+                              title="Edit quotation"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
