@@ -97,15 +97,27 @@ export function ViewQuotationModal({
                 {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
               </Badge>
               <div className="flex space-x-1">
-                <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="h-4 w-4" />
-                </Button>
+                {quotation.status === 'draft' && (
+                  <Button variant="outline" size="sm" onClick={onEdit}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={onDownload}>
                   <Download className="h-4 w-4" />
                 </Button>
                 {quotation.status === 'draft' && (
                   <Button variant="outline" size="sm" onClick={onSend}>
                     <Send className="h-4 w-4" />
+                  </Button>
+                )}
+                {quotation.status === 'sent' && onAccept && (
+                  <Button variant="outline" size="sm" onClick={onAccept} className="bg-success-light text-success border-success/20 hover:bg-success hover:text-success-foreground">
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                )}
+                {quotation.status === 'sent' && onReject && (
+                  <Button variant="outline" size="sm" onClick={onReject} className="bg-destructive-light text-destructive border-destructive/20 hover:bg-destructive hover:text-destructive-foreground">
+                    <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
