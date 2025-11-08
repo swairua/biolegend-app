@@ -247,6 +247,10 @@ Website: www.biolegendscientific.co.ke`;
   };
 
   const handleDeleteQuotation = async (quotation: Quotation) => {
+    if (quotation.status === 'converted') {
+      toast.error('Cannot delete a converted quotation');
+      return;
+    }
     const confirm = window.confirm(`Delete quotation ${quotation.quotation_number}? This action cannot be undone.`);
     if (!confirm) return;
     try {
