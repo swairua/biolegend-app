@@ -56,8 +56,6 @@ export function ApplyCreditNoteModal({
 
   const { currency, rate, format } = useCurrency();
 
-  if (!creditNote) return null;
-
   // Filter invoices for the same customer with outstanding balance
   const availableInvoices = invoices.filter(inv => 
     inv.customer_id === creditNote?.customer_id && 
@@ -88,6 +86,8 @@ export function ApplyCreditNoteModal({
       setAmountToApply(maxApplicableAmount);
     }
   }, [selectedInvoice, creditNote]);
+
+  if (!creditNote) return null;
 
   const fmtCredit = (amount: number) => format(
     normalizeInvoiceAmount(Number(amount) || 0, (creditNote as any)?.currency_code as any, (creditNote as any)?.exchange_rate as any, currency, rate)
