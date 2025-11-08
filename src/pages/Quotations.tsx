@@ -537,6 +537,8 @@ Website: www.biolegendscientific.co.ke`;
         onEdit={() => selectedQuotation && handleEditQuotation(selectedQuotation)}
         onDownload={() => selectedQuotation && handleDownloadQuotation(selectedQuotation)}
         onSend={() => selectedQuotation && handleSendQuotation(selectedQuotation)}
+        onAccept={() => selectedQuotation && handleAcceptQuotation(selectedQuotation)}
+        onReject={() => selectedQuotation && handleRejectQuotation(selectedQuotation)}
       />
 
       <EditQuotationModal
