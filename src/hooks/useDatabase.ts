@@ -2162,3 +2162,22 @@ export const useUpdateQuotationStatus = () => {
     },
   });
 };
+
+// Delete Quotation
+export const useDeleteQuotation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('quotations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw normalizeError(error);
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+    },
+  });
+};
