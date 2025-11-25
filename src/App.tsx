@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Quotations from "./pages/Quotations";
 import Invoices from "./pages/Invoices";
+import Receipts from "./pages/Receipts";
 import Payments from "./pages/Payments";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
@@ -99,21 +100,37 @@ const App = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/invoices/new" 
+          <Route
+            path="/invoices/new"
             element={
               <ProtectedRoute>
                 <Invoices />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/payments" 
+          <Route
+            path="/receipts"
+            element={
+              <ProtectedRoute>
+                <Receipts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receipts/new"
+            element={
+              <ProtectedRoute>
+                <Receipts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments"
             element={
               <ProtectedRoute>
                 <Payments />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route 
             path="/payments/new" 

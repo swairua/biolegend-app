@@ -458,8 +458,11 @@ const buildDocumentHTML = (data: DocumentData) => {
       <table class="totals-table">
         ${data.subtotal ? `<tr class="subtotal-row"><td class="label">Subtotal:</td><td class="amount">${formatCurrency(data.subtotal)}</td></tr>` : ''}
         ${data.tax_amount ? `<tr><td class="label">Tax Amount:</td><td class="amount">${formatCurrency(data.tax_amount)}</td></tr>` : ''}
-        <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
-        ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
+        <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : data.type === 'receipt' ? 'TOTAL DUE:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
+        ${data.type === 'receipt' ? `
+          <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
+          <tr class="balance-info"><td class="label" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">Balance:</td><td class="amount" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">${formatCurrency(data.balance_due || 0)}</td></tr>
+        ` : (data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
           <tr class="payment-info"><td class="label">Paid Amount:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold;">Balance Due:</td><td class="amount" style="font-weight: bold; color: #111827;">${formatCurrency(data.balance_due || 0)}</td></tr>
         ` : ''}
@@ -484,15 +487,15 @@ const buildDocumentHTML = (data: DocumentData) => {
 
     ${''}
 
-    ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
+    ${data.terms_and_conditions ? `
     <div class="invoice-terms-section" style="page-break-inside: avoid;">
       <div class="invoice-terms">
-        <div class="section-subtitle">Terms & Conditions</div>
+        <div class="section-subtitle">${data.type === 'receipt' ? 'Thank You!' : 'Terms & Conditions'}</div>
         <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
       </div>
     </div>` : ''}
 
-    ${(data.type === 'invoice' || data.type === 'proforma') ? `
+    ${(data.type === 'invoice' || data.type === 'proforma') && data.type !== 'receipt' ? `
     <div class="invoice-qr">
       <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
     </div>
@@ -2009,6 +2012,59 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails) => {
     total_amount: lpo.total_amount,
     notes: `${lpo.notes || ''}${lpo.contact_person ? `\n\nContact Person: ${lpo.contact_person}` : ''}${lpo.contact_phone ? `\nContact Phone: ${lpo.contact_phone}` : ''}`.trim(),
     terms_and_conditions: lpo.terms_and_conditions,
+  };
+
+  return generatePDFDownload(documentData);
+};
+
+// Function for receipt PDF generation (like invoice but no terms page, just thank you note)
+export const downloadReceiptPDF = async (receipt: any, company?: CompanyDetails) => {
+  const documentData: DocumentData = {
+    type: 'receipt',
+    number: receipt.invoice_number,
+    date: receipt.invoice_date,
+    company: company,
+    customer: {
+      name: receipt.customers?.name || 'Unknown Customer',
+      email: receipt.customers?.email,
+      phone: receipt.customers?.phone,
+      address: receipt.customers?.address,
+      city: receipt.customers?.city,
+      country: receipt.customers?.country,
+    },
+    items: receipt.invoice_items?.map((item: any, index: number) => {
+      const quantity = Number(item.quantity || 0);
+      const unitPrice = Number(item.unit_price || 0);
+      const taxAmount = Number(item.tax_amount || 0);
+      const discountAmount = Number(item.discount_amount || 0);
+      const computedLineTotal = quantity * unitPrice - discountAmount + taxAmount;
+      const productName = toTrimmedString(item?.products?.name) || toTrimmedString(item?.product_name) || `Item ${index + 1}`;
+      const description = toTrimmedString(item?.products?.description) || toTrimmedString(item?.description) || '';
+
+      return {
+        product_code: resolveLineItemCode(item),
+        product_name: productName,
+        description,
+        quantity: quantity,
+        unit_price: unitPrice,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_before_vat: Number(item.discount_before_vat || 0),
+        discount_amount: discountAmount,
+        tax_percentage: Number(item.tax_percentage || 0),
+        tax_amount: taxAmount,
+        tax_inclusive: item.tax_inclusive || false,
+        line_total: Number(item.line_total ?? computedLineTotal),
+        unit_of_measure: resolveLineItemUnit(item),
+      };
+    }) || [],
+    subtotal: receipt.subtotal,
+    tax_amount: receipt.tax_amount,
+    total_amount: receipt.total_amount,
+    paid_amount: receipt.paid_amount || receipt.total_amount || 0,
+    balance_due: receipt.balance_due !== undefined ? receipt.balance_due : 0,
+    notes: receipt.notes,
+    currency_code: (receipt.currency_code === 'USD' || receipt.currency_code === 'KES' ? receipt.currency_code : (Number(receipt.exchange_rate) && Number(receipt.exchange_rate) !== 1 ? 'USD' : 'KES')),
+    terms_and_conditions: 'Thank you for your purchase. This is a sales receipt confirming payment has been received.',
   };
 
   return generatePDFDownload(documentData);
