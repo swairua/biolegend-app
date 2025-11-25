@@ -495,7 +495,7 @@ const buildDocumentHTML = (data: DocumentData) => {
       </div>
     </div>` : ''}
 
-    ${(data.type === 'invoice' || data.type === 'proforma') ? `
+    ${(data.type === 'invoice' || data.type === 'proforma') && data.type !== 'receipt' ? `
     <div class="invoice-qr">
       <img src="https://cdn.builder.io/api/v1/image/assets%2Fff37486b4b4c4842b23aee857d4320a5%2Fe5bd57bc8bd94893b0fe529520b36c3f?format=webp&width=800" alt="Invoice QR Code" />
     </div>
