@@ -518,6 +518,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
     setSelectedCustomerId('');
     setReceiptDate(new Date().toISOString().split('T')[0]);
     setNotes('');
+    setAmountTendered(0);
     setItems([]);
     setSearchProduct('');
   };
