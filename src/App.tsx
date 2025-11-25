@@ -100,21 +100,37 @@ const App = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/invoices/new" 
+          <Route
+            path="/invoices/new"
             element={
               <ProtectedRoute>
                 <Invoices />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/payments" 
+          <Route
+            path="/receipts"
+            element={
+              <ProtectedRoute>
+                <Receipts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receipts/new"
+            element={
+              <ProtectedRoute>
+                <Receipts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments"
             element={
               <ProtectedRoute>
                 <Payments />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route 
             path="/payments/new" 
