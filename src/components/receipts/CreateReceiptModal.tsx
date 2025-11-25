@@ -364,7 +364,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
 
       const receiptNumber = await generateDocNumber.mutateAsync({
         companyId: currentCompany.id,
-        type: 'receipt'
+        type: 'invoice'
       });
 
       setSubmitProgress({
