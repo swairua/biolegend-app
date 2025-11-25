@@ -328,6 +328,11 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       return;
     }
 
+    if (amountTendered <= 0) {
+      toast.error('Please enter amount tendered');
+      return;
+    }
+
     if (!currentCompany?.id) {
       toast.error('No company selected. Please ensure you are associated with a company.');
       return;
