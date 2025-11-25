@@ -241,8 +241,16 @@ export function ViewReceiptModal({
                       </div>
                     )}
                     <div className="flex justify-between text-base border-t pt-2 font-bold">
-                      <span>Total Amount Received:</span>
+                      <span>Total Due:</span>
                       <span className="text-primary">{formatCurrency(receipt.total_amount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Amount Tendered:</span>
+                      <span className="font-semibold">{formatCurrency(receipt.paid_amount || 0)}</span>
+                    </div>
+                    <div className={`flex justify-between text-sm font-bold ${Number(receipt.balance_due || 0) < 0 ? 'text-destructive' : 'text-success'}`}>
+                      <span>Balance:</span>
+                      <span>{formatCurrency(receipt.balance_due || 0)}</span>
                     </div>
                   </div>
                 </div>
