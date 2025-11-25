@@ -811,13 +811,20 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
                       <span>VAT:</span>
                       <span className="font-semibold">{formatCurrency(taxAmount)}</span>
                     </div>
-                    <div className="flex justify-between text-lg border-t pt-2">
-                      <span className="font-bold">Total:</span>
-                      <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
+                    <div className="flex justify-between text-lg border-t pt-2 font-bold">
+                      <span>Total Due:</span>
+                      <span className="text-primary">{formatCurrency(totalAmount)}</span>
                     </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
+                    <div className="flex justify-between text-sm">
+                      <span>Amount Tendered:</span>
+                      <span className="font-semibold">{formatCurrency(amountTendered)}</span>
+                    </div>
+                    <div className={`flex justify-between text-sm font-bold ${amountTendered - totalAmount < 0 ? 'text-destructive' : 'text-success'}`}>
+                      <span>Balance:</span>
+                      <span>{formatCurrency(amountTendered - totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground pt-1">
                       <span>Items: {items.length}</span>
-                      <span>Amount Received: {formatCurrency(totalAmount)}</span>
                     </div>
                   </div>
                 </div>
