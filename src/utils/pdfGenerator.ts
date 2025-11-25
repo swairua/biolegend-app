@@ -2013,3 +2013,56 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails) => {
 
   return generatePDFDownload(documentData);
 };
+
+// Function for receipt PDF generation (like invoice but no terms page, just thank you note)
+export const downloadReceiptPDF = async (receipt: any, company?: CompanyDetails) => {
+  const documentData: DocumentData = {
+    type: 'receipt',
+    number: receipt.invoice_number,
+    date: receipt.invoice_date,
+    company: company,
+    customer: {
+      name: receipt.customers?.name || 'Unknown Customer',
+      email: receipt.customers?.email,
+      phone: receipt.customers?.phone,
+      address: receipt.customers?.address,
+      city: receipt.customers?.city,
+      country: receipt.customers?.country,
+    },
+    items: receipt.invoice_items?.map((item: any, index: number) => {
+      const quantity = Number(item.quantity || 0);
+      const unitPrice = Number(item.unit_price || 0);
+      const taxAmount = Number(item.tax_amount || 0);
+      const discountAmount = Number(item.discount_amount || 0);
+      const computedLineTotal = quantity * unitPrice - discountAmount + taxAmount;
+      const productName = toTrimmedString(item?.products?.name) || toTrimmedString(item?.product_name) || `Item ${index + 1}`;
+      const description = toTrimmedString(item?.products?.description) || toTrimmedString(item?.description) || '';
+
+      return {
+        product_code: resolveLineItemCode(item),
+        product_name: productName,
+        description,
+        quantity: quantity,
+        unit_price: unitPrice,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_before_vat: Number(item.discount_before_vat || 0),
+        discount_amount: discountAmount,
+        tax_percentage: Number(item.tax_percentage || 0),
+        tax_amount: taxAmount,
+        tax_inclusive: item.tax_inclusive || false,
+        line_total: Number(item.line_total ?? computedLineTotal),
+        unit_of_measure: resolveLineItemUnit(item),
+      };
+    }) || [],
+    subtotal: receipt.subtotal,
+    tax_amount: receipt.tax_amount,
+    total_amount: receipt.total_amount,
+    paid_amount: receipt.total_amount || 0,
+    balance_due: 0,
+    notes: receipt.notes,
+    currency_code: (receipt.currency_code === 'USD' || receipt.currency_code === 'KES' ? receipt.currency_code : (Number(receipt.exchange_rate) && Number(receipt.exchange_rate) !== 1 ? 'USD' : 'KES')),
+    terms_and_conditions: 'Thank you for your purchase. This is a sales receipt confirming payment has been received.',
+  };
+
+  return generatePDFDownload(documentData);
+};
