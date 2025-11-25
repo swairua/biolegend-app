@@ -30,6 +30,7 @@ import {
   Search,
   Filter,
   Eye,
+  Edit,
   Download,
   Calendar,
   Receipt
@@ -40,6 +41,7 @@ import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { CreateReceiptModal } from '@/components/receipts/CreateReceiptModal';
 import { ViewReceiptModal } from '@/components/receipts/ViewReceiptModal';
+import { EditReceiptModal } from '@/components/receipts/EditReceiptModal';
 import { downloadReceiptPDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
@@ -83,6 +85,7 @@ export default function Receipts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
   // Filter states
@@ -144,6 +147,11 @@ export default function Receipts() {
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
     setShowViewModal(true);
+  };
+
+  const handleEditReceipt = (receipt: Receipt) => {
+    setSelectedReceipt(receipt);
+    setShowEditModal(true);
   };
 
   const handleDownloadReceipt = (receipt: Receipt) => {
@@ -428,6 +436,14 @@ export default function Receipts() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleEditReceipt(receipt)}
+                          title="Edit receipt"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDownloadReceipt(receipt)}
                           title="Download PDF"
                         >
@@ -457,6 +473,16 @@ export default function Receipts() {
           onOpenChange={setShowViewModal}
           receipt={selectedReceipt}
           onDownload={() => handleDownloadReceipt(selectedReceipt)}
+        />
+      )}
+
+      {/* Edit Receipt Modal */}
+      {selectedReceipt && (
+        <EditReceiptModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          receipt={selectedReceipt}
+          onSuccess={handleCreateSuccess}
         />
       )}
     </div>
