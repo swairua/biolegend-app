@@ -74,7 +74,8 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
   const [exchangeRate, setExchangeRate] = useState<number>(initialExchangeRate || 1);
   const previousRateRef = useRef<number>(1);
   const [notes, setNotes] = useState('');
-  
+  const [amountTendered, setAmountTendered] = useState<number>(0);
+
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState<{
