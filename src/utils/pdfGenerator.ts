@@ -458,8 +458,11 @@ const buildDocumentHTML = (data: DocumentData) => {
       <table class="totals-table">
         ${data.subtotal ? `<tr class="subtotal-row"><td class="label">Subtotal:</td><td class="amount">${formatCurrency(data.subtotal)}</td></tr>` : ''}
         ${data.tax_amount ? `<tr><td class="label">Tax Amount:</td><td class="amount">${formatCurrency(data.tax_amount)}</td></tr>` : ''}
-        <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
-        ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
+        <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : data.type === 'receipt' ? 'TOTAL DUE:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
+        ${data.type === 'receipt' ? `
+          <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
+          <tr class="balance-info"><td class="label" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">Balance:</td><td class="amount" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">${formatCurrency(data.balance_due || 0)}</td></tr>
+        ` : (data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
           <tr class="payment-info"><td class="label">Paid Amount:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold;">Balance Due:</td><td class="amount" style="font-weight: bold; color: #111827;">${formatCurrency(data.balance_due || 0)}</td></tr>
         ` : ''}
