@@ -487,10 +487,10 @@ const buildDocumentHTML = (data: DocumentData) => {
 
     ${''}
 
-    ${data.terms_and_conditions && (data.type === 'invoice' || data.type === 'proforma') ? `
+    ${data.terms_and_conditions ? `
     <div class="invoice-terms-section" style="page-break-inside: avoid;">
       <div class="invoice-terms">
-        <div class="section-subtitle">Terms & Conditions</div>
+        <div class="section-subtitle">${data.type === 'receipt' ? 'Thank You!' : 'Terms & Conditions'}</div>
         <div class="terms-content">${sanitizeAndEscape(data.terms_and_conditions || '')}</div>
       </div>
     </div>` : ''}
