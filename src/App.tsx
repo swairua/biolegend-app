@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Quotations from "./pages/Quotations";
 import Invoices from "./pages/Invoices";
+import Receipts from "./pages/Receipts";
 import Payments from "./pages/Payments";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
