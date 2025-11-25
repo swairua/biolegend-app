@@ -402,6 +402,10 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       const adjustedTaxAmount = currencyCode === 'USD' ? taxAmount * factor : taxAmount;
       const adjustedTotalAmount = currencyCode === 'USD' ? totalAmount * factor : totalAmount;
 
+      const adjustedAmountTendered = currencyCode === 'USD' ? amountTendered * factor : amountTendered;
+      const balance = adjustedAmountTendered - adjustedTotalAmount;
+      const hasUnderpayment = balance < 0;
+
       const receiptData = {
         company_id: currentCompany.id,
         customer_id: selectedCustomerId,
@@ -412,8 +416,8 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
         subtotal: adjustedSubtotal,
         tax_amount: adjustedTaxAmount,
         total_amount: adjustedTotalAmount,
-        paid_amount: adjustedTotalAmount,
-        balance_due: 0,
+        paid_amount: adjustedAmountTendered,
+        balance_due: balance,
         notes: notes,
         created_by: profile?.id,
         currency_code: currencyCode,
@@ -424,10 +428,12 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
 
       const receiptItems = adjustedItems;
 
+      const totalSteps = hasUnderpayment ? 4 : 3;
+
       setSubmitProgress({
         step: `Creating receipt with ${items.length} items...`,
         current: 3,
-        total: 3
+        total: totalSteps
       });
 
       await createInvoiceWithItems.mutateAsync({
@@ -435,7 +441,48 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
         items: receiptItems
       });
 
-      toast.success(`Receipt ${receiptNumber} created successfully!`);
+      if (hasUnderpayment) {
+        setSubmitProgress({
+          step: 'Creating underpayment invoice...',
+          current: 4,
+          total: totalSteps
+        });
+
+        const invoiceNumber = await generateDocNumber.mutateAsync({
+          companyId: currentCompany.id,
+          type: 'invoice'
+        });
+
+        const invoiceData = {
+          company_id: currentCompany.id,
+          customer_id: selectedCustomerId,
+          invoice_number: invoiceNumber,
+          invoice_date: receiptDate,
+          due_date: receiptDate,
+          status: 'partial',
+          subtotal: adjustedSubtotal,
+          tax_amount: adjustedTaxAmount,
+          total_amount: adjustedTotalAmount,
+          paid_amount: adjustedAmountTendered,
+          balance_due: Math.abs(balance),
+          notes: `Created from receipt ${receiptNumber} - underpayment amount: ${Math.abs(balance).toFixed(2)}`,
+          created_by: profile?.id,
+          currency_code: currencyCode,
+          exchange_rate: currencyCode === 'USD' ? effectiveRate : 1,
+          fx_date: receiptDate,
+          terms_and_conditions: ''
+        };
+
+        await createInvoiceWithItems.mutateAsync({
+          invoice: invoiceData,
+          items: receiptItems
+        });
+
+        toast.success(`Receipt ${receiptNumber} and Invoice ${invoiceNumber} created successfully! (Underpayment detected)`);
+      } else {
+        toast.success(`Receipt ${receiptNumber} created successfully!`);
+      }
+
       onSuccess();
       onOpenChange(false);
       resetForm();
