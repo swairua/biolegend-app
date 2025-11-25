@@ -41,6 +41,7 @@ const sidebarItems: SidebarItem[] = [
     children: [
       { title: 'Quotations', icon: FileText, href: '/quotations' },
       { title: 'Invoices', icon: Receipt, href: '/invoices' },
+      { title: 'Receipts', icon: Receipt, href: '/receipts' },
       { title: 'Proforma Invoices', icon: FileCheck, href: '/proforma' },
       { title: 'Credit Notes', icon: RotateCcw, href: '/credit-notes' }
     ]
