@@ -555,6 +555,18 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
                     placeholder="Additional notes for this receipt..."
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="amount_tendered">Amount Tendered *</Label>
+                  <Input
+                    id="amount_tendered"
+                    type="number"
+                    step="0.01"
+                    value={amountTendered || ''}
+                    onChange={(e) => setAmountTendered(parseFloat(e.target.value) || 0)}
+                    placeholder="Enter amount received from customer"
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
