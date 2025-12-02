@@ -11,15 +11,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { 
-  FileText, 
-  Download, 
-  Send, 
+import {
+  FileText,
+  Download,
+  Send,
   Calendar,
   User,
   Receipt,
   DollarSign
 } from 'lucide-react';
+import { formatCurrency } from '@/utils/taxCalculation';
 
 interface ProformaItem {
   id: string;
