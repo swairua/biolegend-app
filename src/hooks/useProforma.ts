@@ -473,8 +473,10 @@ export const useUpdateProforma = () => {
       console.log('Successfully updated proforma:', proformaData.proforma_number);
 
       // Update items if provided
-      if (items) {
-        console.log('🗑️ Deleting existing proforma items for:', proformaId);
+      if (items && items.length > 0) {
+        console.log('📝 Updating items - count:', items.length);
+
+        console.log('🗑️ Step 1: Deleting existing proforma items for:', proformaId);
 
         // First, delete any specific duplicate items that were detected
         if (duplicateItemIdsToDelete && duplicateItemIdsToDelete.length > 0) {
@@ -488,7 +490,7 @@ export const useUpdateProforma = () => {
                 .eq('id', itemId);
 
               if (dupDeleteError) {
-                console.warn('Warning: Failed to delete duplicate item:', itemId, dupDeleteError);
+                console.warn('⚠️ Failed to delete duplicate item:', itemId, dupDeleteError);
               } else {
                 console.log('✅ Deleted duplicate item:', itemId);
               }
@@ -497,52 +499,50 @@ export const useUpdateProforma = () => {
         }
 
         // Delete all remaining items for this proforma (safety measure)
-        const { error: deleteError } = await supabase
+        const { data: deletedCount, error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
           .eq('proforma_id', proformaId);
 
         if (deleteError) {
           const errorMessage = serializeError(deleteError);
-          console.error('Error deleting existing proforma items:', errorMessage);
+          console.error('❌ Error deleting existing proforma items:', errorMessage);
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
 
         console.log('✅ Deleted all existing items');
 
         // Insert new items
-        if (items.length > 0) {
-          console.log('➕ Inserting new items:', items.length);
-          const proformaItems = items.map(item => ({
-            proforma_id: proformaId,
-            product_id: item.product_id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            tax_percentage: item.tax_percentage,
-            tax_amount: item.tax_amount,
-            tax_inclusive: item.tax_inclusive,
-            line_total: item.line_total,
-          }));
+        console.log('➕ Step 2: Inserting new items - count:', items.length);
+        const proformaItems = items.map(item => ({
+          proforma_id: proformaId,
+          product_id: item.product_id,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          discount_percentage: Number(item.discount_percentage || 0),
+          discount_amount: Number(item.discount_amount || 0),
+          tax_percentage: Number(item.tax_percentage),
+          tax_amount: Number(item.tax_amount),
+          tax_inclusive: Boolean(item.tax_inclusive),
+          line_total: Number(item.line_total),
+        }));
 
-          console.log('Items to insert:', proformaItems);
+        console.log('📦 Items prepared for insert:', proformaItems);
 
-          const { error: itemsError } = await supabase
-            .from('proforma_items')
-            .insert(proformaItems);
+        const { error: itemsError, data: insertedItems } = await supabase
+          .from('proforma_items')
+          .insert(proformaItems);
 
-          if (itemsError) {
-            const errorMessage = serializeError(itemsError);
-            console.error('Error creating updated proforma items:', errorMessage);
-            throw new Error(`Failed to create updated proforma items: ${errorMessage}`);
-          }
-
-          console.log('✅ Inserted new items successfully');
-        } else {
-          console.log('ℹ️ No items to insert (all deleted)');
+        if (itemsError) {
+          const errorMessage = serializeError(itemsError);
+          console.error('❌ Error creating updated proforma items:', errorMessage);
+          throw new Error(`Failed to create updated proforma items: ${errorMessage}`);
         }
+
+        console.log('✅ Inserted new items successfully:', insertedItems?.length || items.length);
+      } else {
+        console.log('⚠️ No items provided or items array is empty - skipping item update');
       }
 
       console.log('🎉 Mutation complete, returning data:', proformaData.proforma_number);
