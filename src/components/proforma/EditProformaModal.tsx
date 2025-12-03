@@ -484,13 +484,19 @@ export const EditProformaModal = ({
         throw mutationError;
       }
     } catch (error) {
-      console.error('❌ Error updating proforma:', error);
+      console.error('❌ ========================================');
+      console.error('❌ Outer catch block - Error during form submission');
+      console.error('=========================================');
+      console.error('Error object:', error);
 
       // Set error state for the error handler component
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error message:', errorMessage);
 
-      // Only show toast if it wasn't already shown by the mutation's onError handler
+      // Note: The mutation's onError handler will have already shown a toast
+      // We only show additional toast here if there's a different error
       if (!errorMessage.includes('Error updating proforma')) {
+        console.log('📢 Showing additional error toast');
         if (errorMessage.includes('company mismatch') || errorMessage.includes('Access denied')) {
           toast.error('Permission denied: You can only edit proformas from your company');
         } else if (errorMessage.includes('not found')) {
