@@ -37,6 +37,7 @@ import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
+import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 
@@ -344,6 +345,29 @@ export default function Proforma() {
                 }}
               >
                 Fix Proforma Schema
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!currentCompany?.id) {
+                    toast.error('No company selected');
+                    return;
+                  }
+                  try {
+                    const result = await fixAllProformaDuplicates(currentCompany.id);
+                    if (result.success) {
+                      toast.success(result.message);
+                      refetch();
+                    } else {
+                      toast.error(result.message);
+                    }
+                  } catch (error) {
+                    toast.error(`Error fixing duplicates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                }}
+              >
+                Fix Duplicate Items
               </Button>
             </div>
           </div>
