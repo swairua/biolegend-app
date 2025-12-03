@@ -481,11 +481,11 @@ export const useUpdateProforma = () => {
       if (items && items.length > 0) {
         console.log('📝 Updating items - count:', items.length);
 
-        console.log('🗑️ Step 1: Deleting existing proforma items for:', proformaId);
+        console.log('🗑️ Deleting all existing proforma items for clean replace:', proformaId);
 
-        // First, delete any specific duplicate items that were detected
+        // Delete any remaining duplicate items as backup (should already be cleaned up at modal open)
         if (duplicateItemIdsToDelete && duplicateItemIdsToDelete.length > 0) {
-          console.log('🗑️ Deleting specific duplicate items:', duplicateItemIdsToDelete);
+          console.log('🔄 Backup cleanup: Attempting to delete remaining duplicate items:', duplicateItemIdsToDelete);
 
           for (const itemId of duplicateItemIdsToDelete) {
             if (itemId) {
@@ -495,16 +495,16 @@ export const useUpdateProforma = () => {
                 .eq('id', itemId);
 
               if (dupDeleteError) {
-                console.warn('⚠️ Failed to delete duplicate item:', itemId, dupDeleteError);
+                console.warn('⚠️ Backup cleanup failed for item (may already be deleted):', itemId);
               } else {
-                console.log('✅ Deleted duplicate item:', itemId);
+                console.log('✅ Backup deleted duplicate item:', itemId);
               }
             }
           }
         }
 
-        // Delete all remaining items for this proforma (safety measure)
-        const { data: deletedCount, error: deleteError } = await supabase
+        // Delete all items for this proforma (clean replace strategy)
+        const { error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
           .eq('proforma_id', proformaId);
@@ -515,7 +515,7 @@ export const useUpdateProforma = () => {
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
 
-        console.log('✅ Deleted all existing items');
+        console.log('✅ Deleted all existing items - ready for fresh insert');
 
         // Insert new items
         console.log('➕ Step 2: Inserting new items - count:', items.length);
