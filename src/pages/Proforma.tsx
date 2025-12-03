@@ -198,8 +198,8 @@ export default function Proforma() {
     setShowCreateModal(false);
   };
 
-  const handleEditSuccess = () => {
-    refetch();
+  const handleEditSuccess = async () => {
+    await refetch();
     setShowEditModal(false);
   };
 
