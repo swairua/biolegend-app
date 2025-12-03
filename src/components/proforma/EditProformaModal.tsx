@@ -241,22 +241,22 @@ export const EditProformaModal = ({
     console.log('🗑️ DELETE CLICKED', { id, currentItemsCount: items.length });
     console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
 
+    const itemToDelete = items.find(item => item.id === id);
+
     setItems(prev => {
-      const itemToDelete = prev.find(item => item.id === id);
       const filtered = prev.filter(item => {
         const keep = item.id !== id;
         console.log(`Comparing item ${item.id} with ${id}: keep=${keep}`);
         return keep;
       });
       console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
-
-      // Show success toast for deleted item
-      if (itemToDelete) {
-        toast.success(`${itemToDelete.product_name} removed from proforma`);
-      }
-
       return filtered;
     });
+
+    // Show success toast after state update (outside of setState callback)
+    if (itemToDelete) {
+      toast.success(`${itemToDelete.product_name} removed from proforma`);
+    }
   };
 
   const calculateTotals = () => {
