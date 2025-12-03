@@ -313,15 +313,19 @@ export const useUpdateProforma = () => {
     }: {
       proformaId: string;
       proforma: Partial<ProformaInvoice>;
-      items?: ProformaItem[]
+      items?: ProformaItem[];
     }) => {
       // Validate proformaId
       if (!proformaId || typeof proformaId !== 'string') {
         throw new Error(`Invalid proformaId: ${proformaId}`);
       }
 
-      console.log('Updating proforma with ID:', proformaId);
-      console.log('Update data:', proforma);
+      console.log('🚀 ========================================');
+      console.log('🔄 MUTATION: Updating proforma invoice');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
+      console.log('Proforma data:', proforma);
+      console.log('Items count:', items?.length || 0);
 
       // First, ensure user has proper profile and access
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -379,7 +383,8 @@ export const useUpdateProforma = () => {
         throw new Error('User profile has no company assigned. Please contact admin.');
       }
       // If items are provided, recalculate totals
-      if (items) {
+      if (items && items.length > 0) {
+        console.log('📊 Recalculating totals for items:', items.length);
         const taxableItems: TaxableItem[] = items.map(item => ({
           quantity: item.quantity,
           unit_price: item.unit_price,
@@ -390,6 +395,7 @@ export const useUpdateProforma = () => {
         }));
 
         const totals = calculateDocumentTotals(taxableItems);
+        console.log('📊 Calculated totals:', totals);
 
         // Update proforma with calculated totals
         proforma = {
@@ -398,6 +404,8 @@ export const useUpdateProforma = () => {
           tax_amount: totals.tax_total,
           total_amount: totals.total_amount,
         };
+      } else {
+        console.log('⚠️ No items provided or items array is empty');
       }
 
       // Check if the proforma exists and verify company access
@@ -467,10 +475,12 @@ export const useUpdateProforma = () => {
       console.log('Successfully updated proforma:', proformaData.proforma_number);
 
       // Update items if provided
-      if (items) {
-        console.log('🗑️ Deleting existing proforma items for:', proformaId);
+      if (items && items.length > 0) {
+        console.log('📝 Updating items - count:', items.length);
+        console.log('Items to save:', items.map(i => ({ product: i.product_name, qty: i.quantity, price: i.unit_price })));
 
-        // Delete existing items
+        // Step 1: Delete ALL existing items for this proforma (clean slate)
+        console.log('🗑️ STEP 1: Deleting all existing proforma items');
         const { error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
@@ -478,65 +488,82 @@ export const useUpdateProforma = () => {
 
         if (deleteError) {
           const errorMessage = serializeError(deleteError);
-          console.error('Error deleting existing proforma items:', errorMessage);
+          console.error('❌ Delete error:', errorMessage);
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
+        console.log('✅ All items deleted');
 
-        console.log('✅ Deleted existing items');
+        // Step 2: Insert the current items from the UI
+        console.log('➕ STEP 2: Inserting fresh items from UI state');
+        const proformaItems = items.map(item => ({
+          proforma_id: proformaId,
+          product_id: item.product_id,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          discount_percentage: Number(item.discount_percentage || 0),
+          discount_amount: Number(item.discount_amount || 0),
+          tax_percentage: Number(item.tax_percentage),
+          tax_amount: Number(item.tax_amount),
+          tax_inclusive: Boolean(item.tax_inclusive),
+          line_total: Number(item.line_total),
+        }));
 
-        // Insert new items
-        if (items.length > 0) {
-          console.log('➕ Inserting new items:', items.length);
-          const proformaItems = items.map(item => ({
-            proforma_id: proformaId,
-            product_id: item.product_id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            tax_percentage: item.tax_percentage,
-            tax_amount: item.tax_amount,
-            tax_inclusive: item.tax_inclusive,
-            line_total: item.line_total,
-          }));
+        console.log('📦 Inserting items:', proformaItems);
 
-          console.log('Items to insert:', proformaItems);
+        const { error: itemsError } = await supabase
+          .from('proforma_items')
+          .insert(proformaItems);
 
-          const { error: itemsError } = await supabase
-            .from('proforma_items')
-            .insert(proformaItems);
-
-          if (itemsError) {
-            const errorMessage = serializeError(itemsError);
-            console.error('Error creating updated proforma items:', errorMessage);
-            throw new Error(`Failed to create updated proforma items: ${errorMessage}`);
-          }
-
-          console.log('✅ Inserted new items successfully');
-        } else {
-          console.log('ℹ️ No items to insert (all deleted)');
+        if (itemsError) {
+          const errorMessage = serializeError(itemsError);
+          console.error('❌ Insert error:', errorMessage);
+          throw new Error(`Failed to create proforma items: ${errorMessage}`);
         }
+
+        console.log('✅ Items inserted successfully - count:', items.length);
+      } else {
+        console.log('⚠️ No items to update');
       }
 
+      console.log('🎉 Mutation complete, returning data:', proformaData.proforma_number);
       return proformaData;
     },
     onSuccess: async (data) => {
-      // Refetch queries to ensure UI is updated with latest data
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
-      toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+      console.log('✅ ========================================');
+      console.log('✅ onSuccess callback triggered');
+      console.log('=========================================');
+      console.log('Proforma number:', data.proforma_number);
+      console.log('Proforma ID:', data.id);
+
+      try {
+        // Refetch queries to ensure UI is updated with latest data
+        console.log('🔄 Refetching proforma_invoices...');
+        const refetch1 = await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+        console.log('🔄 Refetch proforma_invoices complete');
+
+        console.log('🔄 Refetching individual proforma:', data.id);
+        const refetch2 = await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
+        console.log('🔄 Refetch individual proforma complete');
+
+        console.log('📢 Showing success toast');
+        toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+      } catch (refetchError) {
+        console.error('⚠️ Error during refetch, but mutation succeeded:', refetchError);
+        toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+      }
     },
     onError: async (error, variables) => {
       const errorMessage = serializeError(error);
-      console.error('Error updating proforma:', errorMessage);
+      console.error('❌ onError callback triggered:', errorMessage);
+      console.error('Variables:', variables);
 
       // If it's an access/permission error, run diagnostics
       if (errorMessage.includes('permission') ||
           errorMessage.includes('access') ||
           errorMessage.includes('company') ||
           errorMessage.includes('blocked')) {
-        console.log('Running RLS diagnostics for error analysis...');
+        console.log('🔍 Running RLS diagnostics for error analysis...');
         try {
           await logProformaRLSDiagnostics(variables.proformaId);
         } catch (diagError) {
@@ -544,6 +571,7 @@ export const useUpdateProforma = () => {
         }
       }
 
+      console.log('📢 Showing error toast');
       toast.error(`Error updating proforma: ${errorMessage}`);
     },
   });

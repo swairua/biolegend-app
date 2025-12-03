@@ -123,57 +123,32 @@ export const EditProformaModal = ({
           }))
         });
 
-        // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
-        const productMap = new Map<string, ProformaItem>();
-        const duplicateProducts = new Set<string>();
+        // Deduplicate by product_id - keep only the FIRST occurrence, discard duplicates
+        // This ensures quantities are never summed, avoiding the 116+100=216 bug
+        const productMap = new Map<string, { item: ProformaItem; duplicateIds: string[] }>();
+        const duplicateIds = new Set<string>();
 
         proforma.proforma_items.forEach((item, index) => {
           const key = item.product_id;
 
           if (productMap.has(key)) {
-            // Merge quantities if same product already exists
+            // Duplicate product found - track this item ID for deletion
             const existing = productMap.get(key)!;
-            duplicateProducts.add(key);
+            duplicateIds.add(item.id || '');
 
-            const oldQty = existing.quantity || 0;
-            const newQty = item.quantity || 0;
-            const mergedQuantity = oldQty + newQty;
+            const existingQty = existing.item.quantity || 0;
+            const duplicateQty = item.quantity || 0;
 
-            console.warn('⚠️ Duplicate product detected, merging quantities:', {
+            console.warn('⚠️ Duplicate product detected:', {
               product: item.product_name,
-              qty1: oldQty,
-              qty2: newQty,
-              totalQty: mergedQuantity
+              product_id: key,
+              keeping_qty: existingQty,
+              discarding_qty: duplicateQty,
+              duplicate_item_id: item.id
             });
 
-            // Create completely new merged item object (no mutations)
-            const mergedItem: ProformaItem = {
-              id: existing.id,
-              proforma_id: existing.proforma_id,
-              product_id: existing.product_id,
-              product_name: existing.product_name,
-              description: existing.description,
-              quantity: mergedQuantity,  // REPLACE with merged quantity
-              unit_price: existing.unit_price,
-              discount_percentage: existing.discount_percentage || 0,
-              discount_amount: existing.discount_amount || 0,
-              tax_percentage: existing.tax_percentage,
-              tax_amount: existing.tax_amount || 0,
-              tax_inclusive: existing.tax_inclusive || false,
-              line_total: existing.line_total || 0,
-            };
-
-            // Recalculate ALL tax fields after merging quantities
-            const calculated = calculateItemTax(mergedItem);
-
-            productMap.set(key, {
-              ...mergedItem,
-              base_amount: calculated.base_amount,
-              discount_total: calculated.discount_total,
-              taxable_amount: calculated.taxable_amount,
-              tax_amount: calculated.tax_amount,
-              line_total: calculated.line_total,
-            });
+            // Keep track of all duplicate IDs to delete
+            existing.duplicateIds.push(item.id || '');
           } else {
             // First occurrence of this product - use stable unique ID
             const proformaItem: ProformaItem = {
@@ -192,26 +167,32 @@ export const EditProformaModal = ({
               line_total: Number(item.line_total) || 0,
             };
 
-            // Recalculate tax to ensure consistency with new logic
+            // Recalculate tax to ensure consistency
             const calculated = calculateItemTax(proformaItem);
             productMap.set(key, {
-              ...proformaItem,
-              base_amount: calculated.base_amount,
-              discount_total: calculated.discount_total,
-              taxable_amount: calculated.taxable_amount,
-              tax_amount: calculated.tax_amount,
-              line_total: calculated.line_total,
+              item: {
+                ...proformaItem,
+                base_amount: calculated.base_amount,
+                discount_total: calculated.discount_total,
+                taxable_amount: calculated.taxable_amount,
+                tax_amount: calculated.tax_amount,
+                line_total: calculated.line_total,
+              },
+              duplicateIds: []
             });
           }
         });
 
-        const mappedItems = Array.from(productMap.values());
-        console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+        // Store duplicate IDs for cleanup on save
+        const allDuplicateIds = Array.from(duplicateIds);
+        const mappedItems = Array.from(productMap.values()).map(entry => entry.item);
 
-        if (duplicateProducts.size > 0) {
-          console.warn('⚠️ Database contains duplicate items that will be cleaned up on save. Products affected:', Array.from(duplicateProducts));
-          toast.info(`Found and merged ${duplicateProducts.size} duplicate item(s) - will be cleaned up on save`, {
-            duration: 4000
+        console.log('✅ Deduplicated items in UI:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+
+        if (allDuplicateIds.length > 0) {
+          console.warn('⚠️ Database contains duplicate items - will be cleaned on save:', allDuplicateIds);
+          toast.info(`Found ${allDuplicateIds.length} duplicate item(s) - will clean on save`, {
+            duration: 3000
           });
         }
 
@@ -285,37 +266,43 @@ export const EditProformaModal = ({
 
     console.log(`📝 Updating item ${id}: ${field} = ${finalValue}`);
 
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        // Create new object with updated field (REPLACE not ADD)
-        const updatedItem: ProformaItem = {
-          ...item,
-          [field]: finalValue
-        };
+    setItems(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          // Create new object with updated field (REPLACE not ADD)
+          const updatedItem: ProformaItem = {
+            ...item,
+            [field]: finalValue
+          };
 
-        console.log(`   Old value: ${item[field as keyof ProformaItem]}, New value: ${finalValue}`);
+          const oldValue = item[field as keyof ProformaItem];
+          console.log(`   ✏️ ${field}: ${oldValue} → ${finalValue}`);
 
-        // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
-        if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
-          updatedItem.tax_percentage = defaultTaxRate;
+          // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
+          if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
+            updatedItem.tax_percentage = defaultTaxRate;
+          }
+
+          // Recalculate using proper tax utility
+          const calculated = calculateItemTax(updatedItem);
+          const result = {
+            ...updatedItem,
+            base_amount: calculated.base_amount,
+            discount_total: calculated.discount_total,
+            taxable_amount: calculated.taxable_amount,
+            tax_amount: calculated.tax_amount,
+            line_total: calculated.line_total,
+          };
+
+          console.log(`   ✅ Item updated - quantity=${result.quantity}, line_total=${result.line_total}`);
+          return result;
         }
+        return item;
+      });
 
-        // Recalculate using proper tax utility
-        const calculated = calculateItemTax(updatedItem);
-        const result = {
-          ...updatedItem,
-          base_amount: calculated.base_amount,
-          discount_total: calculated.discount_total,
-          taxable_amount: calculated.taxable_amount,
-          tax_amount: calculated.tax_amount,
-          line_total: calculated.line_total,
-        };
-
-        console.log(`   ✅ Item updated, line_total: ${result.line_total}`);
-        return result;
-      }
-      return item;
-    }));
+      console.log('📋 Items after update:', updated.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+      return updated;
+    });
   };
 
 
@@ -356,13 +343,16 @@ export const EditProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🎯 handleSubmit called');
 
     if (!formData.customer_id) {
+      console.warn('⚠️ No customer selected');
       toast.error('Please select a customer');
       return;
     }
 
     if (items.length === 0) {
+      console.warn('⚠️ No items in form');
       toast.error('Please add at least one item');
       return;
     }
@@ -371,10 +361,12 @@ export const EditProformaModal = ({
 
     try {
       if (!proforma.id) {
+        console.error('❌ Proforma ID missing');
         toast.error('Proforma ID is missing - cannot update');
         return;
       }
 
+      console.log('✅ Validation passed, calculating totals...');
       const totals = calculateTotals();
 
       // Update proforma using the hook
@@ -430,42 +422,81 @@ export const EditProformaModal = ({
         qty: i.quantity
       })));
 
-      const result = await updateProforma.mutateAsync({
-        proformaId: proforma.id,
-        proforma: updatedProformaData,
-        items: validatedItems
-      });
+      try {
+        console.log('🎯 ========================================');
+        console.log('🚀 Starting mutation...');
+        console.log('=========================================');
+        console.log('📦 Mutation payload:', {
+          proformaId: proforma.id,
+          proformaData: updatedProformaData,
+          itemsCount: validatedItems.length,
+          items: validatedItems.map(i => ({ product: i.product_name, qty: i.quantity }))
+        });
 
-      console.log('✅ Update successful, calling onSuccess callback');
+        console.log('⏳ Waiting for mutation to complete...');
+        const result = await updateProforma.mutateAsync({
+          proformaId: proforma.id,
+          proforma: updatedProformaData,
+          items: validatedItems
+        });
 
-      // Show explicit success toast after mutation completes
-      toast.success(`Proforma invoice ${proforma.proforma_number} updated successfully!`);
+        console.log('✅ ========================================');
+        console.log('✅ Mutation completed successfully');
+        console.log('=========================================');
+        console.log('Result:', result);
 
-      // Call parent's onSuccess callback after mutation completes and cache is updated
-      if (onSuccess) {
-        console.log('⏳ Parent onSuccess callback starting (refetch)...');
-        await onSuccess();
-        console.log('✅ Parent onSuccess callback complete');
+        // Call parent's onSuccess callback after mutation completes
+        if (onSuccess) {
+          console.log('⏳ Parent onSuccess callback starting...');
+          try {
+            await onSuccess();
+            console.log('✅ Parent onSuccess callback complete');
+          } catch (onSuccessError) {
+            console.warn('⚠️ Parent onSuccess callback failed:', onSuccessError);
+            // Don't fail - the mutation already succeeded
+          }
+        }
+
+        console.log('🚪 Closing modal...');
+        handleClose();
+        console.log('✅ Modal closed');
+      } catch (mutationError) {
+        console.error('❌ ========================================');
+        console.error('❌ Mutation error caught');
+        console.error('=========================================');
+        console.error('Error:', mutationError);
+
+        // The mutation already handles the error toast via onError callback
+        // But we'll set the error state for display
+        const errorMessage = mutationError instanceof Error ? mutationError.message : String(mutationError);
+        setUpdateError(errorMessage);
+
+        // Re-throw to ensure the outer catch doesn't try to process it again
+        throw mutationError;
       }
-
-      console.log('🚪 Closing modal');
-      handleClose();
     } catch (error) {
-      console.error('Error updating proforma:', error);
+      console.error('❌ ========================================');
+      console.error('❌ Outer catch block - Error during form submission');
+      console.error('=========================================');
+      console.error('Error object:', error);
 
       // Set error state for the error handler component
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setUpdateError(errorMessage);
+      console.error('Error message:', errorMessage);
 
-      // Also show a toast for immediate feedback
-      if (errorMessage.includes('company mismatch') || errorMessage.includes('Access denied')) {
-        toast.error('Permission denied: You can only edit proformas from your company');
-      } else if (errorMessage.includes('not found')) {
-        toast.error('Proforma not found or has been deleted');
-      } else if (errorMessage.includes('check permissions')) {
-        toast.error('Update failed: Please check your permissions and try again');
-      } else {
-        toast.error(`Failed to update proforma: ${errorMessage}`);
+      // Note: The mutation's onError handler will have already shown a toast
+      // We only show additional toast here if there's a different error
+      if (!errorMessage.includes('Error updating proforma')) {
+        console.log('📢 Showing additional error toast');
+        if (errorMessage.includes('company mismatch') || errorMessage.includes('Access denied')) {
+          toast.error('Permission denied: You can only edit proformas from your company');
+        } else if (errorMessage.includes('not found')) {
+          toast.error('Proforma not found or has been deleted');
+        } else if (errorMessage.includes('check permissions')) {
+          toast.error('Update failed: Please check your permissions and try again');
+        } else if (errorMessage) {
+          toast.error(`Failed to update proforma: ${errorMessage}`);
+        }
       }
     }
   };
