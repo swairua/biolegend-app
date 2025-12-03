@@ -94,41 +94,6 @@ export const EditProformaModal = ({
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
-  // Auto-cleanup duplicate items from database
-  const cleanupDuplicateItems = async (proformaId: string, allDuplicateIds: string[]) => {
-    if (!allDuplicateIds || allDuplicateIds.length === 0) {
-      console.log('ℹ️ No duplicates to clean up');
-      return;
-    }
-
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-
-      console.log('🧹 Auto-cleanup: Deleting duplicate items from database...');
-
-      for (const itemId of allDuplicateIds) {
-        if (itemId) {
-          const { error } = await supabase
-            .from('proforma_items')
-            .delete()
-            .eq('id', itemId);
-
-          if (error) {
-            console.warn(`⚠️ Failed to delete duplicate ${itemId}:`, error);
-          } else {
-            console.log(`✅ Auto-deleted duplicate item: ${itemId}`);
-          }
-        }
-      }
-
-      console.log(`✅ Auto-cleanup complete: ${allDuplicateIds.length} items deleted`);
-      toast.success(`Auto-cleaned ${allDuplicateIds.length} duplicate item(s) from database`);
-    } catch (error) {
-      console.error('❌ Auto-cleanup failed:', error);
-      toast.error('Failed to auto-clean duplicates - you can manually save to clean them');
-    }
-  };
-
   // Populate form when proforma changes
   useEffect(() => {
     if (proforma && open) {
