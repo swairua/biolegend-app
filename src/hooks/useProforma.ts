@@ -322,8 +322,13 @@ export const useUpdateProforma = () => {
         throw new Error(`Invalid proformaId: ${proformaId}`);
       }
 
-      console.log('Updating proforma with ID:', proformaId);
+      console.log('🚀 ========================================');
+      console.log('🔄 MUTATION STARTING - Updating proforma');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
       console.log('Update data:', proforma);
+      console.log('Items count:', items?.length || 0);
+      console.log('Duplicate IDs to delete:', duplicateItemIdsToDelete?.length || 0);
 
       // First, ensure user has proper profile and access
       const { data: { user }, error: authError } = await supabase.auth.getUser();
