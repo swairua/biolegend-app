@@ -122,7 +122,7 @@ export const EditProformaModal = ({
         const productMap = new Map<string, ProformaItem>();
         const duplicateProducts = new Set<string>();
 
-        proforma.proforma_items.forEach(item => {
+        proforma.proforma_items.forEach((item, index) => {
           const key = item.product_id;
 
           if (productMap.has(key)) {
@@ -137,18 +137,25 @@ export const EditProformaModal = ({
               totalQty: existing.quantity + item.quantity
             });
 
-            existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
+            // Create new merged item object instead of mutating
+            const mergedQuantity = (existing.quantity || 0) + (item.quantity || 0);
+            const mergedItem = { ...existing, quantity: mergedQuantity };
+
             // Recalculate ALL tax fields after merging quantities
-            const calculated = calculateItemTax(existing);
-            existing.base_amount = calculated.base_amount;
-            existing.discount_total = calculated.discount_total;
-            existing.taxable_amount = calculated.taxable_amount;
-            existing.tax_amount = calculated.tax_amount;
-            existing.line_total = calculated.line_total;
+            const calculated = calculateItemTax(mergedItem);
+
+            productMap.set(key, {
+              ...mergedItem,
+              base_amount: calculated.base_amount,
+              discount_total: calculated.discount_total,
+              taxable_amount: calculated.taxable_amount,
+              tax_amount: calculated.tax_amount,
+              line_total: calculated.line_total,
+            });
           } else {
-            // First occurrence of this product
+            // First occurrence of this product - use stable unique ID
             const proformaItem: ProformaItem = {
-              id: item.id || `item-${Date.now()}-${Math.random()}`,
+              id: item.id ? String(item.id) : `item-${proforma.id}-${key}-${index}`,
               product_id: item.product_id,
               product_name: item.product_name || '',
               description: item.description || '',
