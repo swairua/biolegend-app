@@ -140,6 +140,9 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
         // Update the first item with merged quantity
         const mergedQuantity = group.total_quantity;
 
+        console.log(`📝 Merging ${group.product_name} (${group.count} items → qty ${mergedQuantity})`);
+        console.log(`   Keeping item: ${itemsToKeep.id}, Deleting: ${itemsToDelete.length} items`);
+
         const { error: updateError } = await supabase
           .from('proforma_items')
           .update({ quantity: mergedQuantity })
@@ -148,9 +151,11 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
         if (updateError) {
           const errorMsg = `Failed to update item ${itemsToKeep.id}: ${serializeError(updateError)}`;
           result.errors.push(errorMsg);
-          console.error(errorMsg);
+          console.error('❌', errorMsg);
           continue;
         }
+
+        console.log(`   ✅ Updated item with merged quantity`);
 
         // Delete duplicate items
         const idsToDelete = itemsToDelete.map(item => item.id);
@@ -163,16 +168,16 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
         if (deleteError) {
           const errorMsg = `Failed to delete duplicate items for product ${group.product_id}: ${serializeError(deleteError)}`;
           result.errors.push(errorMsg);
-          console.error(errorMsg);
+          console.error('❌', errorMsg);
           continue;
         }
 
         result.duplicates_fixed += 1;
-        console.log(`✅ Deduplicated ${group.product_name}: merged ${group.count} items into quantity ${mergedQuantity}`);
+        console.log(`✅ Successfully deduplicated ${group.product_name}: merged ${group.count} items into quantity ${mergedQuantity}`);
       } catch (error) {
         const errorMsg = `Error deduplicating product ${group.product_id}: ${serializeError(error)}`;
         result.errors.push(errorMsg);
-        console.error(errorMsg);
+        console.error('❌', errorMsg);
       }
     }
 
