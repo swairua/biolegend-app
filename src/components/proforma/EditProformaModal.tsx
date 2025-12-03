@@ -179,7 +179,10 @@ export const EditProformaModal = ({
         console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
 
         if (duplicateProducts.size > 0) {
-          console.warn('⚠️ Database contains duplicate items that should be cleaned up on save. Products affected:', Array.from(duplicateProducts));
+          console.warn('⚠️ Database contains duplicate items that will be cleaned up on save. Products affected:', Array.from(duplicateProducts));
+          toast.info(`Found and merged ${duplicateProducts.size} duplicate item(s) - will be cleaned up on save`, {
+            duration: 4000
+          });
         }
 
         setItems(mappedItems);
