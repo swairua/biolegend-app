@@ -310,9 +310,19 @@ export const EditProformaModal = ({
   };
 
   const handleClose = () => {
+    console.log('Closing edit modal');
     setSearchTerm('');
     setShowProductSearch(false);
     setUpdateError('');
+    setItems([]);
+    setFormData({
+      customer_id: '',
+      proforma_date: '',
+      valid_until: '',
+      notes: '',
+      terms_and_conditions: '',
+      status: 'draft',
+    });
     onOpenChange(false);
   };
 
