@@ -640,8 +640,11 @@ export const EditProformaModal = ({
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.tax_percentage}
-                            onChange={(e) => updateItem(item.id, 'tax_percentage', parseFloat(e.target.value) || 0)}
+                            value={Number(item.tax_percentage) || ''}
+                            onChange={(e) => {
+                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              updateItem(item.id, 'tax_percentage', isNaN(newValue) ? 0 : newValue);
+                            }}
                             min="0"
                             max="100"
                             step="0.01"
