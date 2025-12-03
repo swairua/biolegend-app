@@ -411,10 +411,29 @@ export const EditProformaModal = ({
       console.log('Update data:', updatedProformaData);
 
       console.log('⏳ Sending update to server...');
+
+      // Final validation before sending - ensure all numeric values are properly typed
+      const validatedItems = items.map(item => ({
+        ...item,
+        quantity: Number(item.quantity) || 0,
+        unit_price: Number(item.unit_price) || 0,
+        tax_percentage: Number(item.tax_percentage) || 0,
+        discount_percentage: Number(item.discount_percentage) || 0,
+        discount_amount: Number(item.discount_amount) || 0,
+        tax_amount: Number(item.tax_amount) || 0,
+        line_total: Number(item.line_total) || 0,
+      }));
+
+      console.log('✅ Validated items before save:', validatedItems.map(i => ({
+        id: i.id,
+        product: i.product_name,
+        qty: i.quantity
+      })));
+
       const result = await updateProforma.mutateAsync({
         proformaId: proforma.id,
         proforma: updatedProformaData,
-        items: items
+        items: validatedItems
       });
 
       console.log('✅ Update successful, calling onSuccess callback');
