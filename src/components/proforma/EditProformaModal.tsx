@@ -123,57 +123,32 @@ export const EditProformaModal = ({
           }))
         });
 
-        // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
-        const productMap = new Map<string, ProformaItem>();
-        const duplicateProducts = new Set<string>();
+        // Deduplicate by product_id - keep only the FIRST occurrence, discard duplicates
+        // This ensures quantities are never summed, avoiding the 116+100=216 bug
+        const productMap = new Map<string, { item: ProformaItem; duplicateIds: string[] }>();
+        const duplicateIds = new Set<string>();
 
         proforma.proforma_items.forEach((item, index) => {
           const key = item.product_id;
 
           if (productMap.has(key)) {
-            // Merge quantities if same product already exists
+            // Duplicate product found - track this item ID for deletion
             const existing = productMap.get(key)!;
-            duplicateProducts.add(key);
+            duplicateIds.add(item.id || '');
 
-            const oldQty = existing.quantity || 0;
-            const newQty = item.quantity || 0;
-            const mergedQuantity = oldQty + newQty;
+            const existingQty = existing.item.quantity || 0;
+            const duplicateQty = item.quantity || 0;
 
-            console.warn('⚠️ Duplicate product detected, merging quantities:', {
+            console.warn('⚠️ Duplicate product detected:', {
               product: item.product_name,
-              qty1: oldQty,
-              qty2: newQty,
-              totalQty: mergedQuantity
+              product_id: key,
+              keeping_qty: existingQty,
+              discarding_qty: duplicateQty,
+              duplicate_item_id: item.id
             });
 
-            // Create completely new merged item object (no mutations)
-            const mergedItem: ProformaItem = {
-              id: existing.id,
-              proforma_id: existing.proforma_id,
-              product_id: existing.product_id,
-              product_name: existing.product_name,
-              description: existing.description,
-              quantity: mergedQuantity,  // REPLACE with merged quantity
-              unit_price: existing.unit_price,
-              discount_percentage: existing.discount_percentage || 0,
-              discount_amount: existing.discount_amount || 0,
-              tax_percentage: existing.tax_percentage,
-              tax_amount: existing.tax_amount || 0,
-              tax_inclusive: existing.tax_inclusive || false,
-              line_total: existing.line_total || 0,
-            };
-
-            // Recalculate ALL tax fields after merging quantities
-            const calculated = calculateItemTax(mergedItem);
-
-            productMap.set(key, {
-              ...mergedItem,
-              base_amount: calculated.base_amount,
-              discount_total: calculated.discount_total,
-              taxable_amount: calculated.taxable_amount,
-              tax_amount: calculated.tax_amount,
-              line_total: calculated.line_total,
-            });
+            // Keep track of all duplicate IDs to delete
+            existing.duplicateIds.push(item.id || '');
           } else {
             // First occurrence of this product - use stable unique ID
             const proformaItem: ProformaItem = {
@@ -192,27 +167,35 @@ export const EditProformaModal = ({
               line_total: Number(item.line_total) || 0,
             };
 
-            // Recalculate tax to ensure consistency with new logic
+            // Recalculate tax to ensure consistency
             const calculated = calculateItemTax(proformaItem);
             productMap.set(key, {
-              ...proformaItem,
-              base_amount: calculated.base_amount,
-              discount_total: calculated.discount_total,
-              taxable_amount: calculated.taxable_amount,
-              tax_amount: calculated.tax_amount,
-              line_total: calculated.line_total,
+              item: {
+                ...proformaItem,
+                base_amount: calculated.base_amount,
+                discount_total: calculated.discount_total,
+                taxable_amount: calculated.taxable_amount,
+                tax_amount: calculated.tax_amount,
+                line_total: calculated.line_total,
+              },
+              duplicateIds: []
             });
           }
         });
 
-        const mappedItems = Array.from(productMap.values());
+        // Store duplicate IDs for cleanup on save
+        const allDuplicateIds = Array.from(duplicateIds);
+        const mappedItems = Array.from(productMap.values()).map(entry => entry.item);
+
         console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
 
-        if (duplicateProducts.size > 0) {
-          console.warn('⚠️ Database contains duplicate items that will be cleaned up on save. Products affected:', Array.from(duplicateProducts));
-          toast.info(`Found and merged ${duplicateProducts.size} duplicate item(s) - will be cleaned up on save`, {
-            duration: 4000
+        if (allDuplicateIds.length > 0) {
+          console.warn('⚠️ Database contains duplicate items that will be deleted on save. Duplicate IDs:', allDuplicateIds);
+          toast.warning(`Found ${allDuplicateIds.length} duplicate item(s) - will be cleaned up on save`, {
+            duration: 5000
           });
+          // Store duplicate IDs in session for cleanup during save
+          (window as any).__proformaDedupeCleanupIds = allDuplicateIds;
         }
 
         setItems(mappedItems);
