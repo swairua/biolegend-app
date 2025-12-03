@@ -478,30 +478,10 @@ export const useUpdateProforma = () => {
       // Update items if provided
       if (items && items.length > 0) {
         console.log('📝 Updating items - count:', items.length);
+        console.log('Items to save:', items.map(i => ({ product: i.product_name, qty: i.quantity, price: i.unit_price })));
 
-        console.log('🗑️ Deleting all existing proforma items for clean replace:', proformaId);
-
-        // Delete any remaining duplicate items as backup (should already be cleaned up at modal open)
-        if (duplicateItemIdsToDelete && duplicateItemIdsToDelete.length > 0) {
-          console.log('🔄 Backup cleanup: Attempting to delete remaining duplicate items:', duplicateItemIdsToDelete);
-
-          for (const itemId of duplicateItemIdsToDelete) {
-            if (itemId) {
-              const { error: dupDeleteError } = await supabase
-                .from('proforma_items')
-                .delete()
-                .eq('id', itemId);
-
-              if (dupDeleteError) {
-                console.warn('⚠️ Backup cleanup failed for item (may already be deleted):', itemId);
-              } else {
-                console.log('✅ Backup deleted duplicate item:', itemId);
-              }
-            }
-          }
-        }
-
-        // Delete all items for this proforma (clean replace strategy)
+        // Step 1: Delete ALL existing items for this proforma (clean slate)
+        console.log('🗑️ STEP 1: Deleting all existing proforma items');
         const { error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
@@ -509,14 +489,13 @@ export const useUpdateProforma = () => {
 
         if (deleteError) {
           const errorMessage = serializeError(deleteError);
-          console.error('❌ Error deleting existing proforma items:', errorMessage);
+          console.error('❌ Delete error:', errorMessage);
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
+        console.log('✅ All items deleted');
 
-        console.log('✅ Deleted all existing items - ready for fresh insert');
-
-        // Insert new items
-        console.log('➕ Step 2: Inserting new items - count:', items.length);
+        // Step 2: Insert the current items from the UI
+        console.log('➕ STEP 2: Inserting fresh items from UI state');
         const proformaItems = items.map(item => ({
           proforma_id: proformaId,
           product_id: item.product_id,
@@ -531,21 +510,21 @@ export const useUpdateProforma = () => {
           line_total: Number(item.line_total),
         }));
 
-        console.log('📦 Items prepared for insert:', proformaItems);
+        console.log('📦 Inserting items:', proformaItems);
 
-        const { error: itemsError, data: insertedItems } = await supabase
+        const { error: itemsError } = await supabase
           .from('proforma_items')
           .insert(proformaItems);
 
         if (itemsError) {
           const errorMessage = serializeError(itemsError);
-          console.error('❌ Error creating updated proforma items:', errorMessage);
-          throw new Error(`Failed to create updated proforma items: ${errorMessage}`);
+          console.error('❌ Insert error:', errorMessage);
+          throw new Error(`Failed to create proforma items: ${errorMessage}`);
         }
 
-        console.log('✅ Inserted new items successfully:', insertedItems?.length || items.length);
+        console.log('✅ Items inserted successfully - count:', items.length);
       } else {
-        console.log('⚠️ No items provided or items array is empty - skipping item update');
+        console.log('⚠️ No items to update');
       }
 
       console.log('🎉 Mutation complete, returning data:', proformaData.proforma_number);
