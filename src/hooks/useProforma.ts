@@ -472,7 +472,27 @@ export const useUpdateProforma = () => {
       if (items) {
         console.log('🗑️ Deleting existing proforma items for:', proformaId);
 
-        // Delete existing items
+        // First, delete any specific duplicate items that were detected
+        if (duplicateItemIdsToDelete && duplicateItemIdsToDelete.length > 0) {
+          console.log('🗑️ Deleting specific duplicate items:', duplicateItemIdsToDelete);
+
+          for (const itemId of duplicateItemIdsToDelete) {
+            if (itemId) {
+              const { error: dupDeleteError } = await supabase
+                .from('proforma_items')
+                .delete()
+                .eq('id', itemId);
+
+              if (dupDeleteError) {
+                console.warn('Warning: Failed to delete duplicate item:', itemId, dupDeleteError);
+              } else {
+                console.log('✅ Deleted duplicate item:', itemId);
+              }
+            }
+          }
+        }
+
+        // Delete all remaining items for this proforma (safety measure)
         const { error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
@@ -484,7 +504,7 @@ export const useUpdateProforma = () => {
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
 
-        console.log('✅ Deleted existing items');
+        console.log('✅ Deleted all existing items');
 
         // Insert new items
         if (items.length > 0) {
