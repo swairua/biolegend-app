@@ -92,6 +92,12 @@ export default function Proforma() {
   };
 
   const handleEdit = (proforma: ProformaWithItems) => {
+    console.log('📝 Opening edit modal for proforma:', {
+      id: proforma.id,
+      number: proforma.proforma_number,
+      itemCount: proforma.proforma_items?.length,
+      items: proforma.proforma_items?.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
+    });
     setSelectedProforma(proforma);
     setShowEditModal(true);
   };
