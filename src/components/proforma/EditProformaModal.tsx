@@ -459,9 +459,12 @@ export const EditProformaModal = ({
       })));
 
       // Get any duplicate IDs that were detected during load
+      // Note: These should already be deleted by auto-cleanup, but we keep as backup
       const duplicateIdsToDelete = (window as any).__proformaDedupeCleanupIds || [];
       if (duplicateIdsToDelete.length > 0) {
-        console.log('🗑️ Will delete duplicate items:', duplicateIdsToDelete);
+        console.log('🗑️ Backup: Will delete remaining duplicate items:', duplicateIdsToDelete);
+      } else {
+        console.log('ℹ️ No duplicates to delete (already auto-cleaned on open)');
       }
 
       try {
