@@ -200,7 +200,12 @@ export const EditProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+    console.log('Delete button clicked for item:', id);
+    setItems(prev => {
+      const filtered = prev.filter(item => item.id !== id);
+      console.log('Items after delete:', filtered.length, 'was:', prev.length);
+      return filtered;
+    });
   };
 
   const calculateTotals = () => {
