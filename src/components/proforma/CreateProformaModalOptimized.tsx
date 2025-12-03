@@ -129,29 +129,41 @@ export const CreateProformaModalOptimized = ({
   );
 
   const addItem = (product: any) => {
-    const newItem: ProformaItem = {
-      id: `item-${Date.now()}`,
-      product_id: product.id,
-      product_name: product.name,
-      description: product.description || '',
-      quantity: 1,
-      unit_price: product.selling_price,
-      discount_percentage: 0,
-      discount_amount: 0,
-      tax_percentage: defaultTaxRate,
-      tax_amount: 0,
-      tax_inclusive: false,
-      line_total: 0,
-    };
+    // Check if product already exists in items
+    const existingItem = items.find(item => item.product_id === product.id);
 
-    const calculatedItem = calculateItemTax(newItem);
-    const updatedItem: ProformaItem = {
-      ...newItem,
-      tax_amount: calculatedItem.tax_amount,
-      line_total: calculatedItem.line_total,
-    };
+    if (existingItem) {
+      // Increase quantity for existing product
+      updateItem(existingItem.id, 'quantity', existingItem.quantity + 1);
+      toast.info(`Quantity increased for ${product.name}`);
+    } else {
+      // Add new item
+      const newItem: ProformaItem = {
+        id: `item-${Date.now()}`,
+        product_id: product.id,
+        product_name: product.name,
+        description: product.description || '',
+        quantity: 1,
+        unit_price: product.selling_price,
+        discount_percentage: 0,
+        discount_amount: 0,
+        tax_percentage: defaultTaxRate,
+        tax_amount: 0,
+        tax_inclusive: false,
+        line_total: 0,
+      };
 
-    setItems(prev => [...prev, updatedItem]);
+      const calculatedItem = calculateItemTax(newItem);
+      const updatedItem: ProformaItem = {
+        ...newItem,
+        tax_amount: calculatedItem.tax_amount,
+        line_total: calculatedItem.line_total,
+      };
+
+      setItems(prev => [...prev, updatedItem]);
+      toast.success(`${product.name} added to proforma`);
+    }
+
     setShowProductSearch(false);
     setSearchTerm('');
   };
