@@ -557,8 +557,9 @@ export const useDeleteProforma = () => {
         throw new Error(`Failed to delete proforma: ${errorMessage}`);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+    onSuccess: async () => {
+      // Refetch queries to ensure UI is updated with latest data
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
       toast.success('Proforma invoice deleted successfully!');
     },
     onError: (error) => {
