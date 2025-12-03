@@ -113,9 +113,14 @@ export const EditProformaModal = ({
       });
 
       if (proforma.proforma_items && proforma.proforma_items.length > 0) {
-        console.log('Loading items from proforma:', {
+        console.log('📥 Loading items from proforma:', {
           count: proforma.proforma_items.length,
-          items: proforma.proforma_items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
+          items: proforma.proforma_items.map(i => ({
+            id: i.id,
+            product: i.product_name,
+            qty: i.quantity,
+            qty_type: typeof i.quantity
+          }))
         });
 
         // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
