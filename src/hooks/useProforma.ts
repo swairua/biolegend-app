@@ -511,8 +511,9 @@ export const useUpdateProforma = () => {
       return proformaData;
     },
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
-      await queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
+      // Refetch queries to ensure UI is updated with latest data
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
       toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
     },
     onError: async (error, variables) => {
