@@ -199,7 +199,14 @@ export default function Proforma() {
   };
 
   const handleEditSuccess = async () => {
-    await refetch();
+    const result = await refetch();
+    // Update the selectedProforma with the latest data from the refetch
+    if (result.data && selectedProforma) {
+      const updatedProforma = result.data.find(p => p.id === selectedProforma.id);
+      if (updatedProforma) {
+        setSelectedProforma(updatedProforma);
+      }
+    }
     setShowEditModal(false);
   };
 
