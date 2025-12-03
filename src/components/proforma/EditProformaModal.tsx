@@ -289,7 +289,17 @@ export const EditProformaModal = ({
         terms_and_conditions: formData.terms_and_conditions,
       };
 
-      console.log('Attempting to update proforma:', proforma.id);
+      console.log('🔄 SUBMITTING PROFORMA UPDATE', {
+        proformaId: proforma.id,
+        proformaNumber: proforma.proforma_number,
+        itemCount: items.length,
+        items: items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity, price: i.unit_price })),
+        totals: {
+          subtotal: totals.subtotal,
+          tax: totals.tax_total,
+          total: totals.total_amount
+        }
+      });
       console.log('Update data:', updatedProformaData);
 
       await updateProforma.mutateAsync({
