@@ -541,12 +541,20 @@ export const useUpdateProforma = () => {
         }
       }
 
+      console.log('🎉 Mutation complete, returning data:', proformaData.proforma_number);
       return proformaData;
     },
     onSuccess: async (data) => {
+      console.log('✅ onSuccess callback triggered for:', data.proforma_number);
+
       // Refetch queries to ensure UI is updated with latest data
+      console.log('🔄 Refetching proforma_invoices...');
       await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+
+      console.log('🔄 Refetching individual proforma:', data.id);
       await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
+
+      console.log('📢 Showing success toast for:', data.proforma_number);
       toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
     },
     onError: async (error, variables) => {
