@@ -118,45 +118,59 @@ export const EditProformaModal = ({
           items: proforma.proforma_items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
         });
 
-        // Deduplicate by ID in case there are duplicates from server
-        const seenIds = new Set<string>();
-        const uniqueItems = proforma.proforma_items.filter(item => {
-          if (seenIds.has(item.id)) {
-            console.warn('⚠️ Duplicate item detected:', item.id);
-            return false;
+        // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
+        const productMap = new Map<string, ProformaItem>();
+
+        proforma.proforma_items.forEach(item => {
+          const key = item.product_id;
+
+          if (productMap.has(key)) {
+            // Merge quantities if same product already exists
+            const existing = productMap.get(key)!;
+            console.warn('⚠️ Duplicate product detected, merging quantities:', {
+              product: item.product_name,
+              qty1: existing.quantity,
+              qty2: item.quantity,
+              totalQty: existing.quantity + item.quantity
+            });
+
+            existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
+            // Recalculate line total after merging quantities
+            const calculated = calculateItemTax(existing);
+            existing.tax_amount = calculated.tax_amount;
+            existing.line_total = calculated.line_total;
+          } else {
+            // First occurrence of this product
+            const proformaItem: ProformaItem = {
+              id: item.id || `item-${Date.now()}-${Math.random()}`,
+              product_id: item.product_id,
+              product_name: item.product_name || '',
+              description: item.description || '',
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              discount_percentage: item.discount_percentage || 0,
+              discount_amount: item.discount_amount || 0,
+              tax_percentage: item.tax_percentage,
+              tax_amount: item.tax_amount || 0,
+              tax_inclusive: item.tax_inclusive || false,
+              line_total: item.line_total || 0,
+            };
+
+            // Recalculate tax to ensure consistency with new logic
+            const calculated = calculateItemTax(proformaItem);
+            productMap.set(key, {
+              ...proformaItem,
+              base_amount: calculated.base_amount,
+              discount_total: calculated.discount_total,
+              taxable_amount: calculated.taxable_amount,
+              tax_amount: calculated.tax_amount,
+              line_total: calculated.line_total,
+            });
           }
-          seenIds.add(item.id);
-          return true;
         });
 
-        const mappedItems = uniqueItems.map(item => {
-          const proformaItem: ProformaItem = {
-            id: item.id || `item-${Date.now()}-${Math.random()}`,
-            product_id: item.product_id,
-            product_name: item.product_name || '',
-            description: item.description || '',
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            tax_percentage: item.tax_percentage,
-            tax_amount: item.tax_amount || 0,
-            tax_inclusive: item.tax_inclusive || false,
-            line_total: item.line_total || 0,
-          };
-
-          // Recalculate tax to ensure consistency with new logic
-          const calculated = calculateItemTax(proformaItem);
-          return {
-            ...proformaItem,
-            base_amount: calculated.base_amount,
-            discount_total: calculated.discount_total,
-            taxable_amount: calculated.taxable_amount,
-            tax_amount: calculated.tax_amount,
-            line_total: calculated.line_total,
-          };
-        });
-        console.log('✅ Mapped items:', mappedItems.map(i => ({ id: i.id, product: i.product_name })));
+        const mappedItems = Array.from(productMap.values());
+        console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
