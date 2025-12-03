@@ -200,10 +200,16 @@ export const EditProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    console.log('Delete button clicked for item:', id);
+    console.log('🗑️ DELETE CLICKED', { id, currentItemsCount: items.length });
+    console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+
     setItems(prev => {
-      const filtered = prev.filter(item => item.id !== id);
-      console.log('Items after delete:', filtered.length, 'was:', prev.length);
+      const filtered = prev.filter(item => {
+        const keep = item.id !== id;
+        console.log(`Comparing item ${item.id} with ${id}: keep=${keep}`);
+        return keep;
+      });
+      console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
       return filtered;
     });
   };
