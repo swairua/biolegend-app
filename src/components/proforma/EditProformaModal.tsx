@@ -112,7 +112,7 @@ export const EditProformaModal = ({
         status: proforma.status,
       });
 
-      if (proforma.proforma_items) {
+      if (proforma.proforma_items && proforma.proforma_items.length > 0) {
         console.log('Loading items from proforma:', proforma.proforma_items.length);
         const mappedItems = proforma.proforma_items.map(item => {
           const proformaItem: ProformaItem = {
@@ -145,9 +145,10 @@ export const EditProformaModal = ({
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
+        setItems([]);
       }
     }
-  }, [proforma, open]);
+  }, [proforma?.id, open]);
 
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
