@@ -231,6 +231,22 @@ export default function Proforma() {
         console.warn('⚠️ Updated proforma not found in refetch results');
       }
     }
+
+    // Auto-deduplicate the entire company's proformas after edit
+    if (currentCompany?.id) {
+      console.log('🔄 Auto-deduplicating proformas after edit...');
+      try {
+        const dedupResult = await fixAllProformaDuplicates(currentCompany.id);
+        if (dedupResult.success && dedupResult.duplicates_fixed > 0) {
+          console.log('✅ Auto-deduplication completed:', dedupResult.message);
+          // Refetch again to show cleaned data
+          await refetch();
+        }
+      } catch (error) {
+        console.warn('⚠️ Auto-deduplication failed (non-blocking):', error);
+      }
+    }
+
     setShowEditModal(false);
   };
 
