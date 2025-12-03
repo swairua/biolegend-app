@@ -1,6 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Helper function to serialize errors properly
+const serializeError = (error: any): string => {
+  if (!error) return 'Unknown error';
+  if (typeof error === 'string') return error;
+  if (error.message) return error.message;
+  if (error.details) return error.details;
+  if (error.hint) return error.hint;
+  if (error.code) return `Database error (code: ${error.code})`;
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return String(error);
+  }
+};
+
 export interface DuplicateItemGroup {
   product_id: string;
   product_name: string;
@@ -46,7 +61,8 @@ export async function findProformaDuplicates(proformaId: string): Promise<Duplic
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('Error finding duplicates:', error);
+    const errorMessage = serializeError(error);
+    console.error('Error finding duplicates:', errorMessage);
     return [];
   }
 
@@ -127,7 +143,7 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
           .eq('id', itemsToKeep.id);
 
         if (updateError) {
-          const errorMsg = `Failed to update item ${itemsToKeep.id}: ${updateError.message}`;
+          const errorMsg = `Failed to update item ${itemsToKeep.id}: ${serializeError(updateError)}`;
           result.errors.push(errorMsg);
           console.error(errorMsg);
           continue;
@@ -142,7 +158,7 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
           .in('id', idsToDelete);
 
         if (deleteError) {
-          const errorMsg = `Failed to delete duplicate items for product ${group.product_id}: ${deleteError.message}`;
+          const errorMsg = `Failed to delete duplicate items for product ${group.product_id}: ${serializeError(deleteError)}`;
           result.errors.push(errorMsg);
           console.error(errorMsg);
           continue;
@@ -151,7 +167,7 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
         result.duplicates_fixed += 1;
         console.log(`✅ Deduplicated ${group.product_name}: merged ${group.count} items into quantity ${mergedQuantity}`);
       } catch (error) {
-        const errorMsg = `Error deduplicating product ${group.product_id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        const errorMsg = `Error deduplicating product ${group.product_id}: ${serializeError(error)}`;
         result.errors.push(errorMsg);
         console.error(errorMsg);
       }
@@ -165,7 +181,7 @@ export async function deduplicateProformaItems(proformaId: string): Promise<Dedu
     return result;
   } catch (error) {
     result.success = false;
-    result.message = `Deduplication failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    result.message = `Deduplication failed: ${serializeError(error)}`;
     result.errors.push(result.message);
     return result;
   }
@@ -200,29 +216,33 @@ export async function findAllProformasWithDuplicates(companyId: string): Promise
 
   const proformasWithDuplicates = [];
 
-  for (const proforma of proformas) {
-    const items = (proforma as any).proforma_items || [];
+  try {
+    for (const proforma of proformas) {
+      const items = (proforma as any).proforma_items || [];
 
-    if (items.length === 0) continue;
+      if (items.length === 0) continue;
 
-    // Count occurrences of each product_id
-    const productCounts = new Map<string, number>();
-    items.forEach((item: any) => {
-      const count = productCounts.get(item.product_id) || 0;
-      productCounts.set(item.product_id, count + 1);
-    });
-
-    // Check if there are duplicates
-    const hasDuplicates = Array.from(productCounts.values()).some(count => count > 1);
-
-    if (hasDuplicates) {
-      const duplicateCount = Array.from(productCounts.values()).filter(count => count > 1).length;
-      proformasWithDuplicates.push({
-        proforma_id: proforma.id,
-        proforma_number: proforma.proforma_number,
-        duplicate_count: duplicateCount
+      // Count occurrences of each product_id
+      const productCounts = new Map<string, number>();
+      items.forEach((item: any) => {
+        const count = productCounts.get(item.product_id) || 0;
+        productCounts.set(item.product_id, count + 1);
       });
+
+      // Check if there are duplicates
+      const hasDuplicates = Array.from(productCounts.values()).some(count => count > 1);
+
+      if (hasDuplicates) {
+        const duplicateCount = Array.from(productCounts.values()).filter(count => count > 1).length;
+        proformasWithDuplicates.push({
+          proforma_id: proforma.id,
+          proforma_number: proforma.proforma_number,
+          duplicate_count: duplicateCount
+        });
+      }
     }
+  } catch (error) {
+    console.error('Error processing proformas:', serializeError(error));
   }
 
   return proformasWithDuplicates;
@@ -265,7 +285,7 @@ export async function fixAllProformaDuplicates(companyId: string): Promise<Dedup
 
         result.errors.push(...deduplicateResult.errors);
       } catch (error) {
-        const errorMsg = `Error fixing proforma ${pf.proforma_number}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        const errorMsg = `Error fixing proforma ${pf.proforma_number}: ${serializeError(error)}`;
         result.errors.push(errorMsg);
         console.error(errorMsg);
       }
@@ -279,7 +299,7 @@ export async function fixAllProformaDuplicates(companyId: string): Promise<Dedup
     return result;
   } catch (error) {
     result.success = false;
-    result.message = `Failed to fix duplicates: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    result.message = `Failed to fix duplicates: ${serializeError(error)}`;
     result.errors.push(result.message);
     return result;
   }
