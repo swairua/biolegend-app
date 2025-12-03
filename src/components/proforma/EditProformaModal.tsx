@@ -218,7 +218,7 @@ export const EditProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.customer_id) {
       toast.error('Please select a customer');
       return;
@@ -261,7 +261,14 @@ export const EditProformaModal = ({
         items: items
       });
 
-      onSuccess?.();
+      // Wait a bit for the mutation's onSuccess to complete and invalidate queries
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Call parent's onSuccess callback to trigger refetch
+      if (onSuccess) {
+        await onSuccess();
+      }
+
       handleClose();
     } catch (error) {
       console.error('Error updating proforma:', error);
