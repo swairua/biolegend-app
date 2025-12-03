@@ -309,11 +309,13 @@ export const useUpdateProforma = () => {
     mutationFn: async ({
       proformaId,
       proforma,
-      items
+      items,
+      duplicateItemIdsToDelete
     }: {
       proformaId: string;
       proforma: Partial<ProformaInvoice>;
-      items?: ProformaItem[]
+      items?: ProformaItem[];
+      duplicateItemIdsToDelete?: string[];
     }) => {
       // Validate proformaId
       if (!proformaId || typeof proformaId !== 'string') {
