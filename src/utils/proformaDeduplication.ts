@@ -198,6 +198,8 @@ export async function findAllProformasWithDuplicates(companyId: string): Promise
   proforma_number: string;
   duplicate_count: number;
 }[]> {
+  console.log('🔍 Scanning company for proformas with duplicates:', companyId);
+
   // Get all proformas with their items
   const { data: proformas, error: fetchError } = await supabase
     .from('proforma_invoices')
@@ -209,10 +211,12 @@ export async function findAllProformasWithDuplicates(companyId: string): Promise
     .eq('company_id', companyId);
 
   if (fetchError) {
-    console.error('Error fetching proformas:', fetchError);
+    const errorMsg = serializeError(fetchError);
+    console.error('❌ Error fetching proformas:', errorMsg, fetchError);
     return [];
   }
 
+  console.log(`📋 Found ${proformas?.length || 0} proformas in company`);
   if (!proformas) {
     return [];
   }
