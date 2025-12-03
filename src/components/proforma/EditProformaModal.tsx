@@ -225,11 +225,10 @@ export const EditProformaModal = ({
         console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
 
         if (allDuplicateIds.length > 0) {
-          console.warn('⚠️ Database contains duplicate items that will be deleted on save. Duplicate IDs:', allDuplicateIds);
-          toast.warning(`Found ${allDuplicateIds.length} duplicate item(s) - will be cleaned up on save`, {
-            duration: 5000
-          });
-          // Store duplicate IDs in session for cleanup during save
+          console.warn('⚠️ Database contains duplicate items. Auto-cleaning up...', allDuplicateIds);
+          // Auto-cleanup duplicates immediately when modal opens
+          cleanupDuplicateItems(proforma.id, allDuplicateIds);
+          // Also store IDs as backup in case auto-cleanup fails
           (window as any).__proformaDedupeCleanupIds = allDuplicateIds;
         }
 
