@@ -247,18 +247,39 @@ export const EditProformaModal = ({
   };
 
   const updateItem = (id: string, field: keyof ProformaItem, value: any) => {
+    // Validate and ensure numeric fields are properly handled
+    let finalValue = value;
+
+    if (['quantity', 'unit_price', 'tax_percentage', 'discount_percentage', 'discount_amount'].includes(field)) {
+      const numValue = parseFloat(String(value));
+      if (isNaN(numValue)) {
+        console.warn(`Invalid numeric value for ${field}: ${value}, setting to 0`);
+        finalValue = 0;
+      } else {
+        finalValue = numValue;
+      }
+    }
+
+    console.log(`📝 Updating item ${id}: ${field} = ${finalValue}`);
+
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        let updatedItem = { ...item, [field]: value };
+        // Create new object with updated field (REPLACE not ADD)
+        const updatedItem: ProformaItem = {
+          ...item,
+          [field]: finalValue
+        };
+
+        console.log(`   Old value: ${item[field as keyof ProformaItem]}, New value: ${finalValue}`);
 
         // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
-        if (field === 'tax_inclusive' && value && item.tax_percentage === 0) {
+        if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
           updatedItem.tax_percentage = defaultTaxRate;
         }
 
         // Recalculate using proper tax utility
         const calculated = calculateItemTax(updatedItem);
-        return {
+        const result = {
           ...updatedItem,
           base_amount: calculated.base_amount,
           discount_total: calculated.discount_total,
@@ -266,6 +287,9 @@ export const EditProformaModal = ({
           tax_amount: calculated.tax_amount,
           line_total: calculated.line_total,
         };
+
+        console.log(`   ✅ Item updated, line_total: ${result.line_total}`);
+        return result;
       }
       return item;
     }));
