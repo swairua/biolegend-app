@@ -97,6 +97,12 @@ export const EditProformaModal = ({
   // Populate form when proforma changes
   useEffect(() => {
     if (proforma && open) {
+      console.log('📋 EditProformaModal opened with proforma:', {
+        id: proforma.id,
+        number: proforma.proforma_number,
+        itemCount: proforma.proforma_items?.length
+      });
+
       setFormData({
         customer_id: proforma.customer_id,
         proforma_date: proforma.proforma_date,
@@ -105,8 +111,9 @@ export const EditProformaModal = ({
         terms_and_conditions: proforma.terms_and_conditions || '',
         status: proforma.status,
       });
-      
+
       if (proforma.proforma_items) {
+        console.log('Loading items from proforma:', proforma.proforma_items.length);
         const mappedItems = proforma.proforma_items.map(item => {
           const proformaItem: ProformaItem = {
             id: item.id || `item-${Date.now()}-${Math.random()}`,
