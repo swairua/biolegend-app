@@ -431,7 +431,9 @@ export const EditProformaModal = ({
       }
 
       try {
+        console.log('🎯 ========================================');
         console.log('🚀 Starting mutation...');
+        console.log('=========================================');
         console.log('📦 Mutation payload:', {
           proformaId: proforma.id,
           proformaData: updatedProformaData,
@@ -439,6 +441,7 @@ export const EditProformaModal = ({
           duplicateIdsCount: duplicateIdsToDelete.length
         });
 
+        console.log('⏳ Waiting for mutation to complete...');
         const result = await updateProforma.mutateAsync({
           proformaId: proforma.id,
           proforma: updatedProformaData,
@@ -446,19 +449,31 @@ export const EditProformaModal = ({
           duplicateItemIdsToDelete: duplicateIdsToDelete
         });
 
-        console.log('✅ Mutation returned successfully:', result);
+        console.log('✅ ========================================');
+        console.log('✅ Mutation completed successfully');
+        console.log('=========================================');
+        console.log('Result:', result);
 
         // Call parent's onSuccess callback after mutation completes
         if (onSuccess) {
-          console.log('⏳ Parent onSuccess callback starting (refetch)...');
-          await onSuccess();
-          console.log('✅ Parent onSuccess callback complete');
+          console.log('⏳ Parent onSuccess callback starting...');
+          try {
+            await onSuccess();
+            console.log('✅ Parent onSuccess callback complete');
+          } catch (onSuccessError) {
+            console.warn('⚠️ Parent onSuccess callback failed:', onSuccessError);
+            // Don't fail - the mutation already succeeded
+          }
         }
 
-        console.log('🚪 Closing modal');
+        console.log('🚪 Closing modal...');
         handleClose();
+        console.log('✅ Modal closed');
       } catch (mutationError) {
-        console.error('❌ Mutation error caught:', mutationError);
+        console.error('❌ ========================================');
+        console.error('❌ Mutation error caught');
+        console.error('=========================================');
+        console.error('Error:', mutationError);
 
         // The mutation already handles the error toast via onError callback
         // But we'll set the error state for display
