@@ -394,7 +394,14 @@ export const EditProformaModal = ({
         proformaId: proforma.id,
         proformaNumber: proforma.proforma_number,
         itemCount: items.length,
-        items: items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity, price: i.unit_price })),
+        items: items.map(i => ({
+          id: i.id,
+          product: i.product_name,
+          qty: i.quantity,
+          qty_type: typeof i.quantity,
+          price: i.unit_price,
+          line_total: i.line_total
+        })),
         totals: {
           subtotal: totals.subtotal,
           tax: totals.tax_total,
