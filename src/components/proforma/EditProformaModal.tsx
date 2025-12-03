@@ -544,9 +544,15 @@ export const EditProformaModal = ({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeItem(item.id)}
+                            onClick={(e) => {
+                              console.log('Delete button clicked', e);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeItem(item.id);
+                            }}
+                            className="hover:bg-destructive/10"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
