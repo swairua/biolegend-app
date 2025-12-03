@@ -381,7 +381,8 @@ export const useUpdateProforma = () => {
         throw new Error('User profile has no company assigned. Please contact admin.');
       }
       // If items are provided, recalculate totals
-      if (items) {
+      if (items && items.length > 0) {
+        console.log('📊 Recalculating totals for items:', items.length);
         const taxableItems: TaxableItem[] = items.map(item => ({
           quantity: item.quantity,
           unit_price: item.unit_price,
@@ -392,6 +393,7 @@ export const useUpdateProforma = () => {
         }));
 
         const totals = calculateDocumentTotals(taxableItems);
+        console.log('📊 Calculated totals:', totals);
 
         // Update proforma with calculated totals
         proforma = {
@@ -400,6 +402,8 @@ export const useUpdateProforma = () => {
           tax_amount: totals.tax_total,
           total_amount: totals.total_amount,
         };
+      } else {
+        console.log('⚠️ No items provided or items array is empty');
       }
 
       // Check if the proforma exists and verify company access
