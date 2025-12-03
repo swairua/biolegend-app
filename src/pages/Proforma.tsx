@@ -205,12 +205,29 @@ export default function Proforma() {
   };
 
   const handleEditSuccess = async () => {
+    console.log('📡 handleEditSuccess: Starting refetch for all proformas');
     const result = await refetch();
+
+    console.log('📡 Refetch complete, result:', {
+      dataCount: result.data?.length,
+      selectedProformaId: selectedProforma?.id
+    });
+
     // Update the selectedProforma with the latest data from the refetch
     if (result.data && selectedProforma) {
+      console.log('🔍 Looking for updated proforma with ID:', selectedProforma.id);
       const updatedProforma = result.data.find(p => p.id === selectedProforma.id);
+
       if (updatedProforma) {
+        console.log('✅ Found updated proforma, updating selectedProforma:', {
+          id: updatedProforma.id,
+          number: updatedProforma.proforma_number,
+          itemCount: updatedProforma.proforma_items?.length,
+          items: updatedProforma.proforma_items?.map(i => ({ id: i.id, product: i.product_name }))
+        });
         setSelectedProforma(updatedProforma);
+      } else {
+        console.warn('⚠️ Updated proforma not found in refetch results');
       }
     }
     setShowEditModal(false);
