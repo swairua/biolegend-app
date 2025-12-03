@@ -419,43 +419,54 @@ export const EditProformaModal = ({
         console.log('🗑️ Will delete duplicate items:', duplicateIdsToDelete);
       }
 
-      const result = await updateProforma.mutateAsync({
-        proformaId: proforma.id,
-        proforma: updatedProformaData,
-        items: validatedItems,
-        duplicateItemIdsToDelete: duplicateIdsToDelete
-      });
+      try {
+        console.log('🚀 Starting mutation...');
+        const result = await updateProforma.mutateAsync({
+          proformaId: proforma.id,
+          proforma: updatedProformaData,
+          items: validatedItems,
+          duplicateItemIdsToDelete: duplicateIdsToDelete
+        });
 
-      console.log('✅ Update successful, calling onSuccess callback');
+        console.log('✅ Mutation returned successfully:', result);
 
-      // Show explicit success toast after mutation completes
-      toast.success(`Proforma invoice ${proforma.proforma_number} updated successfully!`);
+        // Call parent's onSuccess callback after mutation completes
+        if (onSuccess) {
+          console.log('⏳ Parent onSuccess callback starting (refetch)...');
+          await onSuccess();
+          console.log('✅ Parent onSuccess callback complete');
+        }
 
-      // Call parent's onSuccess callback after mutation completes and cache is updated
-      if (onSuccess) {
-        console.log('⏳ Parent onSuccess callback starting (refetch)...');
-        await onSuccess();
-        console.log('✅ Parent onSuccess callback complete');
+        console.log('🚪 Closing modal');
+        handleClose();
+      } catch (mutationError) {
+        console.error('❌ Mutation error caught:', mutationError);
+
+        // The mutation already handles the error toast via onError callback
+        // But we'll set the error state for display
+        const errorMessage = mutationError instanceof Error ? mutationError.message : String(mutationError);
+        setUpdateError(errorMessage);
+
+        // Re-throw to ensure the outer catch doesn't try to process it again
+        throw mutationError;
       }
-
-      console.log('🚪 Closing modal');
-      handleClose();
     } catch (error) {
-      console.error('Error updating proforma:', error);
+      console.error('❌ Error updating proforma:', error);
 
       // Set error state for the error handler component
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setUpdateError(errorMessage);
 
-      // Also show a toast for immediate feedback
-      if (errorMessage.includes('company mismatch') || errorMessage.includes('Access denied')) {
-        toast.error('Permission denied: You can only edit proformas from your company');
-      } else if (errorMessage.includes('not found')) {
-        toast.error('Proforma not found or has been deleted');
-      } else if (errorMessage.includes('check permissions')) {
-        toast.error('Update failed: Please check your permissions and try again');
-      } else {
-        toast.error(`Failed to update proforma: ${errorMessage}`);
+      // Only show toast if it wasn't already shown by the mutation's onError handler
+      if (!errorMessage.includes('Error updating proforma')) {
+        if (errorMessage.includes('company mismatch') || errorMessage.includes('Access denied')) {
+          toast.error('Permission denied: You can only edit proformas from your company');
+        } else if (errorMessage.includes('not found')) {
+          toast.error('Proforma not found or has been deleted');
+        } else if (errorMessage.includes('check permissions')) {
+          toast.error('Update failed: Please check your permissions and try again');
+        } else if (errorMessage) {
+          toast.error(`Failed to update proforma: ${errorMessage}`);
+        }
       }
     }
   };
