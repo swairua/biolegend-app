@@ -468,6 +468,8 @@ export const useUpdateProforma = () => {
 
       // Update items if provided
       if (items) {
+        console.log('🗑️ Deleting existing proforma items for:', proformaId);
+
         // Delete existing items
         const { error: deleteError } = await supabase
           .from('proforma_items')
@@ -480,8 +482,11 @@ export const useUpdateProforma = () => {
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
 
+        console.log('✅ Deleted existing items');
+
         // Insert new items
         if (items.length > 0) {
+          console.log('➕ Inserting new items:', items.length);
           const proformaItems = items.map(item => ({
             proforma_id: proformaId,
             product_id: item.product_id,
@@ -496,6 +501,8 @@ export const useUpdateProforma = () => {
             line_total: item.line_total,
           }));
 
+          console.log('Items to insert:', proformaItems);
+
           const { error: itemsError } = await supabase
             .from('proforma_items')
             .insert(proformaItems);
@@ -505,14 +512,19 @@ export const useUpdateProforma = () => {
             console.error('Error creating updated proforma items:', errorMessage);
             throw new Error(`Failed to create updated proforma items: ${errorMessage}`);
           }
+
+          console.log('✅ Inserted new items successfully');
+        } else {
+          console.log('ℹ️ No items to insert (all deleted)');
         }
       }
 
       return proformaData;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
+    onSuccess: async (data) => {
+      // Refetch queries to ensure UI is updated with latest data
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
       toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
     },
     onError: async (error, variables) => {
@@ -556,8 +568,9 @@ export const useDeleteProforma = () => {
         throw new Error(`Failed to delete proforma: ${errorMessage}`);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+    onSuccess: async () => {
+      // Refetch queries to ensure UI is updated with latest data
+      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
       toast.success('Proforma invoice deleted successfully!');
     },
     onError: (error) => {

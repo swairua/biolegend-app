@@ -97,6 +97,12 @@ export const EditProformaModal = ({
   // Populate form when proforma changes
   useEffect(() => {
     if (proforma && open) {
+      console.log('📋 EditProformaModal opened with proforma:', {
+        id: proforma.id,
+        number: proforma.proforma_number,
+        itemCount: proforma.proforma_items?.length
+      });
+
       setFormData({
         customer_id: proforma.customer_id,
         proforma_date: proforma.proforma_date,
@@ -105,9 +111,25 @@ export const EditProformaModal = ({
         terms_and_conditions: proforma.terms_and_conditions || '',
         status: proforma.status,
       });
-      
-      if (proforma.proforma_items) {
-        const mappedItems = proforma.proforma_items.map(item => {
+
+      if (proforma.proforma_items && proforma.proforma_items.length > 0) {
+        console.log('Loading items from proforma:', {
+          count: proforma.proforma_items.length,
+          items: proforma.proforma_items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
+        });
+
+        // Deduplicate by ID in case there are duplicates from server
+        const seenIds = new Set<string>();
+        const uniqueItems = proforma.proforma_items.filter(item => {
+          if (seenIds.has(item.id)) {
+            console.warn('⚠️ Duplicate item detected:', item.id);
+            return false;
+          }
+          seenIds.add(item.id);
+          return true;
+        });
+
+        const mappedItems = uniqueItems.map(item => {
           const proformaItem: ProformaItem = {
             id: item.id || `item-${Date.now()}-${Math.random()}`,
             product_id: item.product_id,
@@ -134,10 +156,14 @@ export const EditProformaModal = ({
             line_total: calculated.line_total,
           };
         });
+        console.log('✅ Mapped items:', mappedItems.map(i => ({ id: i.id, product: i.product_name })));
         setItems(mappedItems);
+      } else {
+        console.log('ℹ️ No items in proforma');
+        setItems([]);
       }
     }
-  }, [proforma, open]);
+  }, [proforma?.id, open]);
 
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -200,7 +226,18 @@ export const EditProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+    console.log('🗑️ DELETE CLICKED', { id, currentItemsCount: items.length });
+    console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+
+    setItems(prev => {
+      const filtered = prev.filter(item => {
+        const keep = item.id !== id;
+        console.log(`Comparing item ${item.id} with ${id}: keep=${keep}`);
+        return keep;
+      });
+      console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
+      return filtered;
+    });
   };
 
   const calculateTotals = () => {
@@ -218,7 +255,7 @@ export const EditProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.customer_id) {
       toast.error('Please select a customer');
       return;
@@ -252,16 +289,36 @@ export const EditProformaModal = ({
         terms_and_conditions: formData.terms_and_conditions,
       };
 
-      console.log('Attempting to update proforma:', proforma.id);
+      console.log('🔄 SUBMITTING PROFORMA UPDATE', {
+        proformaId: proforma.id,
+        proformaNumber: proforma.proforma_number,
+        itemCount: items.length,
+        items: items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity, price: i.unit_price })),
+        totals: {
+          subtotal: totals.subtotal,
+          tax: totals.tax_total,
+          total: totals.total_amount
+        }
+      });
       console.log('Update data:', updatedProformaData);
 
-      await updateProforma.mutateAsync({
+      console.log('⏳ Sending update to server...');
+      const result = await updateProforma.mutateAsync({
         proformaId: proforma.id,
         proforma: updatedProformaData,
         items: items
       });
 
-      onSuccess?.();
+      console.log('✅ Update successful, calling onSuccess callback');
+
+      // Call parent's onSuccess callback after mutation completes and cache is updated
+      if (onSuccess) {
+        console.log('⏳ Parent onSuccess callback starting (refetch)...');
+        await onSuccess();
+        console.log('✅ Parent onSuccess callback complete');
+      }
+
+      console.log('🚪 Closing modal');
       handleClose();
     } catch (error) {
       console.error('Error updating proforma:', error);
@@ -284,9 +341,19 @@ export const EditProformaModal = ({
   };
 
   const handleClose = () => {
+    console.log('Closing edit modal');
     setSearchTerm('');
     setShowProductSearch(false);
     setUpdateError('');
+    setItems([]);
+    setFormData({
+      customer_id: '',
+      proforma_date: '',
+      valid_until: '',
+      notes: '',
+      terms_and_conditions: '',
+      status: 'draft',
+    });
     onOpenChange(false);
   };
 
@@ -535,9 +602,15 @@ export const EditProformaModal = ({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeItem(item.id)}
+                            onClick={(e) => {
+                              console.log('Delete button clicked', e);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeItem(item.id);
+                            }}
+                            className="hover:bg-destructive/10"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
