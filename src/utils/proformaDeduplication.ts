@@ -43,6 +43,8 @@ export interface DeduplicationResult {
  * Find all duplicate items in a proforma
  */
 export async function findProformaDuplicates(proformaId: string): Promise<DuplicateItemGroup[]> {
+  console.log('🔍 Finding duplicates for proforma:', proformaId);
+
   const { data: items, error } = await supabase
     .from('proforma_items')
     .select(`
@@ -60,9 +62,12 @@ export async function findProformaDuplicates(proformaId: string): Promise<Duplic
 
   if (error) {
     const errorMessage = serializeError(error);
-    console.error('Error finding duplicates:', errorMessage);
+    console.error('❌ Error finding duplicates:', errorMessage, error);
     return [];
   }
+
+  console.log(`📋 Found ${items?.length || 0} items in proforma ${proformaId}`);
+  if (!items) return [];
 
   if (!items || items.length === 0) {
     return [];
