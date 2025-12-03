@@ -141,7 +141,10 @@ export const EditProformaModal = ({
             line_total: calculated.line_total,
           };
         });
+        console.log('✅ Mapped items:', mappedItems.map(i => ({ id: i.id, product: i.product_name })));
         setItems(mappedItems);
+      } else {
+        console.log('ℹ️ No items in proforma');
       }
     }
   }, [proforma, open]);
