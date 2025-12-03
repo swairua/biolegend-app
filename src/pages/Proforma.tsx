@@ -370,23 +370,43 @@ export default function Proforma() {
                     toast.error('No company selected');
                     return;
                   }
+
+                  const loadingToast = toast.loading('Finding and fixing duplicate items...');
+
                   try {
                     const result = await fixAllProformaDuplicates(currentCompany.id);
+
+                    console.log('Deduplication result:', {
+                      success: result.success,
+                      message: result.message,
+                      duplicates_found: result.duplicates_found,
+                      duplicates_fixed: result.duplicates_fixed,
+                      errors: result.errors,
+                      affected_proformas: result.affected_proformas
+                    });
+
                     if (result.success) {
-                      toast.success(result.message);
+                      toast.dismiss(loadingToast);
                       if (result.duplicates_fixed > 0) {
+                        toast.success(`✅ Fixed ${result.duplicates_fixed} duplicate(s) in ${result.affected_proformas.length} proforma(s)`);
                         refetch();
+                      } else {
+                        toast.success('No duplicates found');
                       }
                     } else {
+                      toast.dismiss(loadingToast);
                       // Show detailed error message
-                      if (result.errors.length > 0) {
-                        console.error('Deduplication errors:', result.errors);
-                        toast.error(`${result.message}\n\nDetails: ${result.errors[0]}`);
-                      } else {
-                        toast.error(result.message);
-                      }
+                      const errorDetails = result.errors.length > 0
+                        ? result.errors.join('\n')
+                        : 'Unknown error occurred';
+
+                      console.error('Deduplication failed with errors:', result.errors);
+                      toast.error(`Failed to fix duplicates:\n${errorDetails}`, {
+                        duration: 5000
+                      });
                     }
                   } catch (error) {
+                    toast.dismiss(loadingToast);
                     const errorMsg = error instanceof Error ? error.message : String(error);
                     console.error('Fix duplicates error:', error);
                     toast.error(`Error fixing duplicates: ${errorMsg}`);
