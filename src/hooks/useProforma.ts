@@ -554,17 +554,28 @@ export const useUpdateProforma = () => {
       return proformaData;
     },
     onSuccess: async (data) => {
-      console.log('✅ onSuccess callback triggered for:', data.proforma_number);
+      console.log('✅ ========================================');
+      console.log('✅ onSuccess callback triggered');
+      console.log('=========================================');
+      console.log('Proforma number:', data.proforma_number);
+      console.log('Proforma ID:', data.id);
 
-      // Refetch queries to ensure UI is updated with latest data
-      console.log('🔄 Refetching proforma_invoices...');
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+      try {
+        // Refetch queries to ensure UI is updated with latest data
+        console.log('🔄 Refetching proforma_invoices...');
+        const refetch1 = await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+        console.log('🔄 Refetch proforma_invoices complete');
 
-      console.log('🔄 Refetching individual proforma:', data.id);
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
+        console.log('🔄 Refetching individual proforma:', data.id);
+        const refetch2 = await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
+        console.log('🔄 Refetch individual proforma complete');
 
-      console.log('📢 Showing success toast for:', data.proforma_number);
-      toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+        console.log('📢 Showing success toast');
+        toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+      } catch (refetchError) {
+        console.error('⚠️ Error during refetch, but mutation succeeded:', refetchError);
+        toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
+      }
     },
     onError: async (error, variables) => {
       const errorMessage = serializeError(error);
