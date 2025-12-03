@@ -345,13 +345,16 @@ export const EditProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🎯 handleSubmit called');
 
     if (!formData.customer_id) {
+      console.warn('⚠️ No customer selected');
       toast.error('Please select a customer');
       return;
     }
 
     if (items.length === 0) {
+      console.warn('⚠️ No items in form');
       toast.error('Please add at least one item');
       return;
     }
@@ -360,10 +363,12 @@ export const EditProformaModal = ({
 
     try {
       if (!proforma.id) {
+        console.error('❌ Proforma ID missing');
         toast.error('Proforma ID is missing - cannot update');
         return;
       }
 
+      console.log('✅ Validation passed, calculating totals...');
       const totals = calculateTotals();
 
       // Update proforma using the hook
