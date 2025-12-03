@@ -302,17 +302,23 @@ export const EditProformaModal = ({
       });
       console.log('Update data:', updatedProformaData);
 
-      await updateProforma.mutateAsync({
+      console.log('⏳ Sending update to server...');
+      const result = await updateProforma.mutateAsync({
         proformaId: proforma.id,
         proforma: updatedProformaData,
         items: items
       });
 
+      console.log('✅ Update successful, calling onSuccess callback');
+
       // Call parent's onSuccess callback after mutation completes and cache is updated
       if (onSuccess) {
+        console.log('⏳ Parent onSuccess callback starting (refetch)...');
         await onSuccess();
+        console.log('✅ Parent onSuccess callback complete');
       }
 
+      console.log('🚪 Closing modal');
       handleClose();
     } catch (error) {
       console.error('Error updating proforma:', error);
