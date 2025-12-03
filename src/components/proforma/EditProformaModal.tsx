@@ -413,10 +413,17 @@ export const EditProformaModal = ({
         qty: i.quantity
       })));
 
+      // Get any duplicate IDs that were detected during load
+      const duplicateIdsToDelete = (window as any).__proformaDedupeCleanupIds || [];
+      if (duplicateIdsToDelete.length > 0) {
+        console.log('🗑️ Will delete duplicate items:', duplicateIdsToDelete);
+      }
+
       const result = await updateProforma.mutateAsync({
         proformaId: proforma.id,
         proforma: updatedProformaData,
-        items: validatedItems
+        items: validatedItems,
+        duplicateItemIdsToDelete: duplicateIdsToDelete
       });
 
       console.log('✅ Update successful, calling onSuccess callback');
