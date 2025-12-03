@@ -130,16 +130,33 @@ export const EditProformaModal = ({
             const existing = productMap.get(key)!;
             duplicateProducts.add(key);
 
+            const oldQty = existing.quantity || 0;
+            const newQty = item.quantity || 0;
+            const mergedQuantity = oldQty + newQty;
+
             console.warn('⚠️ Duplicate product detected, merging quantities:', {
               product: item.product_name,
-              qty1: existing.quantity,
-              qty2: item.quantity,
-              totalQty: existing.quantity + item.quantity
+              qty1: oldQty,
+              qty2: newQty,
+              totalQty: mergedQuantity
             });
 
-            // Create new merged item object instead of mutating
-            const mergedQuantity = (existing.quantity || 0) + (item.quantity || 0);
-            const mergedItem = { ...existing, quantity: mergedQuantity };
+            // Create completely new merged item object (no mutations)
+            const mergedItem: ProformaItem = {
+              id: existing.id,
+              proforma_id: existing.proforma_id,
+              product_id: existing.product_id,
+              product_name: existing.product_name,
+              description: existing.description,
+              quantity: mergedQuantity,  // REPLACE with merged quantity
+              unit_price: existing.unit_price,
+              discount_percentage: existing.discount_percentage || 0,
+              discount_amount: existing.discount_amount || 0,
+              tax_percentage: existing.tax_percentage,
+              tax_amount: existing.tax_amount || 0,
+              tax_inclusive: existing.tax_inclusive || false,
+              line_total: existing.line_total || 0,
+            };
 
             // Recalculate ALL tax fields after merging quantities
             const calculated = calculateItemTax(mergedItem);
@@ -156,17 +173,18 @@ export const EditProformaModal = ({
             // First occurrence of this product - use stable unique ID
             const proformaItem: ProformaItem = {
               id: item.id ? String(item.id) : `item-${proforma.id}-${key}-${index}`,
+              proforma_id: item.proforma_id,
               product_id: item.product_id,
               product_name: item.product_name || '',
               description: item.description || '',
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              discount_percentage: item.discount_percentage || 0,
-              discount_amount: item.discount_amount || 0,
-              tax_percentage: item.tax_percentage,
-              tax_amount: item.tax_amount || 0,
+              quantity: Number(item.quantity) || 0,  // Ensure it's a number
+              unit_price: Number(item.unit_price) || 0,
+              discount_percentage: Number(item.discount_percentage) || 0,
+              discount_amount: Number(item.discount_amount) || 0,
+              tax_percentage: Number(item.tax_percentage) || 0,
+              tax_amount: Number(item.tax_amount) || 0,
               tax_inclusive: item.tax_inclusive || false,
-              line_total: item.line_total || 0,
+              line_total: Number(item.line_total) || 0,
             };
 
             // Recalculate tax to ensure consistency with new logic
