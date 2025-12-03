@@ -269,8 +269,12 @@ export async function fixAllProformaDuplicates(companyId: string): Promise<Dedup
   };
 
   try {
+    console.log('🚀 Starting full deduplication for company:', companyId);
+
     // Find all proformas with duplicates
     const proformasWithDuplicates = await findAllProformasWithDuplicates(companyId);
+
+    console.log(`📊 Found ${proformasWithDuplicates.length} proformas with duplicates`);
 
     if (proformasWithDuplicates.length === 0) {
       result.success = true;
@@ -282,8 +286,15 @@ export async function fixAllProformaDuplicates(companyId: string): Promise<Dedup
 
     // Fix each proforma
     for (const pf of proformasWithDuplicates) {
+      console.log(`\n⚙️ Processing ${pf.proforma_number}...`);
       try {
         const deduplicateResult = await deduplicateProformaItems(pf.proforma_id);
+
+        console.log(`Result for ${pf.proforma_number}:`, {
+          success: deduplicateResult.success,
+          fixed: deduplicateResult.duplicates_fixed,
+          errors: deduplicateResult.errors
+        });
 
         if (deduplicateResult.success) {
           result.duplicates_fixed += deduplicateResult.duplicates_fixed;
@@ -294,20 +305,29 @@ export async function fixAllProformaDuplicates(companyId: string): Promise<Dedup
       } catch (error) {
         const errorMsg = `Error fixing proforma ${pf.proforma_number}: ${serializeError(error)}`;
         result.errors.push(errorMsg);
-        console.error(errorMsg);
+        console.error('❌', errorMsg);
       }
     }
 
     result.success = result.errors.length === 0;
     result.message = result.success
       ? `Fixed ${result.duplicates_fixed} duplicate(s) in ${result.affected_proformas.length} proforma(s)`
-      : `Fixed with errors: ${result.errors.join('; ')}`;
+      : `Attempted to fix duplicates but encountered ${result.errors.length} error(s)`;
+
+    console.log('✅ Deduplication complete:', {
+      success: result.success,
+      duplicates_found: result.duplicates_found,
+      duplicates_fixed: result.duplicates_fixed,
+      affected_proformas: result.affected_proformas,
+      error_count: result.errors.length
+    });
 
     return result;
   } catch (error) {
     result.success = false;
     result.message = `Failed to fix duplicates: ${serializeError(error)}`;
     result.errors.push(result.message);
+    console.error('❌ Deduplication failed:', error);
     return result;
   }
 }
