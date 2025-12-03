@@ -261,10 +261,7 @@ export const EditProformaModal = ({
         items: items
       });
 
-      // Wait a bit for the mutation's onSuccess to complete and invalidate queries
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Call parent's onSuccess callback to trigger refetch
+      // Call parent's onSuccess callback after mutation completes and cache is updated
       if (onSuccess) {
         await onSuccess();
       }
