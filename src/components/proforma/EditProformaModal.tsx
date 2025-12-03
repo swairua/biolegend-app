@@ -422,15 +422,6 @@ export const EditProformaModal = ({
         qty: i.quantity
       })));
 
-      // Get any duplicate IDs that were detected during load
-      // Note: These should already be deleted by auto-cleanup, but we keep as backup
-      const duplicateIdsToDelete = (window as any).__proformaDedupeCleanupIds || [];
-      if (duplicateIdsToDelete.length > 0) {
-        console.log('🗑️ Backup: Will delete remaining duplicate items:', duplicateIdsToDelete);
-      } else {
-        console.log('ℹ️ No duplicates to delete (already auto-cleaned on open)');
-      }
-
       try {
         console.log('🎯 ========================================');
         console.log('🚀 Starting mutation...');
@@ -439,15 +430,14 @@ export const EditProformaModal = ({
           proformaId: proforma.id,
           proformaData: updatedProformaData,
           itemsCount: validatedItems.length,
-          duplicateIdsCount: duplicateIdsToDelete.length
+          items: validatedItems.map(i => ({ product: i.product_name, qty: i.quantity }))
         });
 
         console.log('⏳ Waiting for mutation to complete...');
         const result = await updateProforma.mutateAsync({
           proformaId: proforma.id,
           proforma: updatedProformaData,
-          items: validatedItems,
-          duplicateItemIdsToDelete: duplicateIdsToDelete
+          items: validatedItems
         });
 
         console.log('✅ ========================================');
