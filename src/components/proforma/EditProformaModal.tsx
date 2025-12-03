@@ -113,8 +113,23 @@ export const EditProformaModal = ({
       });
 
       if (proforma.proforma_items && proforma.proforma_items.length > 0) {
-        console.log('Loading items from proforma:', proforma.proforma_items.length);
-        const mappedItems = proforma.proforma_items.map(item => {
+        console.log('Loading items from proforma:', {
+          count: proforma.proforma_items.length,
+          items: proforma.proforma_items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
+        });
+
+        // Deduplicate by ID in case there are duplicates from server
+        const seenIds = new Set<string>();
+        const uniqueItems = proforma.proforma_items.filter(item => {
+          if (seenIds.has(item.id)) {
+            console.warn('⚠️ Duplicate item detected:', item.id);
+            return false;
+          }
+          seenIds.add(item.id);
+          return true;
+        });
+
+        const mappedItems = uniqueItems.map(item => {
           const proformaItem: ProformaItem = {
             id: item.id || `item-${Date.now()}-${Math.random()}`,
             product_id: item.product_id,
