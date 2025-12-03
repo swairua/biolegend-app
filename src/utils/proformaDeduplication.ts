@@ -27,7 +27,6 @@ export interface DuplicateItemGroup {
     unit_price: number;
     tax_percentage: number;
     tax_inclusive: boolean;
-    created_at?: string;
   }>;
 }
 
