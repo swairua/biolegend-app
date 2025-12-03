@@ -113,47 +113,83 @@ export const EditProformaModal = ({
       });
 
       if (proforma.proforma_items && proforma.proforma_items.length > 0) {
-        console.log('Loading items from proforma:', {
+        console.log('📥 Loading items from proforma:', {
           count: proforma.proforma_items.length,
-          items: proforma.proforma_items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity }))
+          items: proforma.proforma_items.map(i => ({
+            id: i.id,
+            product: i.product_name,
+            qty: i.quantity,
+            qty_type: typeof i.quantity
+          }))
         });
 
         // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
         const productMap = new Map<string, ProformaItem>();
+        const duplicateProducts = new Set<string>();
 
-        proforma.proforma_items.forEach(item => {
+        proforma.proforma_items.forEach((item, index) => {
           const key = item.product_id;
 
           if (productMap.has(key)) {
             // Merge quantities if same product already exists
             const existing = productMap.get(key)!;
+            duplicateProducts.add(key);
+
+            const oldQty = existing.quantity || 0;
+            const newQty = item.quantity || 0;
+            const mergedQuantity = oldQty + newQty;
+
             console.warn('⚠️ Duplicate product detected, merging quantities:', {
               product: item.product_name,
-              qty1: existing.quantity,
-              qty2: item.quantity,
-              totalQty: existing.quantity + item.quantity
+              qty1: oldQty,
+              qty2: newQty,
+              totalQty: mergedQuantity
             });
 
-            existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
-            // Recalculate line total after merging quantities
-            const calculated = calculateItemTax(existing);
-            existing.tax_amount = calculated.tax_amount;
-            existing.line_total = calculated.line_total;
+            // Create completely new merged item object (no mutations)
+            const mergedItem: ProformaItem = {
+              id: existing.id,
+              proforma_id: existing.proforma_id,
+              product_id: existing.product_id,
+              product_name: existing.product_name,
+              description: existing.description,
+              quantity: mergedQuantity,  // REPLACE with merged quantity
+              unit_price: existing.unit_price,
+              discount_percentage: existing.discount_percentage || 0,
+              discount_amount: existing.discount_amount || 0,
+              tax_percentage: existing.tax_percentage,
+              tax_amount: existing.tax_amount || 0,
+              tax_inclusive: existing.tax_inclusive || false,
+              line_total: existing.line_total || 0,
+            };
+
+            // Recalculate ALL tax fields after merging quantities
+            const calculated = calculateItemTax(mergedItem);
+
+            productMap.set(key, {
+              ...mergedItem,
+              base_amount: calculated.base_amount,
+              discount_total: calculated.discount_total,
+              taxable_amount: calculated.taxable_amount,
+              tax_amount: calculated.tax_amount,
+              line_total: calculated.line_total,
+            });
           } else {
-            // First occurrence of this product
+            // First occurrence of this product - use stable unique ID
             const proformaItem: ProformaItem = {
-              id: item.id || `item-${Date.now()}-${Math.random()}`,
+              id: item.id ? String(item.id) : `item-${proforma.id}-${key}-${index}`,
+              proforma_id: item.proforma_id,
               product_id: item.product_id,
               product_name: item.product_name || '',
               description: item.description || '',
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              discount_percentage: item.discount_percentage || 0,
-              discount_amount: item.discount_amount || 0,
-              tax_percentage: item.tax_percentage,
-              tax_amount: item.tax_amount || 0,
+              quantity: Number(item.quantity) || 0,  // Ensure it's a number
+              unit_price: Number(item.unit_price) || 0,
+              discount_percentage: Number(item.discount_percentage) || 0,
+              discount_amount: Number(item.discount_amount) || 0,
+              tax_percentage: Number(item.tax_percentage) || 0,
+              tax_amount: Number(item.tax_amount) || 0,
               tax_inclusive: item.tax_inclusive || false,
-              line_total: item.line_total || 0,
+              line_total: Number(item.line_total) || 0,
             };
 
             // Recalculate tax to ensure consistency with new logic
@@ -171,6 +207,14 @@ export const EditProformaModal = ({
 
         const mappedItems = Array.from(productMap.values());
         console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+
+        if (duplicateProducts.size > 0) {
+          console.warn('⚠️ Database contains duplicate items that will be cleaned up on save. Products affected:', Array.from(duplicateProducts));
+          toast.info(`Found and merged ${duplicateProducts.size} duplicate item(s) - will be cleaned up on save`, {
+            duration: 4000
+          });
+        }
+
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
@@ -226,18 +270,39 @@ export const EditProformaModal = ({
   };
 
   const updateItem = (id: string, field: keyof ProformaItem, value: any) => {
+    // Validate and ensure numeric fields are properly handled
+    let finalValue = value;
+
+    if (['quantity', 'unit_price', 'tax_percentage', 'discount_percentage', 'discount_amount'].includes(field)) {
+      const numValue = parseFloat(String(value));
+      if (isNaN(numValue)) {
+        console.warn(`Invalid numeric value for ${field}: ${value}, setting to 0`);
+        finalValue = 0;
+      } else {
+        finalValue = numValue;
+      }
+    }
+
+    console.log(`📝 Updating item ${id}: ${field} = ${finalValue}`);
+
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        let updatedItem = { ...item, [field]: value };
+        // Create new object with updated field (REPLACE not ADD)
+        const updatedItem: ProformaItem = {
+          ...item,
+          [field]: finalValue
+        };
+
+        console.log(`   Old value: ${item[field as keyof ProformaItem]}, New value: ${finalValue}`);
 
         // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
-        if (field === 'tax_inclusive' && value && item.tax_percentage === 0) {
+        if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
           updatedItem.tax_percentage = defaultTaxRate;
         }
 
         // Recalculate using proper tax utility
         const calculated = calculateItemTax(updatedItem);
-        return {
+        const result = {
           ...updatedItem,
           base_amount: calculated.base_amount,
           discount_total: calculated.discount_total,
@@ -245,6 +310,9 @@ export const EditProformaModal = ({
           tax_amount: calculated.tax_amount,
           line_total: calculated.line_total,
         };
+
+        console.log(`   ✅ Item updated, line_total: ${result.line_total}`);
+        return result;
       }
       return item;
     }));
@@ -326,7 +394,14 @@ export const EditProformaModal = ({
         proformaId: proforma.id,
         proformaNumber: proforma.proforma_number,
         itemCount: items.length,
-        items: items.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity, price: i.unit_price })),
+        items: items.map(i => ({
+          id: i.id,
+          product: i.product_name,
+          qty: i.quantity,
+          qty_type: typeof i.quantity,
+          price: i.unit_price,
+          line_total: i.line_total
+        })),
         totals: {
           subtotal: totals.subtotal,
           tax: totals.tax_total,
@@ -336,10 +411,29 @@ export const EditProformaModal = ({
       console.log('Update data:', updatedProformaData);
 
       console.log('⏳ Sending update to server...');
+
+      // Final validation before sending - ensure all numeric values are properly typed
+      const validatedItems = items.map(item => ({
+        ...item,
+        quantity: Number(item.quantity) || 0,
+        unit_price: Number(item.unit_price) || 0,
+        tax_percentage: Number(item.tax_percentage) || 0,
+        discount_percentage: Number(item.discount_percentage) || 0,
+        discount_amount: Number(item.discount_amount) || 0,
+        tax_amount: Number(item.tax_amount) || 0,
+        line_total: Number(item.line_total) || 0,
+      }));
+
+      console.log('✅ Validated items before save:', validatedItems.map(i => ({
+        id: i.id,
+        product: i.product_name,
+        qty: i.quantity
+      })));
+
       const result = await updateProforma.mutateAsync({
         proformaId: proforma.id,
         proforma: updatedProformaData,
-        items: items
+        items: validatedItems
       });
 
       console.log('✅ Update successful, calling onSuccess callback');
@@ -593,8 +687,11 @@ export const EditProformaModal = ({
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                            value={Number(item.quantity) || ''}
+                            onChange={(e) => {
+                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              updateItem(item.id, 'quantity', isNaN(newValue) ? 0 : newValue);
+                            }}
                             min="0"
                             step="0.01"
                             className="w-20"
@@ -603,8 +700,11 @@ export const EditProformaModal = ({
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.unit_price}
-                            onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                            value={Number(item.unit_price) || ''}
+                            onChange={(e) => {
+                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              updateItem(item.id, 'unit_price', isNaN(newValue) ? 0 : newValue);
+                            }}
                             min="0"
                             step="0.01"
                             className="w-24"
@@ -613,8 +713,11 @@ export const EditProformaModal = ({
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.tax_percentage}
-                            onChange={(e) => updateItem(item.id, 'tax_percentage', parseFloat(e.target.value) || 0)}
+                            value={Number(item.tax_percentage) || ''}
+                            onChange={(e) => {
+                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              updateItem(item.id, 'tax_percentage', isNaN(newValue) ? 0 : newValue);
+                            }}
                             min="0"
                             max="100"
                             step="0.01"
