@@ -330,6 +330,9 @@ export const EditProformaModal = ({
 
       console.log('✅ Update successful, calling onSuccess callback');
 
+      // Show explicit success toast after mutation completes
+      toast.success(`Proforma invoice ${proforma.proforma_number} updated successfully!`);
+
       // Call parent's onSuccess callback after mutation completes and cache is updated
       if (onSuccess) {
         console.log('⏳ Parent onSuccess callback starting (refetch)...');
