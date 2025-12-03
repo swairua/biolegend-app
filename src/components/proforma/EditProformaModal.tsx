@@ -268,37 +268,43 @@ export const EditProformaModal = ({
 
     console.log(`📝 Updating item ${id}: ${field} = ${finalValue}`);
 
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        // Create new object with updated field (REPLACE not ADD)
-        const updatedItem: ProformaItem = {
-          ...item,
-          [field]: finalValue
-        };
+    setItems(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          // Create new object with updated field (REPLACE not ADD)
+          const updatedItem: ProformaItem = {
+            ...item,
+            [field]: finalValue
+          };
 
-        console.log(`   Old value: ${item[field as keyof ProformaItem]}, New value: ${finalValue}`);
+          const oldValue = item[field as keyof ProformaItem];
+          console.log(`   ✏️ ${field}: ${oldValue} → ${finalValue}`);
 
-        // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
-        if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
-          updatedItem.tax_percentage = defaultTaxRate;
+          // Auto-apply default tax rate when tax_inclusive is checked and no tax is set
+          if (field === 'tax_inclusive' && finalValue && item.tax_percentage === 0) {
+            updatedItem.tax_percentage = defaultTaxRate;
+          }
+
+          // Recalculate using proper tax utility
+          const calculated = calculateItemTax(updatedItem);
+          const result = {
+            ...updatedItem,
+            base_amount: calculated.base_amount,
+            discount_total: calculated.discount_total,
+            taxable_amount: calculated.taxable_amount,
+            tax_amount: calculated.tax_amount,
+            line_total: calculated.line_total,
+          };
+
+          console.log(`   ✅ Item updated - quantity=${result.quantity}, line_total=${result.line_total}`);
+          return result;
         }
+        return item;
+      });
 
-        // Recalculate using proper tax utility
-        const calculated = calculateItemTax(updatedItem);
-        const result = {
-          ...updatedItem,
-          base_amount: calculated.base_amount,
-          discount_total: calculated.discount_total,
-          taxable_amount: calculated.taxable_amount,
-          tax_amount: calculated.tax_amount,
-          line_total: calculated.line_total,
-        };
-
-        console.log(`   ✅ Item updated, line_total: ${result.line_total}`);
-        return result;
-      }
-      return item;
-    }));
+      console.log('📋 Items after update:', updated.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+      return updated;
+    });
   };
 
 
