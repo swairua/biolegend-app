@@ -120,6 +120,7 @@ export const EditProformaModal = ({
 
         // Deduplicate by product_id and merge quantities (fixes duplicate items from database)
         const productMap = new Map<string, ProformaItem>();
+        const duplicateProducts = new Set<string>();
 
         proforma.proforma_items.forEach(item => {
           const key = item.product_id;
@@ -127,6 +128,8 @@ export const EditProformaModal = ({
           if (productMap.has(key)) {
             // Merge quantities if same product already exists
             const existing = productMap.get(key)!;
+            duplicateProducts.add(key);
+
             console.warn('⚠️ Duplicate product detected, merging quantities:', {
               product: item.product_name,
               qty1: existing.quantity,
@@ -135,8 +138,11 @@ export const EditProformaModal = ({
             });
 
             existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
-            // Recalculate line total after merging quantities
+            // Recalculate ALL tax fields after merging quantities
             const calculated = calculateItemTax(existing);
+            existing.base_amount = calculated.base_amount;
+            existing.discount_total = calculated.discount_total;
+            existing.taxable_amount = calculated.taxable_amount;
             existing.tax_amount = calculated.tax_amount;
             existing.line_total = calculated.line_total;
           } else {
@@ -171,6 +177,11 @@ export const EditProformaModal = ({
 
         const mappedItems = Array.from(productMap.values());
         console.log('✅ Deduplicated items:', mappedItems.map(i => ({ id: i.id, product: i.product_name, qty: i.quantity })));
+
+        if (duplicateProducts.size > 0) {
+          console.warn('⚠️ Database contains duplicate items that should be cleaned up on save. Products affected:', Array.from(duplicateProducts));
+        }
+
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
