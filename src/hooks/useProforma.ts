@@ -563,14 +563,15 @@ export const useUpdateProforma = () => {
     },
     onError: async (error, variables) => {
       const errorMessage = serializeError(error);
-      console.error('Error updating proforma:', errorMessage);
+      console.error('❌ onError callback triggered:', errorMessage);
+      console.error('Variables:', variables);
 
       // If it's an access/permission error, run diagnostics
       if (errorMessage.includes('permission') ||
           errorMessage.includes('access') ||
           errorMessage.includes('company') ||
           errorMessage.includes('blocked')) {
-        console.log('Running RLS diagnostics for error analysis...');
+        console.log('🔍 Running RLS diagnostics for error analysis...');
         try {
           await logProformaRLSDiagnostics(variables.proformaId);
         } catch (diagError) {
@@ -578,6 +579,7 @@ export const useUpdateProforma = () => {
         }
       }
 
+      console.log('📢 Showing error toast');
       toast.error(`Error updating proforma: ${errorMessage}`);
     },
   });
