@@ -53,12 +53,11 @@ export async function findProformaDuplicates(proformaId: string): Promise<Duplic
       unit_price,
       tax_percentage,
       tax_inclusive,
-      created_at,
       products (name)
     `)
     .eq('proforma_id', proformaId)
     .order('product_id', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('id', { ascending: true });
 
   if (error) {
     const errorMessage = serializeError(error);
