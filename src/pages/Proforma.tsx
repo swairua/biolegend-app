@@ -374,12 +374,22 @@ export default function Proforma() {
                     const result = await fixAllProformaDuplicates(currentCompany.id);
                     if (result.success) {
                       toast.success(result.message);
-                      refetch();
+                      if (result.duplicates_fixed > 0) {
+                        refetch();
+                      }
                     } else {
-                      toast.error(result.message);
+                      // Show detailed error message
+                      if (result.errors.length > 0) {
+                        console.error('Deduplication errors:', result.errors);
+                        toast.error(`${result.message}\n\nDetails: ${result.errors[0]}`);
+                      } else {
+                        toast.error(result.message);
+                      }
                     }
                   } catch (error) {
-                    toast.error(`Error fixing duplicates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    console.error('Fix duplicates error:', error);
+                    toast.error(`Error fixing duplicates: ${errorMsg}`);
                   }
                 }}
               >
