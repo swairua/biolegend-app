@@ -432,6 +432,13 @@ export const EditProformaModal = ({
 
       try {
         console.log('🚀 Starting mutation...');
+        console.log('📦 Mutation payload:', {
+          proformaId: proforma.id,
+          proformaData: updatedProformaData,
+          itemsCount: validatedItems.length,
+          duplicateIdsCount: duplicateIdsToDelete.length
+        });
+
         const result = await updateProforma.mutateAsync({
           proformaId: proforma.id,
           proforma: updatedProformaData,
