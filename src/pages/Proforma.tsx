@@ -662,6 +662,30 @@ export default function Proforma() {
           initialDueDate={invoicePrefill.dueDate}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Proforma Invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete proforma invoice{' '}
+              <span className="font-semibold">{proformaToDelete?.proforma_number}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteProforma.isPending}
+            >
+              {deleteProforma.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
