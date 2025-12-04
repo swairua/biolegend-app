@@ -498,6 +498,7 @@ export const useUpdateProforma = () => {
         const proformaItems = items.map(item => ({
           proforma_id: proformaId,
           product_id: item.product_id,
+          product_name: item.product_name,
           description: item.description,
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price),
