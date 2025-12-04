@@ -210,6 +210,27 @@ export default function Proforma() {
     refetch();
   };
 
+  const handleDeleteClick = (proforma: ProformaWithItems) => {
+    setProformaToDelete(proforma);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!proformaToDelete?.id) return;
+
+    try {
+      await deleteProforma.mutateAsync(proformaToDelete.id);
+      toast.success(`Proforma ${proformaToDelete.proforma_number} deleted successfully`);
+      setShowDeleteConfirm(false);
+      setProformaToDelete(null);
+      await refetch();
+    } catch (error) {
+      console.error('Error deleting proforma:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error deleting proforma: ${message}`);
+    }
+  };
+
   const handleFilter = () => {
     toast.info('Advanced filter functionality coming soon!');
   };
