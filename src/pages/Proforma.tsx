@@ -24,9 +24,10 @@ import {
   Calendar,
   Receipt,
   FileText,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
-import { useProformas, useConvertProformaToInvoice, type ProformaWithItems } from '@/hooks/useProforma';
+import { useProformas, useConvertProformaToInvoice, useDeleteProforma, type ProformaWithItems } from '@/hooks/useProforma';
 import { useCompanies } from '@/hooks/useDatabase';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
