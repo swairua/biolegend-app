@@ -479,8 +479,21 @@ export const useUpdateProforma = () => {
         console.log('📝 Updating items - count:', items.length);
         console.log('Items to save:', items.map(i => ({ product: i.product_name, qty: i.quantity, price: i.unit_price })));
 
-        // Step 1: Delete ALL existing items for this proforma (clean slate)
-        console.log('🗑️ STEP 1: Deleting all existing proforma items');
+        // Step 1: IMPORTANT - Delete ALL existing items for this proforma FIRST (clean slate)
+        // This ensures we never have duplicates no matter what happens
+        console.log('🗑️ STEP 1: Deleting ALL existing proforma items for this proforma');
+
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('proforma_items')
+          .select('id')
+          .eq('proforma_id', proformaId);
+
+        if (fetchError) {
+          console.warn('⚠️ Warning: Could not fetch existing items to verify delete:', fetchError);
+        } else {
+          console.log(`Found ${existingItems?.length || 0} existing items to delete`);
+        }
+
         const { error: deleteError } = await supabase
           .from('proforma_items')
           .delete()
@@ -491,7 +504,22 @@ export const useUpdateProforma = () => {
           console.error('❌ Delete error:', errorMessage);
           throw new Error(`Failed to delete existing proforma items: ${errorMessage}`);
         }
-        console.log('✅ All items deleted');
+
+        // Verify the delete actually happened
+        const { data: deletedItems, error: verifyError } = await supabase
+          .from('proforma_items')
+          .select('id')
+          .eq('proforma_id', proformaId);
+
+        if (verifyError) {
+          console.warn('⚠️ Warning: Could not verify deletion:', verifyError);
+        } else {
+          console.log(`✅ Verified deletion - ${deletedItems?.length || 0} items remaining (should be 0)`);
+          if (deletedItems && deletedItems.length > 0) {
+            console.error('❌ CRITICAL: Items still exist after delete! IDs:', deletedItems.map(i => i.id));
+            throw new Error(`Delete verification failed: ${deletedItems.length} items still exist after deletion`);
+          }
+        }
 
         // Step 2: Validate and insert the current items from the UI
         console.log('➕ STEP 2: Validating and inserting fresh items from UI state');
@@ -534,9 +562,10 @@ export const useUpdateProforma = () => {
           total: i.line_total
         })));
 
-        const { error: itemsError } = await supabase
+        const { error: itemsError, data: insertedData } = await supabase
           .from('proforma_items')
-          .insert(validatedItems);
+          .insert(validatedItems)
+          .select('id');
 
         if (itemsError) {
           const errorMessage = serializeError(itemsError);
@@ -545,9 +574,36 @@ export const useUpdateProforma = () => {
           throw new Error(`Failed to create proforma items: ${errorMessage}`);
         }
 
-        console.log('✅ Items inserted successfully - count:', items.length);
+        console.log(`✅ Items inserted successfully - count: ${validatedItems.length}, IDs: ${insertedData?.map(d => d.id).join(', ') || 'unknown'}`);
+
+        // Verify the insert
+        const { data: verifyInsert, error: verifyInsertError } = await supabase
+          .from('proforma_items')
+          .select('id, product_id, quantity')
+          .eq('proforma_id', proformaId);
+
+        if (verifyInsertError) {
+          console.warn('⚠️ Warning: Could not verify insert:', verifyInsertError);
+        } else {
+          console.log(`✅ Verified insert - ${verifyInsert?.length || 0} items now in database (expected ${validatedItems.length})`);
+          if (verifyInsert && verifyInsert.length !== validatedItems.length) {
+            console.error(`❌ WARNING: Item count mismatch! Expected ${validatedItems.length}, got ${verifyInsert.length}`);
+          }
+        }
       } else {
-        console.log('⚠️ No items to update');
+        console.log('⚠️ No items to update - deleting all existing items');
+
+        // If no items provided, delete all items for this proforma
+        const { error: deleteError } = await supabase
+          .from('proforma_items')
+          .delete()
+          .eq('proforma_id', proformaId);
+
+        if (deleteError) {
+          const errorMessage = serializeError(deleteError);
+          console.warn('⚠️ Warning: Failed to delete items when none provided:', errorMessage);
+          // Don't fail here - the proforma update already succeeded
+        }
       }
 
       console.log('🎉 Mutation complete, returning data:', proformaData.proforma_number);
