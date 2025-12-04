@@ -493,32 +493,55 @@ export const useUpdateProforma = () => {
         }
         console.log('✅ All items deleted');
 
-        // Step 2: Insert the current items from the UI
-        console.log('➕ STEP 2: Inserting fresh items from UI state');
-        const proformaItems = items.map(item => ({
-          proforma_id: proformaId,
-          product_id: item.product_id,
-          product_name: item.product_name,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price),
-          discount_percentage: Number(item.discount_percentage || 0),
-          discount_amount: Number(item.discount_amount || 0),
-          tax_percentage: Number(item.tax_percentage),
-          tax_amount: Number(item.tax_amount),
-          tax_inclusive: Boolean(item.tax_inclusive),
-          line_total: Number(item.line_total),
-        }));
+        // Step 2: Validate and insert the current items from the UI
+        console.log('➕ STEP 2: Validating and inserting fresh items from UI state');
 
-        console.log('📦 Inserting items:', proformaItems);
+        // Validate items have required fields before inserting
+        const validatedItems = items.map((item, index) => {
+          if (!item.product_id) {
+            throw new Error(`Item ${index + 1} missing product_id. Product: ${item.product_name || 'Unknown'}`);
+          }
+          if (item.quantity === undefined || item.quantity === null) {
+            throw new Error(`Item ${index + 1} (${item.product_name}) missing quantity`);
+          }
+          if (item.unit_price === undefined || item.unit_price === null) {
+            throw new Error(`Item ${index + 1} (${item.product_name}) missing unit price`);
+          }
+          if (item.tax_percentage === undefined || item.tax_percentage === null) {
+            throw new Error(`Item ${index + 1} (${item.product_name}) missing tax percentage`);
+          }
+
+          return {
+            proforma_id: proformaId,
+            product_id: item.product_id,
+            description: item.description,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            discount_percentage: Number(item.discount_percentage || 0),
+            discount_amount: Number(item.discount_amount || 0),
+            tax_percentage: Number(item.tax_percentage),
+            tax_amount: Number(item.tax_amount),
+            tax_inclusive: Boolean(item.tax_inclusive),
+            line_total: Number(item.line_total),
+          };
+        });
+
+        console.log('✅ Validation passed - inserting items:', validatedItems.length);
+        console.log('📦 Item details:', validatedItems.map(i => ({
+          product_id: i.product_id,
+          qty: i.quantity,
+          price: i.unit_price,
+          total: i.line_total
+        })));
 
         const { error: itemsError } = await supabase
           .from('proforma_items')
-          .insert(proformaItems);
+          .insert(validatedItems);
 
         if (itemsError) {
           const errorMessage = serializeError(itemsError);
           console.error('❌ Insert error:', errorMessage);
+          console.error('❌ Error code:', itemsError.code);
           throw new Error(`Failed to create proforma items: ${errorMessage}`);
         }
 
