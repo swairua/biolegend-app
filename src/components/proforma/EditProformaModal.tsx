@@ -198,6 +198,7 @@ export const EditProformaModal = ({
           });
         }
 
+        setDuplicateItemIds(allDuplicateIds);
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
