@@ -5,6 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,9 +34,10 @@ import {
   Calendar,
   Receipt,
   FileText,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
-import { useProformas, useConvertProformaToInvoice, type ProformaWithItems } from '@/hooks/useProforma';
+import { useProformas, useConvertProformaToInvoice, useDeleteProforma, type ProformaWithItems } from '@/hooks/useProforma';
 import { useCompanies } from '@/hooks/useDatabase';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +60,8 @@ export default function Proforma() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
+  const [proformaToDelete, setProformaToDelete] = useState<ProformaWithItems | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get company data
   const { data: companies } = useCompanies();
@@ -57,6 +70,7 @@ export default function Proforma() {
   // Use proper proforma hooks
   const { data: proformas = [], isLoading, refetch } = useProformas(currentCompany?.id);
   const convertToInvoice = useConvertProformaToInvoice();
+  const deleteProforma = useDeleteProforma();
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -194,6 +208,27 @@ export default function Proforma() {
     // TODO: Implement accept proforma mutation
     toast.success(`Proforma ${proforma.proforma_number} marked as accepted`);
     refetch();
+  };
+
+  const handleDeleteClick = (proforma: ProformaWithItems) => {
+    setProformaToDelete(proforma);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!proformaToDelete?.id) return;
+
+    try {
+      await deleteProforma.mutateAsync(proformaToDelete.id);
+      toast.success(`Proforma ${proformaToDelete.proforma_number} deleted successfully`);
+      setShowDeleteConfirm(false);
+      setProformaToDelete(null);
+      await refetch();
+    } catch (error) {
+      console.error('Error deleting proforma:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error deleting proforma: ${message}`);
+    }
   };
 
   const handleFilter = () => {
@@ -545,6 +580,17 @@ export default function Proforma() {
                             <Receipt className="h-4 w-4" />
                           </Button>
                         )}
+                        {proforma.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(proforma)}
+                            title="Delete Proforma"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -616,6 +662,30 @@ export default function Proforma() {
           initialDueDate={invoicePrefill.dueDate}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Proforma Invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete proforma invoice{' '}
+              <span className="font-semibold">{proformaToDelete?.proforma_number}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteProforma.isPending}
+            >
+              {deleteProforma.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

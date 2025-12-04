@@ -21,9 +21,9 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Search,
   Calculator,
   Receipt,
@@ -33,6 +33,7 @@ import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateProforma, type ProformaItem as BaseProformaItem } from '@/hooks/useProforma';
 import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
 import { ProformaUpdateErrorHandler } from './ProformaUpdateErrorHandler';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ProformaItem extends BaseProformaItem {
@@ -86,6 +87,7 @@ export const EditProformaModal = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [updateError, setUpdateError] = useState<string>('');
+  const [duplicateItemIds, setDuplicateItemIds] = useState<string[]>([]);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
@@ -196,6 +198,7 @@ export const EditProformaModal = ({
           });
         }
 
+        setDuplicateItemIds(allDuplicateIds);
         setItems(mappedItems);
       } else {
         console.log('ℹ️ No items in proforma');
@@ -341,6 +344,37 @@ export const EditProformaModal = ({
     return calculateDocumentTotals(taxableItems);
   };
 
+  const cleanupDuplicateItems = async (): Promise<boolean> => {
+    if (duplicateItemIds.length === 0) {
+      console.log('✅ No duplicate items to clean up');
+      return true;
+    }
+
+    try {
+      console.log('🗑️ Cleaning up duplicate items:', duplicateItemIds);
+
+      const { error } = await supabase
+        .from('proforma_items')
+        .delete()
+        .in('id', duplicateItemIds);
+
+      if (error) {
+        console.error('❌ Error deleting duplicate items:', error);
+        toast.error(`Failed to clean up duplicate items: ${error.message}`);
+        return false;
+      }
+
+      console.log('✅ Successfully cleaned up duplicate items');
+      setDuplicateItemIds([]);
+      return true;
+    } catch (error) {
+      console.error('❌ Cleanup error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error during cleanup: ${errorMsg}`);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🎯 handleSubmit called');
@@ -364,6 +398,15 @@ export const EditProformaModal = ({
         console.error('❌ Proforma ID missing');
         toast.error('Proforma ID is missing - cannot update');
         return;
+      }
+
+      // Clean up duplicate items from database before saving
+      if (duplicateItemIds.length > 0) {
+        console.log('🧹 Cleaning up duplicate items before save...');
+        const cleanupSuccess = await cleanupDuplicateItems();
+        if (!cleanupSuccess) {
+          console.warn('⚠️ Duplicate cleanup failed, but continuing with save...');
+        }
       }
 
       console.log('✅ Validation passed, calculating totals...');
@@ -507,6 +550,7 @@ export const EditProformaModal = ({
     setShowProductSearch(false);
     setUpdateError('');
     setItems([]);
+    setDuplicateItemIds([]);
     setFormData({
       customer_id: '',
       proforma_date: '',

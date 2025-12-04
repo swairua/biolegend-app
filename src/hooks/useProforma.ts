@@ -498,6 +498,7 @@ export const useUpdateProforma = () => {
         const proformaItems = items.map(item => ({
           proforma_id: proformaId,
           product_id: item.product_id,
+          product_name: item.product_name,
           description: item.description,
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price),
@@ -537,14 +538,20 @@ export const useUpdateProforma = () => {
       console.log('Proforma ID:', data.id);
 
       try {
+        // Invalidate cache to force fresh data
+        console.log('🔄 Invalidating cache for fresh data...');
+        await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+        await queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
+        console.log('🔄 Cache invalidated');
+
         // Refetch queries to ensure UI is updated with latest data
         console.log('🔄 Refetching proforma_invoices...');
         const refetch1 = await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
-        console.log('🔄 Refetch proforma_invoices complete');
+        console.log('🔄 Refetch proforma_invoices complete:', refetch1);
 
         console.log('🔄 Refetching individual proforma:', data.id);
         const refetch2 = await queryClient.refetchQueries({ queryKey: ['proforma_invoice', data.id] });
-        console.log('🔄 Refetch individual proforma complete');
+        console.log('🔄 Refetch individual proforma complete:', refetch2);
 
         console.log('📢 Showing success toast');
         toast.success(`Proforma invoice ${data.proforma_number} updated successfully!`);
