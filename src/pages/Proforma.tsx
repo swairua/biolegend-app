@@ -451,6 +451,51 @@ export default function Proforma() {
               >
                 Fix Duplicate Items
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!currentCompany?.id) {
+                    toast.error('No company selected');
+                    return;
+                  }
+
+                  const loadingToast = toast.loading('Recalculating proforma totals...');
+
+                  try {
+                    const result = await recalculateAllProformaTotals(currentCompany.id);
+
+                    console.log('Recalculation result:', {
+                      success: result.success,
+                      message: result.message,
+                      proformas_updated: result.proformas_updated,
+                      errors: result.errors
+                    });
+
+                    if (result.success) {
+                      toast.dismiss(loadingToast);
+                      if (result.proformas_updated > 0) {
+                        toast.success(`✅ Recalculated totals for ${result.proformas_updated} proforma(s)`);
+                        refetch();
+                      } else {
+                        toast.success('No proformas needed recalculation');
+                      }
+                    } else {
+                      toast.dismiss(loadingToast);
+                      toast.error(`Recalculation failed:\n${result.errors.join('\n')}`, {
+                        duration: 5000
+                      });
+                    }
+                  } catch (error) {
+                    toast.dismiss(loadingToast);
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    console.error('Recalculation error:', error);
+                    toast.error(`Error recalculating totals: ${errorMsg}`);
+                  }
+                }}
+              >
+                Recalculate Totals
+              </Button>
             </div>
           </div>
         </CardHeader>
