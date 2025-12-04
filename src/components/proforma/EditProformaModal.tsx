@@ -344,6 +344,37 @@ export const EditProformaModal = ({
     return calculateDocumentTotals(taxableItems);
   };
 
+  const cleanupDuplicateItems = async (): Promise<boolean> => {
+    if (duplicateItemIds.length === 0) {
+      console.log('✅ No duplicate items to clean up');
+      return true;
+    }
+
+    try {
+      console.log('🗑️ Cleaning up duplicate items:', duplicateItemIds);
+
+      const { error } = await supabase
+        .from('proforma_items')
+        .delete()
+        .in('id', duplicateItemIds);
+
+      if (error) {
+        console.error('❌ Error deleting duplicate items:', error);
+        toast.error(`Failed to clean up duplicate items: ${error.message}`);
+        return false;
+      }
+
+      console.log('✅ Successfully cleaned up duplicate items');
+      setDuplicateItemIds([]);
+      return true;
+    } catch (error) {
+      console.error('❌ Cleanup error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error during cleanup: ${errorMsg}`);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🎯 handleSubmit called');
