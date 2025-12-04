@@ -550,6 +550,7 @@ export const EditProformaModal = ({
     setShowProductSearch(false);
     setUpdateError('');
     setItems([]);
+    setDuplicateItemIds([]);
     setFormData({
       customer_id: '',
       proforma_date: '',
