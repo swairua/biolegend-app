@@ -400,6 +400,15 @@ export const EditProformaModal = ({
         return;
       }
 
+      // Clean up duplicate items from database before saving
+      if (duplicateItemIds.length > 0) {
+        console.log('🧹 Cleaning up duplicate items before save...');
+        const cleanupSuccess = await cleanupDuplicateItems();
+        if (!cleanupSuccess) {
+          console.warn('⚠️ Duplicate cleanup failed, but continuing with save...');
+        }
+      }
+
       console.log('✅ Validation passed, calculating totals...');
       const totals = calculateTotals();
 
