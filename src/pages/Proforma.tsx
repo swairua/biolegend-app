@@ -60,6 +60,8 @@ export default function Proforma() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
+  const [proformaToDelete, setProformaToDelete] = useState<ProformaWithItems | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get company data
   const { data: companies } = useCompanies();
