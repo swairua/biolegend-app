@@ -49,6 +49,7 @@ import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
 import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
+import { recalculateAllProformaTotals } from '@/utils/proformaRecalculation';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 
