@@ -1418,10 +1418,15 @@ export const useQuotations = (companyId?: string) => {
 
         // Step 2: Get customers separately (filter out invalid UUIDs)
         const customerIds = [...new Set(quotations.map(quotation => quotation.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
-        const { data: customers } = customerIds.length > 0 ? await supabase
+        const { data: customers, error: customersError } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
           .in('id', customerIds) : { data: [] };
+
+        if (customersError) {
+          console.error('Error fetching customers for quotations:', customersError);
+          throw customersError;
+        }
 
         // Step 3: Get quotation items separately
         const { data: quotationItems, error: itemsError } = await supabase
