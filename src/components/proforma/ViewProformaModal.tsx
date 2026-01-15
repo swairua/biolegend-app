@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   FileText,
   Download,
@@ -18,7 +20,8 @@ import {
   Calendar,
   User,
   Receipt,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/taxCalculation';
 
