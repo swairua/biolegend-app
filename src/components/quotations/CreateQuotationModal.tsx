@@ -36,6 +36,7 @@ import { convertAmount } from '@/utils/currency';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface QuotationItem {
   id: string;
@@ -66,6 +67,8 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<QuotationItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
@@ -222,7 +225,19 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   };
 
   const removeItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
 
@@ -710,6 +725,15 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the quotation. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 }

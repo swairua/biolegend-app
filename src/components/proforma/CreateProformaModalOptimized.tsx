@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { convertAmount } from '@/utils/currency';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface CreateProformaModalOptimizedProps {
   open: boolean;
@@ -67,6 +68,8 @@ export const CreateProformaModalOptimized = ({
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [functionError, setFunctionError] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers, isLoading: customersLoading } = useCustomers(companyId);
   const { data: products, isLoading: productsLoading } = useProducts(companyId);
@@ -194,7 +197,19 @@ export const CreateProformaModalOptimized = ({
   };
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const calculateTotals = () => {
@@ -619,6 +634,15 @@ export const CreateProformaModalOptimized = ({
           </form>
         )}
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the proforma invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 };

@@ -40,6 +40,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface InvoiceItem {
   id: string;
@@ -92,6 +93,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     current: number;
     total: number;
   } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InvoiceItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -368,7 +371,19 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   };
 
   const removeItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
 
@@ -929,6 +944,14 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         </DialogFooter>
       </DialogContent>
 
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 }

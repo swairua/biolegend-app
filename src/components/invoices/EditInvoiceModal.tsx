@@ -35,6 +35,7 @@ import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface InvoiceItem {
   id: string;
@@ -73,6 +74,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InvoiceItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { currentCompany } = useCurrentCompany();
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
@@ -260,7 +263,19 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   };
 
   const removeItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
 
@@ -646,6 +661,15 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 }

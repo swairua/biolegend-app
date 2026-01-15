@@ -37,6 +37,7 @@ import { ProformaUpdateErrorHandler } from './ProformaUpdateErrorHandler';
 import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQL';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ProformaItem extends BaseProformaItem {
   // Extends the base ProformaItem with any additional UI-specific fields if needed
@@ -90,6 +91,8 @@ export const EditProformaModal = ({
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [updateError, setUpdateError] = useState<string>('');
   const [duplicateItemIds, setDuplicateItemIds] = useState<string[]>([]);
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
@@ -312,24 +315,31 @@ export const EditProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    console.log('🗑️ DELETE CLICKED', { id, currentItemsCount: items.length });
-    console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
 
-    const itemToDelete = items.find(item => item.id === id);
-
-    setItems(prev => {
-      const filtered = prev.filter(item => {
-        const keep = item.id !== id;
-        console.log(`Comparing item ${item.id} with ${id}: keep=${keep}`);
-        return keep;
-      });
-      console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
-      return filtered;
-    });
-
-    // Show success toast after state update (outside of setState callback)
+  const handleConfirmDeleteItem = () => {
     if (itemToDelete) {
+      console.log('🗑️ DELETE CLICKED', { id: itemToDelete.id, currentItemsCount: items.length });
+      console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+
+      setItems(prev => {
+        const filtered = prev.filter(item => {
+          const keep = item.id !== itemToDelete.id;
+          console.log(`Comparing item ${item.id} with ${itemToDelete.id}: keep=${keep}`);
+          return keep;
+        });
+        console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
+        return filtered;
+      });
+
       toast.success(`${itemToDelete.product_name} removed from proforma`);
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -912,6 +922,15 @@ export const EditProformaModal = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the proforma invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 };

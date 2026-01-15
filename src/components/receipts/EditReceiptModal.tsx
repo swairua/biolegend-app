@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ReceiptItem {
   id: string;
@@ -77,6 +78,8 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
     current: number;
     total: number;
   } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ReceiptItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { profile } = useAuth();
   const { data: companies } = useCompanies();
@@ -286,7 +289,19 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
   };
 
   const removeItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
@@ -755,6 +770,15 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the receipt. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 }

@@ -35,6 +35,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ProformaItem {
   id: string;
@@ -77,6 +78,8 @@ export const CreateProformaModal = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [proformaNumber, setProformaNumber] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
@@ -223,7 +226,19 @@ export const CreateProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const calculateTotals = () => {
@@ -620,6 +635,15 @@ export const CreateProformaModal = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the proforma invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 };

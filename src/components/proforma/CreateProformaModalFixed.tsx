@@ -38,6 +38,7 @@ import { setupProformaTables, checkProformaTables } from '@/utils/proformaDataba
 import { ProformaErrorNotification } from '@/components/fixes/ProformaErrorNotification';
 import { autoFixProformaFunction } from '@/utils/immediateProformaFix';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface CreateProformaModalProps {
   open: boolean;
@@ -66,6 +67,8 @@ export const CreateProformaModalFixed = ({
   const [proformaNumber, setProformaNumber] = useState('');
   const [tablesStatus, setTablesStatus] = useState<'checking' | 'ready' | 'missing' | 'error'>('checking');
   const [functionError, setFunctionError] = useState<string>('');
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
@@ -238,7 +241,19 @@ export const CreateProformaModalFixed = ({
   };
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (itemToDelete) {
+      setItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const calculateTotals = () => {
@@ -654,6 +669,15 @@ export const CreateProformaModalFixed = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the proforma invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 };
