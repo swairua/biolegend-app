@@ -42,6 +42,7 @@ import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { EditInvoiceModal } from '@/components/invoices/EditInvoiceModal';
 import { ViewInvoiceModal } from '@/components/invoices/ViewInvoiceModal';
