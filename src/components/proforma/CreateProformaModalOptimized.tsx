@@ -68,6 +68,8 @@ export const CreateProformaModalOptimized = ({
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [functionError, setFunctionError] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers, isLoading: customersLoading } = useCustomers(companyId);
   const { data: products, isLoading: productsLoading } = useProducts(companyId);
