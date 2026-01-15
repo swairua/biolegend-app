@@ -147,35 +147,15 @@ export default function Invoices() {
   const { currency, rate, format } = useCurrency();
   const deleteInvoice = useDeleteInvoice();
 
-  // Filter and search logic
+  // Client-side post-filtering for customer name/email (server handles invoice_number, status, dates, amounts)
   const filteredInvoices = invoices?.filter(invoice => {
-    // Search filter
-    const matchesSearch =
-      invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    // Post-filter by customer name or email (server-side search is on invoice_number only)
+    const matchesCustomerSearch =
+      !searchTerm ||
       invoice.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-
-    // Date filter
-    const invoiceDate = new Date(invoice.invoice_date);
-    const matchesDateFrom = !dateFromFilter || invoiceDate >= new Date(dateFromFilter);
-    const matchesDateTo = !dateToFilter || invoiceDate <= new Date(dateToFilter);
-
-    // Normalize amounts to current display currency for filtering
-    const normalizedTotal = normalizeInvoiceAmount(
-      Number(invoice.total_amount) || 0,
-      invoice.currency_code as any,
-      invoice.exchange_rate as any,
-      currency,
-      rate
-    );
-
-    const matchesAmountFrom = !amountFromFilter || normalizedTotal >= parseFloat(amountFromFilter);
-    const matchesAmountTo = !amountToFilter || normalizedTotal <= parseFloat(amountToFilter);
-
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
+    return matchesCustomerSearch;
   }) || [];
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', invoiceRate?: number) => {
