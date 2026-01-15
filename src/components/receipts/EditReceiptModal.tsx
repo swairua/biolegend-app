@@ -78,6 +78,8 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
     current: number;
     total: number;
   } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ReceiptItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { profile } = useAuth();
   const { data: companies } = useCompanies();
