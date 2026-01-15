@@ -42,10 +42,12 @@ import {
   Edit,
   Download,
   Calendar,
-  Receipt
+  Receipt,
+  Trash2
 } from 'lucide-react';
-import { useCompanies } from '@/hooks/useDatabase';
+import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useReceipts } from '@/hooks/useInvoicesFixed';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { CreateReceiptModal } from '@/components/receipts/CreateReceiptModal';
@@ -54,6 +56,7 @@ import { EditReceiptModal } from '@/components/receipts/EditReceiptModal';
 import { downloadReceiptPDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Receipt {
   id: string;
@@ -96,6 +99,8 @@ export default function Receipts() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [receiptToDelete, setReceiptToDelete] = useState<Receipt | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,10 +116,13 @@ export default function Receipts() {
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  
+
   // Use the receipts hook (same as invoices for now)
   const { data: receipts, isLoading, error, refetch } = useReceipts(currentCompany?.id);
   const { currency, rate, format } = useCurrency();
+
+  // Delete mutation
+  const deleteReceipt = useDeleteInvoice();
 
   // Filter and search logic
   const filteredReceipts = receipts?.filter(receipt => {
@@ -146,6 +154,14 @@ export default function Receipts() {
 
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
   }) || [];
+
+  // Pagination
+  const totalCount = filteredReceipts.length;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const paginatedReceipts = filteredReceipts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', receiptRate?: number) => {
     const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, receiptRate as any, currency, rate);
@@ -198,6 +214,49 @@ export default function Receipts() {
     setAmountToFilter('');
     setSearchTerm('');
     toast.success('Filters cleared');
+  };
+
+  const handleDeleteReceipt = (receipt: Receipt) => {
+    setReceiptToDelete(receipt);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!receiptToDelete?.id) return;
+
+    try {
+      // First, delete related payment allocations
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .eq('invoice_id', receiptToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then delete related delivery notes that reference this invoice
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .eq('invoice_id', receiptToDelete.id);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete the receipt/invoice
+      await deleteReceipt.mutateAsync(receiptToDelete.id);
+
+      toast.success('Receipt deleted and related documents updated successfully');
+      setShowDeleteConfirm(false);
+      setReceiptToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting receipt:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete receipt';
+      toast.error(`Error: ${errorMsg}`);
+    }
   };
 
   if (error) {
@@ -352,7 +411,7 @@ export default function Receipts() {
             <span>Receipts List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredReceipts.length} receipts
+                {paginatedReceipts.length} of {totalCount} receipts
               </Badge>
             )}
           </CardTitle>
@@ -378,7 +437,7 @@ export default function Receipts() {
               <Receipt className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No receipts found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
+                {searchTerm
                   ? 'Try adjusting your search criteria'
                   : 'Get started by creating your first receipt'
                 }
@@ -394,80 +453,164 @@ export default function Receipts() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Receipt Number</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReceipts.map((receipt: Receipt) => (
-                  <TableRow key={receipt.id} className="hover:bg-muted/50 transition-smooth">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center space-x-2">
-                        <Receipt className="h-4 w-4 text-primary" />
-                        <span>{receipt.invoice_number}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{receipt.customers?.name || 'Unknown Customer'}</div>
-                        {receipt.customers?.email && (
-                          <div className="text-sm text-muted-foreground">{receipt.customers.email}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{new Date(receipt.invoice_date).toLocaleDateString()}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      {displayAmount(receipt.total_amount || 0, receipt.currency_code as any, receipt.exchange_rate as any)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusColor(receipt.status)}>
-                        {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleViewReceipt(receipt)}
-                          title="View receipt"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditReceipt(receipt)}
-                          title="Edit receipt"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDownloadReceipt(receipt)}
-                          title="Download PDF"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Receipt Number</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right min-w-[180px]">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedReceipts.map((receipt: Receipt) => (
+                    <TableRow key={receipt.id} className="hover:bg-muted/50 transition-smooth">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center space-x-2">
+                          <Receipt className="h-4 w-4 text-primary" />
+                          <span>{receipt.invoice_number}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{receipt.customers?.name || 'Unknown Customer'}</div>
+                          {receipt.customers?.email && (
+                            <div className="text-sm text-muted-foreground">{receipt.customers.email}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>{new Date(receipt.invoice_date).toLocaleDateString()}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {displayAmount(receipt.total_amount || 0, receipt.currency_code as any, receipt.exchange_rate as any)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(receipt.status)}>
+                          {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewReceipt(receipt)}
+                            title="View receipt"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditReceipt(receipt)}
+                            title="Edit receipt"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDownloadReceipt(receipt)}
+                            title="Download PDF"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteReceipt(receipt)}
+                            title="Delete receipt"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination Controls */}
+              {filteredReceipts.length > PAGE_SIZE && (
+                <div className="mt-6 flex flex-col items-center gap-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage > 1) {
+                              setCurrentPage(currentPage - 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const pageNum = i + 1;
+                        const isCurrentPage = pageNum === currentPage;
+                        const isVisible = pageNum === 1 ||
+                                          pageNum === totalPages ||
+                                          (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                        if (!isVisible) {
+                          if (pageNum === currentPage - 2) {
+                            return (
+                              <PaginationItem key={`ellipsis-${pageNum}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(pageNum);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              isActive={isCurrentPage}
+                              className={isCurrentPage ? '' : 'cursor-pointer'}
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage < totalPages) {
+                              setCurrentPage(currentPage + 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -498,6 +641,17 @@ export default function Receipts() {
           onSuccess={handleCreateSuccess}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Receipt?"
+        description="This action will delete the receipt and remove its allocation from payments. Any delivery notes linked to this receipt will be unlinked."
+        itemName={receiptToDelete?.invoice_number}
+        isLoading={deleteReceipt.isPending}
+      />
     </div>
   );
 }

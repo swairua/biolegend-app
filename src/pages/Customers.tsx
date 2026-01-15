@@ -46,10 +46,12 @@ import {
   FileText,
   DollarSign,
   Building2,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
-import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments, useDeleteCustomer } from '@/hooks/useDatabase';
 import { useOptimizedCustomers, useCustomerCities } from '@/hooks/useOptimizedCustomers';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EditCustomerModal } from '@/components/customers/EditCustomerModal';
@@ -88,6 +90,8 @@ export default function Customers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -122,6 +126,8 @@ export default function Customers() {
   const formatCurrency = (amount: number) => {
     return format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
   };
+
+  const deleteCustomer = useDeleteCustomer();
 
 
   const handleCreateCustomer = () => {
@@ -209,6 +215,27 @@ export default function Customers() {
       }
     } else {
       toast.error('No valid email address available');
+    }
+  };
+
+  const handleDeleteCustomer = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete?.id) return;
+
+    try {
+      await deleteCustomer.mutateAsync(customerToDelete.id);
+      toast.success('Customer deleted successfully');
+      setShowDeleteConfirm(false);
+      setCustomerToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete customer';
+      toast.error(`Error: ${errorMsg}`);
     }
   };
 

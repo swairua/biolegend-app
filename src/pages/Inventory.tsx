@@ -37,8 +37,11 @@ import {
   Package,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Trash2
 } from 'lucide-react';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InventoryItem {
   id: string;
@@ -94,6 +97,9 @@ export default function Inventory() {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -148,6 +154,36 @@ export default function Inventory() {
     setSelectedItem(null);
     // Data will be automatically refreshed due to React Query invalidation
     toast.success('Item updated successfully!');
+  };
+
+  const handleDeleteItem = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', itemToDelete.id);
+
+      if (error) throw error;
+
+      toast.success('Inventory item deleted successfully');
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete inventory item';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleAdjustmentSuccess = () => {
@@ -392,6 +428,15 @@ export default function Inventory() {
                             Restock
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteItem(item)}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -524,6 +569,17 @@ export default function Inventory() {
           item={selectedItem}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Inventory Item?"
+        description="This action will permanently delete the inventory item. This cannot be undone."
+        itemName={itemToDelete?.name}
+        isLoading={isDeleting}
+      />
 
     </div>
   );

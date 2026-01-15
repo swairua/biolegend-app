@@ -37,20 +37,23 @@ import {
   AlertTriangle,
   FileText,
   User,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUpdateLPO, useCompanies } from '@/hooks/useDatabase';
+import { useUpdateLPO, useCompanies, useDeleteLPO } from '@/hooks/useDatabase';
 import { useOptimizedLPOs } from '@/hooks/useOptimizedLPOs';
 import { downloadLPOPDF } from '@/utils/pdfGenerator';
 import { CreateLPOModal } from '@/components/lpo/CreateLPOModal';
 import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
 import { EditLPOModal } from '@/components/lpo/EditLPOModal';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { DatabaseAuditPanel } from '@/components/DatabaseAuditPanel';
 import { DirectForceMigration } from '@/components/DirectForceMigration';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { LPOCustomerSupplierAudit } from '@/components/LPOCustomerSupplierAudit';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LPOs() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -60,6 +63,8 @@ export default function LPOs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
+  const [lpoToDelete, setLpoToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,6 +81,7 @@ export default function LPOs() {
     searchTerm
   });
   const updateLPO = useUpdateLPO();
+  const deleteLPO = useDeleteLPO();
 
   const lpos = lpoData?.lpos || [];
   const totalCount = lpoData?.totalCount || 0;
@@ -175,6 +181,39 @@ export default function LPOs() {
     setShowEditModal(false);
     setSelectedLPO(null);
     toast.success('Local Purchase Order updated successfully!');
+  };
+
+  const handleDeleteLPO = (lpo: any) => {
+    setLpoToDelete(lpo);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!lpoToDelete?.id) return;
+
+    try {
+      // First, delete LPO items
+      const { error: itemsError } = await supabase
+        .from('lpo_items')
+        .delete()
+        .eq('lpo_id', lpoToDelete.id);
+
+      if (itemsError && !itemsError.message.includes('relation') && !itemsError.message.includes('does not exist')) {
+        throw itemsError;
+      }
+
+      // Then delete the LPO itself
+      await deleteLPO.mutateAsync(lpoToDelete.id);
+
+      toast.success('Local Purchase Order deleted successfully');
+      setShowDeleteConfirm(false);
+      setLpoToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting LPO:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete LPO';
+      toast.error(`Error: ${errorMsg}`);
+    }
   };
 
   // Calculate stats from current page (total stats would need separate query)
@@ -486,6 +525,14 @@ export default function LPOs() {
                             <Package className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteLPO(lpo)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -594,6 +641,17 @@ export default function LPOs() {
         onOpenChange={setShowEditModal}
         lpo={selectedLPO}
         onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Local Purchase Order?"
+        description="This action will delete the LPO and all its items. This cannot be undone."
+        itemName={lpoToDelete?.lpo_number}
+        isLoading={deleteLPO.isPending}
       />
     </div>
   );

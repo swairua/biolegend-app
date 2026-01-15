@@ -35,15 +35,18 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { downloadDeliveryNotePDF } from '@/utils/pdfGenerator';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
 import { ViewDeliveryNoteModal } from '@/components/delivery/ViewDeliveryNoteModal';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useUpdateDeliveryNote, useCompanies } from '@/hooks/useDatabase';
 import { useOptimizedDeliveryNotes } from '@/hooks/useOptimizedDeliveryNotes';
 import { mapDeliveryNoteForDisplay } from '@/utils/deliveryNoteMapper';
+import { supabase } from '@/integrations/supabase/client';
 
 
 export default function DeliveryNotes() {
@@ -51,6 +54,9 @@ export default function DeliveryNotes() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedDeliveryNote, setSelectedDeliveryNote] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deliveryNoteToDelete, setDeliveryNoteToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -165,6 +171,47 @@ export default function DeliveryNotes() {
   const handleCreateSuccess = () => {
     setShowCreateModal(false);
     toast.success('Delivery note created successfully!');
+  };
+
+  const handleDeleteDeliveryNote = (deliveryNote: any) => {
+    setDeliveryNoteToDelete(deliveryNote);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deliveryNoteToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      // First, delete delivery note items
+      const { error: itemsError } = await supabase
+        .from('delivery_note_items')
+        .delete()
+        .eq('delivery_note_id', deliveryNoteToDelete.id);
+
+      if (itemsError && !itemsError.message.includes('relation') && !itemsError.message.includes('does not exist')) {
+        throw itemsError;
+      }
+
+      // Then delete the delivery note itself
+      const { error: deleteError } = await supabase
+        .from('delivery_notes')
+        .delete()
+        .eq('id', deliveryNoteToDelete.id);
+
+      if (deleteError) throw deleteError;
+
+      toast.success('Delivery note deleted successfully');
+      setShowDeleteConfirm(false);
+      setDeliveryNoteToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting delivery note:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete delivery note';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Calculate stats
@@ -415,6 +462,14 @@ export default function DeliveryNotes() {
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteDeliveryNote(note)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -512,6 +567,17 @@ export default function DeliveryNotes() {
         onDownloadPDF={handleDownloadPDF}
         onSendEmail={handleSendEmail}
         onMarkDelivered={handleMarkDelivered}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Delivery Note?"
+        description="This action will delete the delivery note and all its items. The linked invoice will not be affected."
+        itemName={deliveryNoteToDelete?.delivery_note_number || deliveryNoteToDelete?.delivery_number}
+        isLoading={isDeleting}
       />
     </div>
   );
