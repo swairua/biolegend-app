@@ -279,6 +279,33 @@ Website: www.biolegendscientific.co.ke`;
     toast.info(`Creating delivery note for invoice ${invoice.invoice_number}`);
   };
 
+  const handleDeleteInvoice = (invoice: Invoice) => {
+    if (invoice.status !== 'draft') {
+      toast.error('Only draft invoices can be deleted');
+      return;
+    }
+    setInvoiceToDelete(invoice);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete?.id) {
+      toast.error('Invoice not found');
+      return;
+    }
+
+    try {
+      await deleteInvoice.mutateAsync(invoiceToDelete.id);
+      setShowDeleteConfirm(false);
+      setInvoiceToDelete(null);
+      toast.success('Invoice deleted successfully!');
+      refetch();
+    } catch (error) {
+      const errorMessage = parseErrorMessage(error);
+      toast.error(`Failed to delete invoice: ${errorMessage}`);
+    }
+  };
+
   const handleClearFilters = () => {
     setStatusFilter('all');
     setDateFromFilter('');
