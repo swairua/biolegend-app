@@ -474,7 +474,7 @@ export default function CustomerStatements() {
             <CardTitle>Customer Statements</CardTitle>
             <div className="flex items-center space-x-2">
               <Checkbox
-                checked={selectedCustomers.length === filteredStatements.length && filteredStatements.length > 0}
+                checked={selectedCustomers.length === allFilteredStatements.length && allFilteredStatements.length > 0}
                 onCheckedChange={handleSelectAll}
               />
               <Label className="text-sm">Select All</Label>
