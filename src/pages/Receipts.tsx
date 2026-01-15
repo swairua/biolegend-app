@@ -99,6 +99,8 @@ export default function Receipts() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [receiptToDelete, setReceiptToDelete] = useState<Receipt | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,10 +116,13 @@ export default function Receipts() {
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  
+
   // Use the receipts hook (same as invoices for now)
   const { data: receipts, isLoading, error, refetch } = useReceipts(currentCompany?.id);
   const { currency, rate, format } = useCurrency();
+
+  // Delete mutation
+  const deleteReceipt = useDeleteInvoice();
 
   // Filter and search logic
   const filteredReceipts = receipts?.filter(receipt => {
