@@ -654,6 +654,30 @@ Website: www.biolegendscientific.co.ke`;
           initialDueDate={invoicePrefill.dueDate}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quotation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete quotation{' '}
+              <span className="font-semibold">{quotationToDelete?.quotation_number}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteQuotation.isPending}
+            >
+              {deleteQuotation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
