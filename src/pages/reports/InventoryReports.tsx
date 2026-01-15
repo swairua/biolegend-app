@@ -417,7 +417,7 @@ export default function InventoryReports() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {turnoverData.map((item, index) => (
+                {paginatedTurnoverData.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.product}</TableCell>
                     <TableCell>{item.turnover.toFixed(1)}x</TableCell>
@@ -438,6 +438,79 @@ export default function InventoryReports() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls for Turnover */}
+            {paginatedTurnoverData.length > 0 && turnoverTotalCount > PAGE_SIZE && (
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentTurnoverPage > 1) {
+                            setCurrentTurnoverPage(currentTurnoverPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentTurnoverPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.ceil(turnoverTotalCount / PAGE_SIZE) }).map((_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentTurnoverPage;
+                      const isVisible = pageNum === 1 ||
+                                        pageNum === Math.ceil(turnoverTotalCount / PAGE_SIZE) ||
+                                        (pageNum >= currentTurnoverPage - 1 && pageNum <= currentTurnoverPage + 1);
+
+                      if (!isVisible) {
+                        if (pageNum === currentTurnoverPage - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${pageNum}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentTurnoverPage(pageNum);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            isActive={isCurrentPage}
+                            className={isCurrentPage ? '' : 'cursor-pointer'}
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentTurnoverPage < Math.ceil(turnoverTotalCount / PAGE_SIZE)) {
+                            setCurrentTurnoverPage(currentTurnoverPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentTurnoverPage >= Math.ceil(turnoverTotalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
