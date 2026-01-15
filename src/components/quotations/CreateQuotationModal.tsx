@@ -22,10 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
-  Search,
+import {
+  Plus,
+  Trash2,
   Calculator
 } from 'lucide-react';
 import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
@@ -35,6 +34,8 @@ import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { getExchangeRate } from '@/utils/exchangeRates';
+import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
+import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 
 interface QuotationItem {
   id: string;
