@@ -35,6 +35,7 @@ import { ViewQuotationModal } from '@/components/quotations/ViewQuotationModal';
 import { EditQuotationModal } from '@/components/quotations/EditQuotationModal';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
+import { QuotationConversionDiagnostic } from '@/components/QuotationConversionDiagnostic';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, X } from 'lucide-react';
 
