@@ -90,6 +90,8 @@ export default function Customers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
