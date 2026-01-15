@@ -699,6 +699,15 @@ export default function Customers() {
         }}
         preSelectedCustomer={selectedCustomer}
       />
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Customer"
+        description={`Are you sure you want to delete ${customerToDelete?.name}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteCustomer.isPending}
+      />
     </div>
   );
 }
