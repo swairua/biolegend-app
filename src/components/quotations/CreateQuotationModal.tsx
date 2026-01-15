@@ -251,6 +251,21 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       return;
     }
 
+    // Save any new items before submitting the quotation
+    if (newItems.length > 0) {
+      if (!currentCompany?.id) {
+        toast.error('No company selected. Cannot save new items.');
+        return;
+      }
+
+      try {
+        await saveAllNewItems(currentCompany.id);
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       console.log('Starting quotation creation process...');
