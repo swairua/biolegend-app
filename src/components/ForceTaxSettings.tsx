@@ -244,7 +244,7 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDeleteTax(tax.id)}
+                      onClick={() => handleInitiateDeleteTax(tax.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
