@@ -34,7 +34,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
-import { useQuotations, useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useOptimizedQuotations } from '@/hooks/useOptimizedQuotations';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
