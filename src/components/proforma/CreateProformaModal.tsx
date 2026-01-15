@@ -126,6 +126,16 @@ export const CreateProformaModal = ({
     product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (filteredProducts || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description,
+  }));
+
   const addItem = (product: any) => {
     // Check if product already exists in items
     const existingItem = items.find(item => item.product_id === product.id);
