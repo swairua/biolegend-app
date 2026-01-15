@@ -61,19 +61,25 @@ export default function LPOs() {
   const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: lpos, isLoading, error, refetch } = useLPOs(currentCompany?.id);
+
+  // Use optimized LPOs hook with server-side pagination
+  const { data: lpoData, isLoading, error, refetch } = useOptimizedLPOs(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
   const updateLPO = useUpdateLPO();
 
-  // Note: Auto-migration removed - using manual migration guide instead
-
-  const filteredLPOs = lpos?.filter(lpo =>
-    lpo.lpo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.suppliers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const lpos = lpoData?.lpos || [];
+  const totalCount = lpoData?.totalCount || 0;
+  const filteredLPOs = lpos;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
