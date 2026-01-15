@@ -218,6 +218,27 @@ export default function Customers() {
     }
   };
 
+  const handleDeleteCustomer = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete?.id) return;
+
+    try {
+      await deleteCustomer.mutateAsync(customerToDelete.id);
+      toast.success('Customer deleted successfully');
+      setShowDeleteConfirm(false);
+      setCustomerToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete customer';
+      toast.error(`Error: ${errorMsg}`);
+    }
+  };
+
   const handleCall = (phone: string) => {
     if (phone && phone !== '+254 700 000000') {
       try {
