@@ -347,33 +347,38 @@ export const EditProformaModal = ({
   };
 
   const cleanupDuplicateItems = async (): Promise<boolean> => {
-    if (duplicateItemIds.length === 0) {
-      console.log('✅ No duplicate items to clean up');
+    if (!proforma?.id) {
+      console.log('ℹ️ No duplicates to clean up (fresh proforma)');
       return true;
     }
 
     try {
-      console.log('🗑️ Cleaning up duplicate items:', duplicateItemIds);
+      console.log('🧹 SQL Cleanup: Removing duplicate items from database...');
 
-      const { error } = await supabase
-        .from('proforma_items')
-        .delete()
-        .in('id', duplicateItemIds);
+      const result = await cleanupProformaDuplicatesSQL(proforma.id);
 
-      if (error) {
-        console.error('❌ Error deleting duplicate items:', error);
-        toast.error(`Failed to clean up duplicate items: ${error.message}`);
-        return false;
+      if (!result.success) {
+        console.error('❌ SQL Cleanup failed:', result.message);
+        toast.error(`Cleanup warning: ${result.message}`);
+        // Don't fail the save, just warn
+        return true;
       }
 
-      console.log('✅ Successfully cleaned up duplicate items');
+      if (result.duplicatesRemoved > 0) {
+        console.log(`✅ SQL Cleanup removed ${result.duplicatesRemoved} duplicates`);
+        toast.info(`🧹 Cleaned up ${result.duplicatesRemoved} duplicate item(s) from database`);
+      } else {
+        console.log('✅ No duplicates found to clean');
+      }
+
       setDuplicateItemIds([]);
       return true;
     } catch (error) {
       console.error('❌ Cleanup error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Error during cleanup: ${errorMsg}`);
-      return false;
+      console.warn('⚠️ Cleanup failed, but continuing with save:', errorMsg);
+      // Don't fail the entire save if cleanup fails
+      return true;
     }
   };
 
