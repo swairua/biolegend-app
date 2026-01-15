@@ -136,7 +136,7 @@ export const CreateProformaModal = ({
     description: product.description,
   }));
 
-  const addItem = (product: any) => {
+  const addItem = (product: AutocompleteItem) => {
     // Check if product already exists in items
     const existingItem = items.find(item => item.product_id === product.id);
 
@@ -152,7 +152,7 @@ export const CreateProformaModal = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: product.selling_price,
+        unit_price: product.selling_price || 0,
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -175,6 +175,21 @@ export const CreateProformaModal = ({
 
     setShowProductSearch(false);
     setSearchTerm('');
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Add to new items queue for auto-save
+    addNewItem(itemData);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: `new-${Date.now()}`,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const updateItem = (id: string, field: keyof ProformaItem, value: any) => {
