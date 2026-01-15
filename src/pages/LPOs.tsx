@@ -177,8 +177,7 @@ export default function LPOs() {
     toast.success('Local Purchase Order updated successfully!');
   };
 
-  // Calculate stats
-  const totalLPOs = lpos?.length || 0;
+  // Calculate stats from current page (total stats would need separate query)
   const draftLPOs = lpos?.filter(lpo => lpo.status === 'draft').length || 0;
   const sentLPOs = lpos?.filter(lpo => lpo.status === 'sent').length || 0;
   const approvedLPOs = lpos?.filter(lpo => lpo.status === 'approved').length || 0;
