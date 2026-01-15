@@ -183,6 +183,39 @@ export default function LPOs() {
     toast.success('Local Purchase Order updated successfully!');
   };
 
+  const handleDeleteLPO = (lpo: any) => {
+    setLpoToDelete(lpo);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!lpoToDelete?.id) return;
+
+    try {
+      // First, delete LPO items
+      const { error: itemsError } = await supabase
+        .from('lpo_items')
+        .delete()
+        .eq('lpo_id', lpoToDelete.id);
+
+      if (itemsError && !itemsError.message.includes('relation') && !itemsError.message.includes('does not exist')) {
+        throw itemsError;
+      }
+
+      // Then delete the LPO itself
+      await deleteLPO.mutateAsync(lpoToDelete.id);
+
+      toast.success('Local Purchase Order deleted successfully');
+      setShowDeleteConfirm(false);
+      setLpoToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting LPO:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete LPO';
+      toast.error(`Error: ${errorMsg}`);
+    }
+  };
+
   // Calculate stats from current page (total stats would need separate query)
   const draftLPOs = lpos?.filter(lpo => lpo.status === 'draft').length || 0;
   const sentLPOs = lpos?.filter(lpo => lpo.status === 'sent').length || 0;
