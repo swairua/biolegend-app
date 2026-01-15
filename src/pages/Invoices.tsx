@@ -482,7 +482,7 @@ Website: www.biolegendscientific.co.ke`;
             <span>Invoices List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredInvoices.length} invoices
+                {filteredInvoices.length > 0 ? `${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, totalCount)}` : '0'} of {totalCount} invoices
               </Badge>
             )}
           </CardTitle>
