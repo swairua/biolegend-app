@@ -565,6 +565,16 @@ export default function Customers() {
                             <DollarSign className="h-4 w-4 mr-1" />
                             <span className="hidden sm:inline">Statement</span>
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCustomer(customer)}
+                            title="Delete customer"
+                            className="bg-destructive-light text-destructive border-destructive/20 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
                         </div>
                       </div>
                     </TableCell>
@@ -688,6 +698,15 @@ export default function Customers() {
           toast.success('Invoice created successfully!');
         }}
         preSelectedCustomer={selectedCustomer}
+      />
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Customer"
+        description={`Are you sure you want to delete ${customerToDelete?.name}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteCustomer.isPending}
       />
     </div>
   );
