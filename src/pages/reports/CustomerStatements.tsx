@@ -132,7 +132,7 @@ export default function CustomerStatements() {
   const customerStatements = calculateCustomerStatements();
 
   // Filter statements
-  const filteredStatements = customerStatements.filter(statement => {
+  const allFilteredStatements = customerStatements.filter(statement => {
     // Search filter
     const matchesSearch = statement.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          statement.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -156,6 +156,11 @@ export default function CustomerStatements() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalCount = allFilteredStatements.length;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const filteredStatements = allFilteredStatements.slice(startIndex, endIndex);
 
   // Calculate totals
   const totalOutstanding = filteredStatements.reduce((sum, s) => sum + s.total_outstanding, 0);
