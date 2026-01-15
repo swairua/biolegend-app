@@ -7,10 +7,20 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Edit, Trash2, Check, X, Zap } from 'lucide-react';
-import { 
-  useForceTaxSettings, 
-  useForceCreateTaxSetting, 
-  useForceUpdateTaxSetting, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  useForceTaxSettings,
+  useForceCreateTaxSetting,
+  useForceUpdateTaxSetting,
   useForceDeleteTaxSetting,
   useForceSetupTaxSettings
 } from '@/hooks/useForceTaxSettings';
@@ -24,6 +34,8 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
   const [editingTax, setEditingTax] = useState<string | null>(null);
   const [newTax, setNewTax] = useState({ name: '', rate: 0, is_default: false });
   const [showNewTaxForm, setShowNewTaxForm] = useState(false);
+  const [taxToDelete, setTaxToDelete] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: taxSettings, isLoading, error } = useForceTaxSettings(companyId);
   const createTaxSetting = useForceCreateTaxSetting();
@@ -65,13 +77,18 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
     }
   };
 
-  const handleDeleteTax = async (taxId: string) => {
-    if (!confirm('Are you sure you want to delete this tax setting?')) {
-      return;
-    }
+  const handleInitiateDeleteTax = (taxId: string) => {
+    setTaxToDelete(taxId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDeleteTax = async () => {
+    if (!taxToDelete) return;
 
     try {
-      await deleteTaxSetting.mutateAsync(taxId);
+      await deleteTaxSetting.mutateAsync(taxToDelete);
+      setShowDeleteConfirm(false);
+      setTaxToDelete(null);
     } catch (error) {
       console.error('Delete tax error:', error);
     }
@@ -227,7 +244,7 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDeleteTax(tax.id)}
+                      onClick={() => handleInitiateDeleteTax(tax.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -245,6 +262,28 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Delete Tax Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tax Setting?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this tax setting? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteTax}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTaxSetting.isPending}
+            >
+              {deleteTaxSetting.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

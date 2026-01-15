@@ -24,6 +24,16 @@ import {
   Send,
   Trash2
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useQuotations, useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
@@ -93,6 +103,8 @@ export default function Quotations() {
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string; currencyCode?: 'KES' | 'USD'; exchangeRate?: number } | null>(null);
+  const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -246,16 +258,22 @@ Website: www.biolegendscientific.co.ke`;
     }
   };
 
-  const handleDeleteQuotation = async (quotation: Quotation) => {
+  const handleDeleteQuotation = (quotation: Quotation) => {
     if (quotation.status === 'converted') {
       toast.error('Cannot delete a converted quotation');
       return;
     }
-    const confirm = window.confirm(`Delete quotation ${quotation.quotation_number}? This action cannot be undone.`);
-    if (!confirm) return;
+    setQuotationToDelete(quotation);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!quotationToDelete?.id) return;
     try {
-      await deleteQuotation.mutateAsync(quotation.id);
+      await deleteQuotation.mutateAsync(quotationToDelete.id);
       toast.success('Quotation deleted successfully');
+      setShowDeleteConfirm(false);
+      setQuotationToDelete(null);
       refetch();
     } catch (error) {
       console.error('Error deleting quotation:', error);
@@ -636,6 +654,30 @@ Website: www.biolegendscientific.co.ke`;
           initialDueDate={invoicePrefill.dueDate}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quotation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete quotation{' '}
+              <span className="font-semibold">{quotationToDelete?.quotation_number}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteQuotation.isPending}
+            >
+              {deleteQuotation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

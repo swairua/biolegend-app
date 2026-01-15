@@ -4,6 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle, XCircle, Play } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   runAllReversalTests, 
   generateTestReport,
@@ -23,6 +33,7 @@ export function CreditNoteReversalTestPanel() {
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [reportText, setReportText] = useState('');
+  const [showReversalConfirm, setShowReversalConfirm] = useState(false);
 
   const handleRunTests = async () => {
     if (!creditNoteId.trim()) {
@@ -49,23 +60,22 @@ export function CreditNoteReversalTestPanel() {
     }
   };
 
-  const handleExecuteReversal = async () => {
+  const handleInitiateReversal = () => {
     if (!creditNoteId.trim()) {
       toast.error('Please enter a credit note ID');
       return;
     }
 
-    const confirmed = window.confirm(
-      'Are you sure you want to reverse this credit note? This action cannot be undone.'
-    );
+    setShowReversalConfirm(true);
+  };
 
-    if (!confirmed) return;
-
+  const handleConfirmReversal = async () => {
+    setShowReversalConfirm(false);
     setIsRunning(true);
 
     try {
       const result = await testFullReversal(creditNoteId, 'Test reversal');
-      
+
       if (result.passed) {
         toast.success('Credit note reversed successfully');
         setCreditNoteId('');
@@ -114,7 +124,7 @@ export function CreditNoteReversalTestPanel() {
                 Run Tests
               </Button>
               <Button
-                onClick={handleExecuteReversal}
+                onClick={handleInitiateReversal}
                 disabled={isRunning || !creditNoteId.trim()}
                 className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
@@ -211,6 +221,28 @@ export function CreditNoteReversalTestPanel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reversal Confirmation Modal */}
+      <AlertDialog open={showReversalConfirm} onOpenChange={setShowReversalConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverse Credit Note?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reverse this credit note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReversal}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isRunning}
+            >
+              {isRunning ? 'Reversing...' : 'Reverse'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

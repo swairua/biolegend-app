@@ -9,6 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { Building2, Save, Upload, Plus, Trash2, Edit, Check, X, Image, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCompanies, useUpdateCompany, useCreateCompany, useTaxSettings, useCreateTaxSetting, useUpdateTaxSetting, useDeleteTaxSetting } from '@/hooks/useDatabase';
 import { toast } from 'sonner';
 import { ForceTaxSettings } from '@/components/ForceTaxSettings';
@@ -27,6 +37,8 @@ export default function CompanySettings() {
   const [fixingCurrency, setFixingCurrency] = useState(false);
   const [testingStorage, setTestingStorage] = useState(false);
   const [storageStatus, setStorageStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
+  const [taxToDelete, setTaxToDelete] = useState<string | null>(null);
+  const [showDeleteTaxConfirm, setShowDeleteTaxConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [companyData, setCompanyData] = useState({
     name: 'BIOLEGEND SCIENTIFIC LTD',
@@ -579,14 +591,19 @@ export default function CompanySettings() {
     }
   };
 
-  const handleDeleteTax = async (taxId: string) => {
-    if (!confirm('Are you sure you want to delete this tax setting?')) {
-      return;
-    }
+  const handleInitiateDeleteTax = (taxId: string) => {
+    setTaxToDelete(taxId);
+    setShowDeleteTaxConfirm(true);
+  };
+
+  const handleConfirmDeleteTax = async () => {
+    if (!taxToDelete) return;
 
     try {
-      await deleteTaxSetting.mutateAsync(taxId);
+      await deleteTaxSetting.mutateAsync(taxToDelete);
       toast.success('Tax setting deleted successfully');
+      setShowDeleteTaxConfirm(false);
+      setTaxToDelete(null);
     } catch (error) {
       console.error('Tax deletion error:', error);
 
@@ -966,6 +983,28 @@ export default function CompanySettings() {
         )}
 
       </div>
+
+      {/* Delete Tax Setting Confirmation Modal */}
+      <AlertDialog open={showDeleteTaxConfirm} onOpenChange={setShowDeleteTaxConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tax Setting?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this tax setting? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteTax}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTaxSetting.isPending}
+            >
+              {deleteTaxSetting.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

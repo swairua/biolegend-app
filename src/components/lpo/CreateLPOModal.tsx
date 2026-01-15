@@ -32,6 +32,16 @@ import {
   Calendar,
   AlertTriangle
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCreateLPO, useGenerateLPONumber, useAllSuppliersAndCustomers, useProducts, useCompanies, useCreateCustomer } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
@@ -91,6 +101,9 @@ export const CreateLPOModal = ({
   });
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [newlyCreatedSupplierId, setNewlyCreatedSupplierId] = useState<string | null>(null);
+  const [showSupplierConflictWarning, setShowSupplierConflictWarning] = useState(false);
+  const [supplierConflictData, setSupplierConflictData] = useState<{ entityName: string; invoiceCount: number } | null>(null);
+  const [proceedWithConflict, setProceedWithConflict] = useState(false);
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
@@ -260,53 +273,11 @@ export const CreateLPOModal = ({
   const totalTax = items.reduce((sum, item) => sum + item.tax_amount, 0);
   const totalAmount = subtotal + totalTax;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!currentCompany?.id) {
-      toast.error('Company not found. Please refresh and try again.');
-      return;
-    }
-
-    // Validate LPO data
-    const validationResult = validateLPO({
-      supplier_id: formData.supplier_id,
-      lpo_date: formData.lpo_date,
-      items: items.map(item => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        description: item.description,
-      }))
-    });
-
-    if (!validationResult.isValid) {
-      validationResult.errors.forEach(error => toast.error(error));
-      return;
-    }
-
-    // Check supplier validation - only block on critical errors
-    if (supplierValidation && !supplierValidation.isValid && supplierValidation.errors.length > 0) {
-      toast.error('Please resolve supplier validation errors before creating LPO');
-      return;
-    }
-
-    // Show final warning for supplier conflicts (only for existing suppliers with significant conflicts)
-    if (supplierValidation && supplierValidation.warnings.length > 0 &&
-        supplierValidation.conflictData?.customerInvoiceCount &&
-        supplierValidation.conflictData.customerInvoiceCount >= 5 &&
-        formData.supplier_id !== newlyCreatedSupplierId) {
-      const proceed = window.confirm(
-        `WARNING: This supplier "${supplierValidation.conflictData.entityName}" has ${supplierValidation.conflictData.customerInvoiceCount} invoice(s) as a customer. ` +
-        `This creates a customer/supplier conflict. Do you want to proceed anyway?`
-      );
-      if (!proceed) return;
-    }
-
+  const performLPOSubmission = async () => {
     setIsSubmitting(true);
     try {
       const lpoData = {
-        company_id: currentCompany.id,
+        company_id: currentCompany!.id,
         supplier_id: formData.supplier_id,
         lpo_number: lpoNumber,
         lpo_date: formData.lpo_date,
@@ -349,6 +320,61 @@ export const CreateLPOModal = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!currentCompany?.id) {
+      toast.error('Company not found. Please refresh and try again.');
+      return;
+    }
+
+    // Validate LPO data
+    const validationResult = validateLPO({
+      supplier_id: formData.supplier_id,
+      lpo_date: formData.lpo_date,
+      items: items.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        description: item.description,
+      }))
+    });
+
+    if (!validationResult.isValid) {
+      validationResult.errors.forEach(error => toast.error(error));
+      return;
+    }
+
+    // Check supplier validation - only block on critical errors
+    if (supplierValidation && !supplierValidation.isValid && supplierValidation.errors.length > 0) {
+      toast.error('Please resolve supplier validation errors before creating LPO');
+      return;
+    }
+
+    // Show final warning for supplier conflicts (only for existing suppliers with significant conflicts)
+    if (supplierValidation && supplierValidation.warnings.length > 0 &&
+        supplierValidation.conflictData?.customerInvoiceCount &&
+        supplierValidation.conflictData.customerInvoiceCount >= 5 &&
+        formData.supplier_id !== newlyCreatedSupplierId) {
+      setSupplierConflictData({
+        entityName: supplierValidation.conflictData.entityName,
+        invoiceCount: supplierValidation.conflictData.customerInvoiceCount
+      });
+      setShowSupplierConflictWarning(true);
+      return;
+    }
+
+    // No conflicts, proceed with submission
+    await performLPOSubmission();
+  };
+
+  const handleConfirmSupplierConflict = async () => {
+    setShowSupplierConflictWarning(false);
+    setSupplierConflictData(null);
+    setProceedWithConflict(true);
+    await performLPOSubmission();
   };
 
   const handleSupplierChange = (supplierId: string) => {
@@ -966,6 +992,34 @@ export const CreateLPOModal = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Supplier Conflict Warning Modal */}
+      <AlertDialog open={showSupplierConflictWarning} onOpenChange={setShowSupplierConflictWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supplier Conflict Warning</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                <span className="font-semibold">{supplierConflictData?.entityName}</span> has{' '}
+                <span className="font-semibold">{supplierConflictData?.invoiceCount} invoice(s)</span> as a customer.
+              </p>
+              <p>
+                This creates a customer/supplier conflict. Do you want to proceed anyway?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmSupplierConflict}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Proceed Anyway'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
