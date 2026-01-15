@@ -370,9 +370,9 @@ export default function CreditNotes() {
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-primary" />
             <span>Credit Notes List</span>
-            {!isLoading && (
+            {!isLoading && totalCount > 0 && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCreditNotes.length} credit notes
+                {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount}
               </Badge>
             )}
           </CardTitle>
