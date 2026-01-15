@@ -38,6 +38,7 @@ import { setupProformaTables, checkProformaTables } from '@/utils/proformaDataba
 import { ProformaErrorNotification } from '@/components/fixes/ProformaErrorNotification';
 import { autoFixProformaFunction } from '@/utils/immediateProformaFix';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface CreateProformaModalProps {
   open: boolean;
