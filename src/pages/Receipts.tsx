@@ -411,7 +411,7 @@ export default function Receipts() {
             <span>Receipts List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredReceipts.length} receipts
+                {paginatedReceipts.length} of {totalCount} receipts
               </Badge>
             )}
           </CardTitle>
