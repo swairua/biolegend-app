@@ -42,10 +42,12 @@ import {
   Edit,
   Download,
   Calendar,
-  Receipt
+  Receipt,
+  Trash2
 } from 'lucide-react';
-import { useCompanies } from '@/hooks/useDatabase';
+import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useReceipts } from '@/hooks/useInvoicesFixed';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { CreateReceiptModal } from '@/components/receipts/CreateReceiptModal';
@@ -54,6 +56,7 @@ import { EditReceiptModal } from '@/components/receipts/EditReceiptModal';
 import { downloadReceiptPDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Receipt {
   id: string;
