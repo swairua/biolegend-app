@@ -7,16 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Edit, Trash2, Check, X, Zap } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import {
   useForceTaxSettings,
   useForceCreateTaxSetting,
@@ -264,26 +255,14 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
       </CardContent>
 
       {/* Delete Tax Confirmation Modal */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tax Setting?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this tax setting? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDeleteTax}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteTaxSetting.isPending}
-            >
-              {deleteTaxSetting.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteTax}
+        title="Delete Tax Setting?"
+        description="This action cannot be undone."
+        isLoading={deleteTaxSetting.isPending}
+      />
     </Card>
   );
 }
