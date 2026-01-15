@@ -91,6 +91,8 @@ export const EditProformaModal = ({
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [updateError, setUpdateError] = useState<string>('');
   const [duplicateItemIds, setDuplicateItemIds] = useState<string[]>([]);
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
