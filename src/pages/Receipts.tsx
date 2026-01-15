@@ -216,6 +216,49 @@ export default function Receipts() {
     toast.success('Filters cleared');
   };
 
+  const handleDeleteReceipt = (receipt: Receipt) => {
+    setReceiptToDelete(receipt);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!receiptToDelete?.id) return;
+
+    try {
+      // First, delete related payment allocations
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .eq('invoice_id', receiptToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then delete related delivery notes that reference this invoice
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .eq('invoice_id', receiptToDelete.id);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete the receipt/invoice
+      await deleteReceipt.mutateAsync(receiptToDelete.id);
+
+      toast.success('Receipt deleted and related documents updated successfully');
+      setShowDeleteConfirm(false);
+      setReceiptToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting receipt:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete receipt';
+      toast.error(`Error: ${errorMsg}`);
+    }
+  };
+
   if (error) {
     return (
       <div className="space-y-6">
