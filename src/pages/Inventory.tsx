@@ -167,12 +167,12 @@ export default function Inventory() {
   const filteredInventory = inventory;
 
   const formatCurrency = useFormatCurrency();
-  const totalValue = inventory.reduce((sum, item) => {
+  const pageValue = inventory.reduce((sum, item) => {
     return sum + ((item.stock_quantity || 0) * (item.selling_price || 0));
   }, 0);
 
-  const lowStockItems = inventory.filter(item => item.status === 'low_stock').length;
-  const outOfStockItems = inventory.filter(item => item.status === 'out_of_stock').length;
+  const pageStockItems = inventory.filter(item => item.status === 'low_stock').length;
+  const pageOutOfStockItems = inventory.filter(item => item.status === 'out_of_stock').length;
 
   // Handle loading and error states
   if (loadingProducts) {
