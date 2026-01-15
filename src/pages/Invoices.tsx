@@ -96,6 +96,8 @@ export default function Invoices() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeliveryNoteModal, setShowDeliveryNoteModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
