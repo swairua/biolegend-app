@@ -60,6 +60,9 @@ export default function InventoryReports() {
   const [reportType, setReportType] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [currentTurnoverPage, setCurrentTurnoverPage] = useState(1);
+  const [currentAlertsPage, setCurrentAlertsPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const { data: products } = useProducts();
   const { data: stockMovements } = useStockMovements();
