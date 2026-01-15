@@ -83,6 +83,7 @@ export const CreateProformaModal = ({
   const { data: taxSettings } = useTaxSettings(companyId);
   const generateDocumentNumber = useGenerateDocumentNumber();
   const createProforma = useCreateProforma();
+  const { newItems, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
