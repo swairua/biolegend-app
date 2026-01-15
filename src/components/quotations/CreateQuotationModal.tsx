@@ -124,9 +124,9 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     return baseAmount * (item.vat_percentage / 100);
   };
 
-  const addItem = (product: any) => {
+  const addItem = (product: AutocompleteItem) => {
     const existingItem = items.find(item => item.product_id === product.id);
-    
+
     if (existingItem) {
       // Increase quantity if item already exists
       updateItemQuantity(existingItem.id, existingItem.quantity + 1);
@@ -139,14 +139,28 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       product_name: product.name,
       description: product.description || product.name,
       quantity: 1,
-      unit_price: product.selling_price,
+      unit_price: product.selling_price || 0,
       vat_percentage: 0,
       vat_inclusive: false,
-      line_total: calculateItemTotal(1, product.selling_price, 0, false)
+      line_total: calculateItemTotal(1, product.selling_price || 0, 0, false)
     };
 
     setItems([...items, newItem]);
-    setSearchProduct('');
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Add to new items queue for auto-save
+    addNewItem(itemData);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: `new-${Date.now()}`,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const updateItemQuantity = (itemId: string, quantity: number) => {
