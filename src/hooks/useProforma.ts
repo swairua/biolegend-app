@@ -232,6 +232,16 @@ export const useCreateProforma = () => {
 
       // Create the proforma items
       if (items.length > 0) {
+        // Validate for duplicate products in items before insertion
+        const productIds = items.map(item => item.product_id).filter(Boolean);
+        if (new Set(productIds).size !== productIds.length) {
+          const uniqueDuplicates = [...new Set(
+            productIds.filter((id, index) => productIds.indexOf(id) !== index)
+          )];
+          await supabase.from('proforma_invoices').delete().eq('id', proformaData.id);
+          throw new Error(`Duplicate products detected in items: ${uniqueDuplicates.join(', ')}. Please add each product only once.`);
+        }
+
         const proformaItemsFull = items.map(item => ({
           proforma_id: proformaData.id,
           product_id: item.product_id,
