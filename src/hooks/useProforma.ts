@@ -554,6 +554,29 @@ export const useUpdateProforma = () => {
         }
 
         console.log(`✅ Items inserted successfully - count: ${validatedItems.length}`);
+
+        // 🔍 POST-INSERT VERIFICATION: Ensure no duplicates were created
+        const { data: insertedItems, error: verifyError } = await supabase
+          .from('proforma_items')
+          .select('product_id')
+          .eq('proforma_id', proformaId);
+
+        if (verifyError) {
+          console.warn('⚠️ Could not verify inserted items:', verifyError.message);
+        } else if (insertedItems && insertedItems.length > 0) {
+          const insertedProductIds = insertedItems.map((i: any) => i.product_id);
+          const uniqueInserted = new Set(insertedProductIds);
+
+          if (uniqueInserted.size !== insertedProductIds.length) {
+            console.error('❌ CRITICAL: Duplicate items were created during insert!', {
+              expected: validatedItems.length,
+              actual: insertedItems.length,
+              unique: uniqueInserted.size
+            });
+            throw new Error(`Data integrity error: Duplicate items were created (expected ${validatedItems.length}, found ${insertedItems.length} with ${uniqueInserted.size} unique products). Please contact support.`);
+          }
+          console.log('✅ POST-INSERT VERIFICATION: No duplicates detected');
+        }
       } else {
         console.log('⚠️ No items provided - deleting all existing items');
 
