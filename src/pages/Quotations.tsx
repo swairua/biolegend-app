@@ -4,14 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -25,7 +34,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
-import { useQuotations, useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useOptimizedQuotations } from '@/hooks/useOptimizedQuotations';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,12 +107,23 @@ export default function Quotations() {
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string; currencyCode?: 'KES' | 'USD'; exchangeRate?: number } | null>(null);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: quotations, isLoading, error, refetch } = useQuotations(currentCompany?.id);
+  const { data: quotationData, isLoading, error, refetch } = useOptimizedQuotations(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: 'all'
+  });
+
+  const quotations = quotationData?.quotations || [];
+  const totalCount = quotationData?.totalCount || 0;
+
   const updateQuotationStatus = useUpdateQuotationStatus();
   const deleteQuotation = useDeleteQuotation();
 
@@ -110,8 +131,7 @@ export default function Quotations() {
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const filteredQuotations = quotations?.filter(quotation =>
-    quotation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    quotation.quotation_number.toLowerCase().includes(searchTerm.toLowerCase())
+    quotation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const handleCreateSuccess = () => {

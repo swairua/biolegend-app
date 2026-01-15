@@ -17,14 +17,23 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -36,12 +45,14 @@ import {
   Send,
   Calendar,
   Receipt,
-  Truck
+  Truck,
+  Trash2
 } from 'lucide-react';
-import { useCompanies } from '@/hooks/useDatabase';
-import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
+import { useOptimizedInvoices } from '@/hooks/useOptimizedInvoices';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { EditInvoiceModal } from '@/components/invoices/EditInvoiceModal';
 import { ViewInvoiceModal } from '@/components/invoices/ViewInvoiceModal';
@@ -94,6 +105,8 @@ export default function Invoices() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDeliveryNoteModal, setShowDeliveryNoteModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -103,42 +116,46 @@ export default function Invoices() {
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  
-  // Use the fixed invoices hook
-  const { data: invoices, isLoading, error, refetch } = useInvoices(currentCompany?.id);
-  const { currency, rate, format } = useCurrency();
 
-  // Filter and search logic
+  // Use the optimized invoices hook with pagination
+  const {
+    data: invoiceData,
+    isLoading,
+    error,
+    refetch
+  } = useOptimizedInvoices(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
+    dateFromFilter,
+    dateToFilter,
+    amountFromFilter: amountFromFilter ? parseFloat(amountFromFilter) : undefined,
+    amountToFilter: amountToFilter ? parseFloat(amountToFilter) : undefined
+  });
+
+  const invoices = invoiceData?.invoices || [];
+  const totalCount = invoiceData?.totalCount || 0;
+  const hasMore = invoiceData?.hasMore || false;
+
+  const { currency, rate, format } = useCurrency();
+  const deleteInvoice = useDeleteInvoice();
+
+  // Client-side post-filtering for customer name/email (server handles invoice_number, status, dates, amounts)
   const filteredInvoices = invoices?.filter(invoice => {
-    // Search filter
-    const matchesSearch =
-      invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    // Post-filter by customer name or email (server-side search is on invoice_number only)
+    const matchesCustomerSearch =
+      !searchTerm ||
       invoice.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-
-    // Date filter
-    const invoiceDate = new Date(invoice.invoice_date);
-    const matchesDateFrom = !dateFromFilter || invoiceDate >= new Date(dateFromFilter);
-    const matchesDateTo = !dateToFilter || invoiceDate <= new Date(dateToFilter);
-
-    // Normalize amounts to current display currency for filtering
-    const normalizedTotal = normalizeInvoiceAmount(
-      Number(invoice.total_amount) || 0,
-      invoice.currency_code as any,
-      invoice.exchange_rate as any,
-      currency,
-      rate
-    );
-
-    const matchesAmountFrom = !amountFromFilter || normalizedTotal >= parseFloat(amountFromFilter);
-    const matchesAmountTo = !amountToFilter || normalizedTotal <= parseFloat(amountToFilter);
-
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
+    return matchesCustomerSearch;
   }) || [];
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', invoiceRate?: number) => {
@@ -274,6 +291,33 @@ Website: www.biolegendscientific.co.ke`;
     toast.info(`Creating delivery note for invoice ${invoice.invoice_number}`);
   };
 
+  const handleDeleteInvoice = (invoice: Invoice) => {
+    if (invoice.status !== 'draft') {
+      toast.error('Only draft invoices can be deleted');
+      return;
+    }
+    setInvoiceToDelete(invoice);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete?.id) {
+      toast.error('Invoice not found');
+      return;
+    }
+
+    try {
+      await deleteInvoice.mutateAsync(invoiceToDelete.id);
+      setShowDeleteConfirm(false);
+      setInvoiceToDelete(null);
+      toast.success('Invoice deleted successfully!');
+      refetch();
+    } catch (error) {
+      const errorMessage = parseErrorMessage(error);
+      toast.error(`Failed to delete invoice: ${errorMessage}`);
+    }
+  };
+
   const handleClearFilters = () => {
     setStatusFilter('all');
     setDateFromFilter('');
@@ -282,6 +326,7 @@ Website: www.biolegendscientific.co.ke`;
     setAmountFromFilter('');
     setAmountToFilter('');
     setSearchTerm('');
+    setCurrentPage(1);
     toast.success('Filters cleared');
   };
 
@@ -437,7 +482,7 @@ Website: www.biolegendscientific.co.ke`;
             <span>Invoices List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredInvoices.length} invoices
+                {filteredInvoices.length > 0 ? `${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, totalCount)}` : '0'} of {totalCount} invoices
               </Badge>
             )}
           </CardTitle>
@@ -544,13 +589,24 @@ Website: www.biolegendscientific.co.ke`;
                           <Eye className="h-4 w-4" />
                         </Button>
                         {invoice.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleEditInvoice(invoice)}
                             title="Edit invoice"
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {invoice.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteInvoice(invoice)}
+                            title="Delete invoice"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                         <Button
@@ -602,6 +658,88 @@ Website: www.biolegendscientific.co.ke`;
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination */}
+          {!isLoading && filteredInvoices.length > 0 && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredInvoices.length > 0 ? `${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, totalCount)}` : '0'} of {totalCount} invoices
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {/* Page number buttons */}
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible =
+                      pageNum === 1 ||
+                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={
+                        currentPage >= Math.ceil(totalCount / PAGE_SIZE)
+                          ? 'pointer-events-none opacity-50'
+                          : 'cursor-pointer'
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -662,6 +800,20 @@ Website: www.biolegendscientific.co.ke`;
           setShowDeliveryNoteModal(false);
           toast.success('Delivery note created successfully!');
         }}
+      />
+
+      {/* Delete Invoice Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Invoice"
+        description="This action cannot be undone. The invoice will be permanently deleted."
+        itemName={invoiceToDelete?.invoice_number}
+        isLoading={deleteInvoice.isPending}
+        isDangerous={true}
+        actionLabel="Delete"
+        loadingLabel="Deleting..."
       />
     </div>
   );

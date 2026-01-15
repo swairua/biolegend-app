@@ -752,7 +752,7 @@ export const useCustomerInvoices = (customerId?: string, companyId?: string) => 
 
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (invoice: Omit<Invoice, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
@@ -760,12 +760,37 @@ export const useCreateInvoice = () => {
         .insert([invoice])
         .select()
         .single();
-      
+
       if (error) throw normalizeError(error);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+// Delete Invoice
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw normalizeError(error);
+      return id;
+    },
+    onSuccess: () => {
+      // Invalidate all invoice-related queries
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices_fixed'] });
+      queryClient.invalidateQueries({ queryKey: ['customer_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_notes'] });
     },
   });
 };
