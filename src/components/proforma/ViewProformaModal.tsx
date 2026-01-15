@@ -147,6 +147,17 @@ export const ViewProformaModal = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Duplicate Items Warning */}
+          {hasDuplicates && (
+            <Alert className="border-amber-300 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                ⚠️ This proforma has <strong>{duplicateCount} duplicate item(s)</strong> in the database.
+                The display below shows deduplicated items. Use <strong>"Repair Duplicates"</strong> from the Proforma list page to permanently clean up the database.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Header Information */}
           <Card>
             <CardHeader>
