@@ -526,7 +526,16 @@ export const useUpdateProforma = () => {
           };
         });
 
-        console.log('✅ Validation passed - inserting items:', validatedItems.length);
+        // 🔍 CHECK: Validate no duplicate product_ids in items array
+        const productIds = validatedItems.map(i => i.product_id);
+        const uniqueProductIds = new Set(productIds);
+        if (uniqueProductIds.size !== productIds.length) {
+          const duplicates = productIds.filter((id, index) => productIds.indexOf(id) !== index);
+          const uniqueDuplicates = [...new Set(duplicates)];
+          throw new Error(`Duplicate products detected in items: ${uniqueDuplicates.join(', ')}. Each product can only appear once per proforma.`);
+        }
+
+        console.log('✅ Validation passed - no duplicate products found - inserting items:', validatedItems.length);
         console.log('📦 Item details:', validatedItems.map(i => ({
           product_id: i.product_id,
           qty: i.quantity,
