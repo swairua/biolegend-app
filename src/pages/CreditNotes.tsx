@@ -102,35 +102,31 @@ export default function CreditNotes() {
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: creditNotes, isLoading, error, refetch } = useCreditNotes(currentCompany?.id);
+
+  // Use optimized credit notes hook with server-side pagination
+  const { data: creditNoteData, isLoading, error, refetch } = useOptimizedCreditNotes(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'draft' | 'sent' | 'applied' | 'cancelled',
+    dateFromFilter: dateFromFilter || undefined,
+    dateToFilter: dateToFilter || undefined,
+    amountFromFilter: amountFromFilter ? parseFloat(amountFromFilter) : undefined,
+    amountToFilter: amountToFilter ? parseFloat(amountToFilter) : undefined
+  });
+
   const downloadPDF = useCreditNotePDFDownload();
   const reverseCreditNote = useReverseCreditNote();
 
-  // Filter and search logic
-  const filteredCreditNotes = creditNotes?.filter(creditNote => {
-    // Search filter
-    const matchesSearch =
-      creditNote.credit_note_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || creditNote.status === statusFilter;
-
-    // Date filter
-    const creditNoteDate = new Date(creditNote.credit_note_date);
-    const matchesDateFrom = !dateFromFilter || creditNoteDate >= new Date(dateFromFilter);
-    const matchesDateTo = !dateToFilter || creditNoteDate <= new Date(dateToFilter);
-
-    // Amount filter
-    const matchesAmountFrom = !amountFromFilter || (creditNote.total_amount || 0) >= parseFloat(amountFromFilter);
-    const matchesAmountTo = !amountToFilter || (creditNote.total_amount || 0) <= parseFloat(amountToFilter);
-
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
-  }) || [];
+  const creditNotes = creditNoteData?.creditNotes || [];
+  const totalCount = creditNoteData?.totalCount || 0;
+  const filteredCreditNotes = creditNotes;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
