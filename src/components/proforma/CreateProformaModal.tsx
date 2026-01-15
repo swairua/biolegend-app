@@ -338,6 +338,7 @@ export const CreateProformaModal = ({
     setItems([]);
     setSearchTerm('');
     setShowProductSearch(false);
+    clearNewItems();
     onOpenChange(false);
   };
 
