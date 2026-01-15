@@ -145,6 +145,17 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
 
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (displayProducts || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price || product.unit_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description || `${product.name} - Product details`,
+    category_name: product.category_name,
+  }));
+
   const convertItemsByFactor = (factor: number) => {
     setItems(prev => prev.map(item => {
       const newUnit = parseFloat((item.unit_price * factor).toFixed(4));
