@@ -414,6 +414,16 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       return;
     }
 
+    // Save any new items before submitting the invoice
+    if (newItems.length > 0) {
+      try {
+        await saveAllNewItems(currentCompany.id);
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmitProgress({
       step: 'Preparing invoice data...',
