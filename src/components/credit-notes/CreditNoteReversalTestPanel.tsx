@@ -60,23 +60,22 @@ export function CreditNoteReversalTestPanel() {
     }
   };
 
-  const handleExecuteReversal = async () => {
+  const handleInitiateReversal = () => {
     if (!creditNoteId.trim()) {
       toast.error('Please enter a credit note ID');
       return;
     }
 
-    const confirmed = window.confirm(
-      'Are you sure you want to reverse this credit note? This action cannot be undone.'
-    );
+    setShowReversalConfirm(true);
+  };
 
-    if (!confirmed) return;
-
+  const handleConfirmReversal = async () => {
+    setShowReversalConfirm(false);
     setIsRunning(true);
 
     try {
       const result = await testFullReversal(creditNoteId, 'Test reversal');
-      
+
       if (result.passed) {
         toast.success('Credit note reversed successfully');
         setCreditNoteId('');
