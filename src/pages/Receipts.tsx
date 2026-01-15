@@ -155,6 +155,14 @@ export default function Receipts() {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
   }) || [];
 
+  // Pagination
+  const totalCount = filteredReceipts.length;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const paginatedReceipts = filteredReceipts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', receiptRate?: number) => {
     const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, receiptRate as any, currency, rate);
     return format(normalized, currency);
