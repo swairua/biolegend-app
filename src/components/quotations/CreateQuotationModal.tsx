@@ -68,7 +68,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
-  const { newItems, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
+  const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
