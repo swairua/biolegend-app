@@ -247,12 +247,15 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   };
 
   const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Create temporary ID for this item
+    const tempId = `new-${Date.now()}`;
+
     // Add to new items queue for auto-save
-    addNewItem(itemData);
+    addNewItem(itemData, tempId);
 
     // Return immediately with a temporary item that can be used in the form
     return {
-      id: `new-${Date.now()}`,
+      id: tempId,
       name: itemData.name,
       product_code: itemData.product_code,
       selling_price: itemData.selling_price,
