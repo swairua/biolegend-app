@@ -170,13 +170,13 @@ export default function CustomerStatements() {
 
   const getStatusBadge = (statement: CustomerStatement) => {
     if (statement.total_outstanding === 0) {
-      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Paid Up</Badge>;
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" /> Paid Up</Badge>;
     }
     if (statement.overdue_amount > 0) {
-      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Overdue</Badge>;
+      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" /> Overdue</Badge>;
     }
     if (statement.current_due > 0) {
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Current</Badge>;
+      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Current</Badge>;
     }
     return <Badge variant="secondary">No Balance</Badge>;
   };
