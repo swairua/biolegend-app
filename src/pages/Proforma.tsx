@@ -21,6 +21,15 @@ import {
   TableRow
 } from '@/components/ui/table';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
   Plus,
   Search,
   Filter,
@@ -36,8 +45,9 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import { useProformas, useConvertProformaToInvoice, useDeleteProforma, type ProformaWithItems } from '@/hooks/useProforma';
-import { useCompanies } from '@/hooks/useDatabase';
+import { useOptimizedProformas } from '@/hooks/useOptimizedProformas';
+import { useCompanies, useConvertProformaToInvoice, useDeleteProforma } from '@/hooks/useDatabase';
+import type { ProformaWithItems } from '@/hooks/useProforma';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -57,30 +67,35 @@ export default function Proforma() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedProforma, setSelectedProforma] = useState<ProformaWithItems | null>(null);
+  const [selectedProforma, setSelectedProforma] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
-  const [proformaToDelete, setProformaToDelete] = useState<ProformaWithItems | null>(null);
+  const [proformaToDelete, setProformaToDelete] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRepairPanel, setShowRepairPanel] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Get company data
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
-  // Use proper proforma hooks
-  const { data: proformas = [], isLoading, refetch } = useProformas(currentCompany?.id);
-  const convertToInvoice = useConvertProformaToInvoice();
-  const deleteProforma = useDeleteProforma();
+  // Use optimized proformas hook with server-side pagination
+  const { data: proformaData, isLoading, refetch } = useOptimizedProformas(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
+
+  const proformas = proformaData?.proformas || [];
+  const totalCount = proformaData?.totalCount || 0;
+  const filteredProformas = proformas;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
-
-  const filteredProformas = proformas.filter(proforma =>
-    proforma.proforma_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    proforma.customers?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -620,6 +635,79 @@ export default function Proforma() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && filteredProformas.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

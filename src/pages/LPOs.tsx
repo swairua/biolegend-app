@@ -4,14 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -31,7 +40,8 @@ import {
   Database
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLPOs, useUpdateLPO, useCompanies } from '@/hooks/useDatabase';
+import { useUpdateLPO, useCompanies } from '@/hooks/useDatabase';
+import { useOptimizedLPOs } from '@/hooks/useOptimizedLPOs';
 import { downloadLPOPDF } from '@/utils/pdfGenerator';
 import { CreateLPOModal } from '@/components/lpo/CreateLPOModal';
 import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
@@ -51,19 +61,25 @@ export default function LPOs() {
   const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: lpos, isLoading, error, refetch } = useLPOs(currentCompany?.id);
+
+  // Use optimized LPOs hook with server-side pagination
+  const { data: lpoData, isLoading, error, refetch } = useOptimizedLPOs(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
   const updateLPO = useUpdateLPO();
 
-  // Note: Auto-migration removed - using manual migration guide instead
-
-  const filteredLPOs = lpos?.filter(lpo =>
-    lpo.lpo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.suppliers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const lpos = lpoData?.lpos || [];
+  const totalCount = lpoData?.totalCount || 0;
+  const filteredLPOs = lpos;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -161,8 +177,7 @@ export default function LPOs() {
     toast.success('Local Purchase Order updated successfully!');
   };
 
-  // Calculate stats
-  const totalLPOs = lpos?.length || 0;
+  // Calculate stats from current page (total stats would need separate query)
   const draftLPOs = lpos?.filter(lpo => lpo.status === 'draft').length || 0;
   const sentLPOs = lpos?.filter(lpo => lpo.status === 'sent').length || 0;
   const approvedLPOs = lpos?.filter(lpo => lpo.status === 'approved').length || 0;
@@ -258,7 +273,7 @@ export default function LPOs() {
             <div className="flex items-center space-x-2">
               <ShoppingCart className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{totalLPOs}</p>
+                <p className="text-2xl font-bold">{totalCount}</p>
                 <p className="text-xs text-muted-foreground">Total LPOs</p>
               </div>
             </div>
@@ -477,6 +492,79 @@ export default function LPOs() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && filteredLPOs.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

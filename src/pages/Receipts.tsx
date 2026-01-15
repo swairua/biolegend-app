@@ -17,14 +17,23 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -87,6 +96,10 @@ export default function Receipts() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');

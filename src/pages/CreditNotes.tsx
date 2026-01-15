@@ -17,14 +17,23 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -43,7 +52,7 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
-import { useCreditNotes } from '@/hooks/useCreditNotes';
+import { useOptimizedCreditNotes } from '@/hooks/useOptimizedCreditNotes';
 import { toast } from 'sonner';
 import { CreateCreditNoteModal } from '@/components/credit-notes/CreateCreditNoteModal';
 import { ViewCreditNoteModal } from '@/components/credit-notes/ViewCreditNoteModal';
@@ -93,35 +102,31 @@ export default function CreditNotes() {
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: creditNotes, isLoading, error, refetch } = useCreditNotes(currentCompany?.id);
+
+  // Use optimized credit notes hook with server-side pagination
+  const { data: creditNoteData, isLoading, error, refetch } = useOptimizedCreditNotes(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'draft' | 'sent' | 'applied' | 'cancelled',
+    dateFromFilter: dateFromFilter || undefined,
+    dateToFilter: dateToFilter || undefined,
+    amountFromFilter: amountFromFilter ? parseFloat(amountFromFilter) : undefined,
+    amountToFilter: amountToFilter ? parseFloat(amountToFilter) : undefined
+  });
+
   const downloadPDF = useCreditNotePDFDownload();
   const reverseCreditNote = useReverseCreditNote();
 
-  // Filter and search logic
-  const filteredCreditNotes = creditNotes?.filter(creditNote => {
-    // Search filter
-    const matchesSearch =
-      creditNote.credit_note_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || creditNote.status === statusFilter;
-
-    // Date filter
-    const creditNoteDate = new Date(creditNote.credit_note_date);
-    const matchesDateFrom = !dateFromFilter || creditNoteDate >= new Date(dateFromFilter);
-    const matchesDateTo = !dateToFilter || creditNoteDate <= new Date(dateToFilter);
-
-    // Amount filter
-    const matchesAmountFrom = !amountFromFilter || (creditNote.total_amount || 0) >= parseFloat(amountFromFilter);
-    const matchesAmountTo = !amountToFilter || (creditNote.total_amount || 0) <= parseFloat(amountToFilter);
-
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
-  }) || [];
+  const creditNotes = creditNoteData?.creditNotes || [];
+  const totalCount = creditNoteData?.totalCount || 0;
+  const filteredCreditNotes = creditNotes;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -365,9 +370,9 @@ export default function CreditNotes() {
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-primary" />
             <span>Credit Notes List</span>
-            {!isLoading && (
+            {!isLoading && totalCount > 0 && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCreditNotes.length} credit notes
+                {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount}
               </Badge>
             )}
           </CardTitle>
@@ -536,6 +541,79 @@ export default function CreditNotes() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && filteredCreditNotes.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

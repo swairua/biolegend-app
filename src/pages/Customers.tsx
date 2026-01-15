@@ -18,17 +18,26 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
@@ -39,7 +48,8 @@ import {
   Building2,
   MapPin
 } from 'lucide-react';
-import { useCustomers, useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useOptimizedCustomers, useCustomerCities } from '@/hooks/useOptimizedCustomers';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EditCustomerModal } from '@/components/customers/EditCustomerModal';
@@ -83,35 +93,30 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
   const [creditLimitFilter, setCreditLimitFilter] = useState('all');
-  
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers, isLoading, error } = useCustomers(currentCompany?.id);
 
-  // Filter and search logic
-  const filteredCustomers = customers?.filter(customer => {
-    // Search filter
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.customer_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Use optimized customers hook with server-side pagination
+  const { data: customerData, isLoading, error, refetch } = useOptimizedCustomers(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'active' | 'inactive',
+    cityFilter: cityFilter !== 'all' ? cityFilter : undefined,
+    creditLimitFilter: creditLimitFilter as 'all' | 'with_limit' | 'no_limit'
+  });
 
-    // Status filter
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && customer.is_active !== false) ||
-      (statusFilter === 'inactive' && customer.is_active === false);
+  // Fetch unique cities for filter dropdown
+  const { data: citiesList = [] } = useCustomerCities(currentCompany?.id);
 
-    // City filter
-    const matchesCity = cityFilter === 'all' || customer.city === cityFilter;
-
-    // Credit limit filter
-    const matchesCreditLimit = creditLimitFilter === 'all' ||
-      (creditLimitFilter === 'no_limit' && !customer.credit_limit) ||
-      (creditLimitFilter === 'with_limit' && customer.credit_limit);
-
-    return matchesSearch && matchesStatus && matchesCity && matchesCreditLimit;
-  }) || [];
+  const customers = customerData?.customers || [];
+  const totalCount = customerData?.totalCount || 0;
+  const filteredCustomers = customers;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => {
@@ -330,8 +335,8 @@ export default function Customers() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Cities</SelectItem>
-                        {Array.from(new Set(customers?.map(c => c.city).filter(Boolean))).map(city => (
-                          <SelectItem key={city} value={city!}>{city}</SelectItem>
+                        {citiesList.map(city => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -365,9 +370,9 @@ export default function Customers() {
           <CardTitle className="flex items-center space-x-2">
             <Building2 className="h-5 w-5 text-primary" />
             <span>Customers List</span>
-            {!isLoading && (
+            {!isLoading && totalCount > 0 && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCustomers.length} customers
+                {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount}
               </Badge>
             )}
           </CardTitle>
@@ -540,6 +545,79 @@ export default function Customers() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && filteredCustomers.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

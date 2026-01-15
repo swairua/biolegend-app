@@ -4,23 +4,33 @@ import { EditInventoryItemModal } from '@/components/inventory/EditInventoryItem
 import { ViewInventoryItemModal } from '@/components/inventory/ViewInventoryItemModal';
 import { RestockItemModal } from '@/components/inventory/RestockItemModal';
 import { StockAdjustmentModal } from '@/components/inventory/StockAdjustmentModal';
-import { useProducts, useCompanies } from '@/hooks/useDatabase';
+import { useCompanies } from '@/hooks/useDatabase';
+import { useOptimizedProducts } from '@/hooks/useOptimizedProducts';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
@@ -85,10 +95,20 @@ export default function Inventory() {
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   // Fetch products from database
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: products, isLoading: loadingProducts, error: productsError } = useProducts(currentCompany?.id);
+
+  // Use optimized products hook with server-side pagination
+  const { data: productData, isLoading: loadingProducts, error: productsError, refetch } = useOptimizedProducts(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
 
   const handleAddItem = () => {
     setShowAddModal(true);
@@ -138,24 +158,21 @@ export default function Inventory() {
   };
 
   // Transform products data to inventory items
-  const inventory: InventoryItem[] = products?.map(product => ({
+  const inventory: InventoryItem[] = productData?.products?.map(product => ({
     ...product,
     status: getStockStatus(product.stock_quantity || 0, product.minimum_stock_level || 0)
   })) || [];
 
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.product_categories?.name && item.product_categories.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const totalCount = productData?.totalCount || 0;
+  const filteredInventory = inventory;
 
   const formatCurrency = useFormatCurrency();
-  const totalValue = inventory.reduce((sum, item) => {
+  const pageValue = inventory.reduce((sum, item) => {
     return sum + ((item.stock_quantity || 0) * (item.selling_price || 0));
   }, 0);
 
-  const lowStockItems = inventory.filter(item => item.status === 'low_stock').length;
-  const outOfStockItems = inventory.filter(item => item.status === 'out_of_stock').length;
+  const pageStockItems = inventory.filter(item => item.status === 'low_stock').length;
+  const pageOutOfStockItems = inventory.filter(item => item.status === 'out_of_stock').length;
 
   // Handle loading and error states
   if (loadingProducts) {
@@ -227,19 +244,19 @@ export default function Inventory() {
               <Package className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold text-primary">{inventory.length}</p>
+                <p className="text-2xl font-bold text-primary">{totalCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-card">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-success" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalValue)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Page Value</p>
+                <p className="text-2xl font-bold text-success">{formatCurrency(pageValue)}</p>
               </div>
             </div>
           </CardContent>
@@ -250,8 +267,8 @@ export default function Inventory() {
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-warning" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold text-warning">{lowStockItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Low Stock (Page)</p>
+                <p className="text-2xl font-bold text-warning">{pageStockItems}</p>
               </div>
             </div>
           </CardContent>
@@ -262,8 +279,8 @@ export default function Inventory() {
             <div className="flex items-center space-x-2">
               <TrendingDown className="h-5 w-5 text-destructive" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Out of Stock</p>
-                <p className="text-2xl font-bold text-destructive">{outOfStockItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Out of Stock (Page)</p>
+                <p className="text-2xl font-bold text-destructive">{pageOutOfStockItems}</p>
               </div>
             </div>
           </CardContent>
@@ -382,6 +399,79 @@ export default function Inventory() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {!loadingProducts && filteredInventory.length > 0 && totalCount > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalCount / PAGE_SIZE) ||
+                                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < Math.ceil(totalCount / PAGE_SIZE)) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
