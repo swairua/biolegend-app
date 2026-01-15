@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { convertAmount } from '@/utils/currency';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface CreateProformaModalOptimizedProps {
   open: boolean;
