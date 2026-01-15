@@ -40,7 +40,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
-import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useOptimizedInvoices } from '@/hooks/useOptimizedInvoices';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
