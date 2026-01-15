@@ -623,7 +623,7 @@ Website: www.biolegendscientific.co.ke`;
           )}
 
           {/* Pagination Controls */}
-          {!isLoading && filteredQuotations.length > 0 && totalCount > 20 && (
+          {!isLoading && quotations.length > 0 && totalCount > PAGE_SIZE && (
             <div className="mt-6 flex flex-col items-center gap-4">
               <Pagination>
                 <PaginationContent>
