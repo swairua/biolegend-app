@@ -35,15 +35,18 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { downloadDeliveryNotePDF } from '@/utils/pdfGenerator';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
 import { ViewDeliveryNoteModal } from '@/components/delivery/ViewDeliveryNoteModal';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useUpdateDeliveryNote, useCompanies } from '@/hooks/useDatabase';
 import { useOptimizedDeliveryNotes } from '@/hooks/useOptimizedDeliveryNotes';
 import { mapDeliveryNoteForDisplay } from '@/utils/deliveryNoteMapper';
+import { supabase } from '@/integrations/supabase/client';
 
 
 export default function DeliveryNotes() {
