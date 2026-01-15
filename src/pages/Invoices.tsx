@@ -706,6 +706,20 @@ Website: www.biolegendscientific.co.ke`;
           toast.success('Delivery note created successfully!');
         }}
       />
+
+      {/* Delete Invoice Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Invoice"
+        description="This action cannot be undone. The invoice will be permanently deleted."
+        itemName={invoiceToDelete?.invoice_number}
+        isLoading={deleteInvoice.isPending}
+        isDangerous={true}
+        actionLabel="Delete"
+        loadingLabel="Deleting..."
+      />
     </div>
   );
 }
