@@ -244,19 +244,19 @@ export default function Inventory() {
               <Package className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold text-primary">{inventory.length}</p>
+                <p className="text-2xl font-bold text-primary">{totalCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-card">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-success" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalValue)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Page Value</p>
+                <p className="text-2xl font-bold text-success">{formatCurrency(pageValue)}</p>
               </div>
             </div>
           </CardContent>
@@ -267,8 +267,8 @@ export default function Inventory() {
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-warning" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold text-warning">{lowStockItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Low Stock (Page)</p>
+                <p className="text-2xl font-bold text-warning">{pageStockItems}</p>
               </div>
             </div>
           </CardContent>
@@ -279,8 +279,8 @@ export default function Inventory() {
             <div className="flex items-center space-x-2">
               <TrendingDown className="h-5 w-5 text-destructive" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Out of Stock</p>
-                <p className="text-2xl font-bold text-destructive">{outOfStockItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Out of Stock (Page)</p>
+                <p className="text-2xl font-bold text-destructive">{pageOutOfStockItems}</p>
               </div>
             </div>
           </CardContent>
