@@ -34,6 +34,7 @@ import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateProforma, type ProformaItem as BaseProformaItem } from '@/hooks/useProforma';
 import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
 import { ProformaUpdateErrorHandler } from './ProformaUpdateErrorHandler';
+import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQL';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
