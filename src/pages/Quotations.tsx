@@ -675,6 +675,9 @@ Website: www.biolegendscientific.co.ke`;
         itemName={quotationToDelete?.quotation_number}
         isLoading={deleteQuotation.isPending}
       />
+
+      {/* Diagnostic Panel - Remove after debugging */}
+      <QuotationConversionDiagnostic />
     </div>
   );
 }
