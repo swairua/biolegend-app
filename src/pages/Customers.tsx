@@ -49,7 +49,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
-import { useOptimizedCustomers } from '@/hooks/useOptimizedCustomers';
+import { useOptimizedCustomers, useCustomerCities } from '@/hooks/useOptimizedCustomers';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EditCustomerModal } from '@/components/customers/EditCustomerModal';
