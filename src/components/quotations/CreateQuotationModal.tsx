@@ -445,7 +445,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     setNotes('');
     setTermsAndConditions('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
     setItems([]);
-    setSearchProduct('');
+    clearNewItems();
   };
 
   return (
