@@ -1440,7 +1440,15 @@ export const useQuotations = (companyId?: string) => {
           throw customersError;
         }
 
+        console.log('✅ useQuotations - Fetched customers:', {
+          count: customers?.length || 0,
+          customerIds: customers?.map(c => c.id)
+        });
+
         // Step 3: Get quotation items separately
+        const quotationIdsForItems = quotations.map(quot => quot.id);
+        console.log('🔧 useQuotations - Fetching items for quotation IDs:', quotationIdsForItems);
+
         const { data: quotationItems, error: itemsError } = await supabase
           .from('quotation_items')
           .select(`
@@ -1457,12 +1465,20 @@ export const useQuotations = (companyId?: string) => {
             line_total,
             sort_order
           `)
-          .in('quotation_id', quotations.map(quot => quot.id));
+          .in('quotation_id', quotationIdsForItems);
 
         if (itemsError) {
           console.error('Error fetching quotation items:', itemsError);
           throw itemsError;
         }
+
+        console.log('✅ useQuotations - Fetched quotation items:', {
+          count: quotationItems?.length || 0,
+          itemsByQuotation: quotationIdsForItems.map(qId => ({
+            quotationId: qId,
+            itemCount: (quotationItems || []).filter(item => item.quotation_id === qId).length
+          }))
+        });
 
         // Step 4: Get products for quotation items
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
