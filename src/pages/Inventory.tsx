@@ -570,6 +570,17 @@ export default function Inventory() {
         />
       )}
 
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Inventory Item?"
+        description="This action will permanently delete the inventory item. This cannot be undone."
+        itemName={itemToDelete?.name}
+        isLoading={isDeleting}
+      />
+
     </div>
   );
 }
