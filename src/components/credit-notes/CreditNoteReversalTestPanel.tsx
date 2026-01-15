@@ -124,7 +124,7 @@ export function CreditNoteReversalTestPanel() {
                 Run Tests
               </Button>
               <Button
-                onClick={handleExecuteReversal}
+                onClick={handleInitiateReversal}
                 disabled={isRunning || !creditNoteId.trim()}
                 className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
