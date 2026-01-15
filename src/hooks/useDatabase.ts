@@ -1482,6 +1482,11 @@ export const useQuotations = (companyId?: string) => {
 
         // Step 4: Get products for quotation items
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
+        console.log('🔧 useQuotations - Fetching products for IDs:', {
+          count: productIds.length,
+          productIds
+        });
+
         const { data: products, error: productsError } = productIds.length > 0 ? await supabase
           .from('products')
           .select('id, name, unit_of_measure')
@@ -1491,6 +1496,11 @@ export const useQuotations = (companyId?: string) => {
           console.error('Error fetching products for quotation items:', productsError);
           throw productsError;
         }
+
+        console.log('✅ useQuotations - Fetched products:', {
+          count: products?.length || 0,
+          productIds: products?.map(p => p.id)
+        });
 
         // Step 5: Create lookup maps
         const customerMap = new Map();
