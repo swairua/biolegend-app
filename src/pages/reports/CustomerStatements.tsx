@@ -162,11 +162,11 @@ export default function CustomerStatements() {
   const endIndex = startIndex + PAGE_SIZE;
   const filteredStatements = allFilteredStatements.slice(startIndex, endIndex);
 
-  // Calculate totals
-  const totalOutstanding = filteredStatements.reduce((sum, s) => sum + s.total_outstanding, 0);
-  const totalOverdue = filteredStatements.reduce((sum, s) => sum + s.overdue_amount, 0);
-  const totalCurrent = filteredStatements.reduce((sum, s) => sum + s.current_due, 0);
-  const overdueCustomers = filteredStatements.filter(s => s.overdue_amount > 0).length;
+  // Calculate totals (from all filtered statements, not just current page)
+  const totalOutstanding = allFilteredStatements.reduce((sum, s) => sum + s.total_outstanding, 0);
+  const totalOverdue = allFilteredStatements.reduce((sum, s) => sum + s.overdue_amount, 0);
+  const totalCurrent = allFilteredStatements.reduce((sum, s) => sum + s.current_due, 0);
+  const overdueCustomers = allFilteredStatements.filter(s => s.overdue_amount > 0).length;
 
   const getStatusBadge = (statement: CustomerStatement) => {
     if (statement.total_outstanding === 0) {
