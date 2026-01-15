@@ -203,7 +203,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
   };
 
-  const addItem = (product: any) => {
+  const addItem = (product: AutocompleteItem) => {
     const existingItem = items.find(item => item.product_id === product.id);
 
     if (existingItem) {
@@ -212,7 +212,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
 
     // Use defensive price fallback - try selling_price first, then unit_price
-    const priceBase = Number(product.selling_price || product.unit_price || 0);
+    const priceBase = Number(product.selling_price || 0);
     if (isNaN(priceBase) || priceBase === 0) {
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product \"${product.name}\" has no price set`);
@@ -244,6 +244,21 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
     // Show success message with calculated totals
     toast.success(`Added "${product.name}" - ${formatCurrency(lineTotal)} (incl. tax)`);
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Add to new items queue for auto-save
+    addNewItem(itemData);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: `new-${Date.now()}`,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const calculateLineTotal = (item: InvoiceItem, quantity?: number, unitPrice?: number, discountPercentage?: number, taxPercentage?: number, taxInclusive?: boolean) => {
