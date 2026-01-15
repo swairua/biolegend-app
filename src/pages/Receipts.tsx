@@ -641,6 +641,17 @@ export default function Receipts() {
           onSuccess={handleCreateSuccess}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Receipt?"
+        description="This action will delete the receipt and remove its allocation from payments. Any delivery notes linked to this receipt will be unlinked."
+        itemName={receiptToDelete?.invoice_number}
+        isLoading={deleteReceipt.isPending}
+      />
     </div>
   );
 }
