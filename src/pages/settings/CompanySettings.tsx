@@ -37,6 +37,8 @@ export default function CompanySettings() {
   const [fixingCurrency, setFixingCurrency] = useState(false);
   const [testingStorage, setTestingStorage] = useState(false);
   const [storageStatus, setStorageStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
+  const [taxToDelete, setTaxToDelete] = useState<string | null>(null);
+  const [showDeleteTaxConfirm, setShowDeleteTaxConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [companyData, setCompanyData] = useState({
     name: 'BIOLEGEND SCIENTIFIC LTD',
