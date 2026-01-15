@@ -1475,6 +1475,14 @@ export const useQuotations = (companyId?: string) => {
           productMap.set(product.id, product);
         });
 
+        console.log('🔧 useQuotations - Fetched raw data:', {
+          quotationsCount: quotations.length,
+          quotationItemsCount: quotationItems?.length || 0,
+          productsCount: products?.length || 0,
+          customersCount: customers?.length || 0,
+          quotationItemsRaw: quotationItems
+        });
+
         const itemsMap = new Map();
         (quotationItems || []).forEach(item => {
           if (!itemsMap.has(item.quotation_id)) {
@@ -1486,19 +1494,39 @@ export const useQuotations = (companyId?: string) => {
           });
         });
 
+        console.log('🔧 useQuotations - Built itemsMap:', {
+          mapSize: itemsMap.size,
+          quotationIds: Array.from(itemsMap.keys())
+        });
+
         // Step 6: Combine data
-        return quotations.map(quotation => ({
-          ...quotation,
-          customers: customerMap.get(quotation.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null,
-            address: null,
-            city: null,
-            country: null
-          },
-          quotation_items: itemsMap.get(quotation.id) || []
-        }));
+        const result = quotations.map(quotation => {
+          const quotationItemsForThisQuote = itemsMap.get(quotation.id) || [];
+          console.log(`🔧 useQuotations - Quotation ${quotation.id}:`, {
+            quotationNumber: quotation.quotation_number,
+            itemsCount: quotationItemsForThisQuote.length,
+            items: quotationItemsForThisQuote
+          });
+          return {
+            ...quotation,
+            customers: customerMap.get(quotation.customer_id) || {
+              name: 'Unknown Customer',
+              email: null,
+              phone: null,
+              address: null,
+              city: null,
+              country: null
+            },
+            quotation_items: quotationItemsForThisQuote
+          };
+        });
+
+        console.log('✅ useQuotations - Final result:', {
+          quotationsCount: result.length,
+          firstQuotation: result[0]
+        });
+
+        return result;
 
       } catch (error) {
         console.error('Error in useQuotations:', error);
