@@ -1416,10 +1416,20 @@ export const useQuotations = (companyId?: string) => {
         const { data: quotations, error: quotationsError } = await query;
 
         if (quotationsError) throw quotationsError;
-        if (!quotations || quotations.length === 0) return [];
+
+        console.log('✅ useQuotations - Fetched quotations:', {
+          count: quotations?.length || 0,
+          quotations: quotations?.map(q => ({ id: q.id, number: q.quotation_number, customerId: q.customer_id }))
+        });
+
+        if (!quotations || quotations.length === 0) {
+          console.log('⚠️ useQuotations - No quotations found');
+          return [];
+        }
 
         // Step 2: Get customers separately (filter out invalid UUIDs)
         const customerIds = [...new Set(quotations.map(quotation => quotation.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
+        console.log('🔧 useQuotations - Fetching customers for IDs:', customerIds);
         const { data: customers, error: customersError } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
