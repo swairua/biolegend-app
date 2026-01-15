@@ -197,7 +197,14 @@ export default function Proforma() {
         line_total: Number(pi.line_total || (Number(pi.quantity || 0) * Number(pi.unit_price || 0)))
       }));
 
-      setInvoicePrefill({
+      console.log('📦 Mapped items for invoice from proforma:', {
+        mappedItemsCount: items.length,
+        mappedItems: items,
+        originalItemsCount: proforma.proforma_items?.length || 0,
+        originalItems: proforma.proforma_items
+      });
+
+      const invoicePrefillData = {
         customer: proforma.customers,
         items,
         notes: `Converted from proforma ${proforma.proforma_number}`,
@@ -206,7 +213,10 @@ export default function Proforma() {
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         currencyCode: proforma.currency_code || 'KES',
         exchangeRate: proforma.exchange_rate || 1
-      });
+      };
+
+      console.log('💾 Setting invoice prefill from proforma:', invoicePrefillData);
+      setInvoicePrefill(invoicePrefillData);
       setSelectedProforma(proforma);
       setShowCreateInvoiceModal(true);
     } catch (error) {
