@@ -992,6 +992,34 @@ export const CreateLPOModal = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Supplier Conflict Warning Modal */}
+      <AlertDialog open={showSupplierConflictWarning} onOpenChange={setShowSupplierConflictWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supplier Conflict Warning</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                <span className="font-semibold">{supplierConflictData?.entityName}</span> has{' '}
+                <span className="font-semibold">{supplierConflictData?.invoiceCount} invoice(s)</span> as a customer.
+              </p>
+              <p>
+                This creates a customer/supplier conflict. Do you want to proceed anyway?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmSupplierConflict}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Proceed Anyway'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
