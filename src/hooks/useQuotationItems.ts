@@ -586,6 +586,16 @@ export const useCreateProformaWithItems = () => {
 
       // Then create the proforma items if any
       if (items.length > 0) {
+        // Validate for duplicate products before insertion
+        const productIds = items.map(item => item.product_id).filter(Boolean);
+        if (new Set(productIds).size !== productIds.length) {
+          const uniqueDuplicates = [...new Set(
+            productIds.filter((id: string, index: number) => productIds.indexOf(id) !== index)
+          )];
+          await supabase.from('proforma_invoices').delete().eq('id', proformaData.id);
+          throw new Error(`Duplicate products detected in items: ${uniqueDuplicates.join(', ')}. Please add each product only once.`);
+        }
+
         const proformaItems = items.map((item, index) => ({
           proforma_id: proformaData.id,
           product_id: item.product_id,
@@ -613,6 +623,25 @@ export const useCreateProformaWithItems = () => {
             if (retry.error) throw normalizeError(retry.error);
           } else {
             throw itemsError;
+          }
+        }
+
+        // Post-insert verification: ensure no duplicate product_ids were created
+        const { data: insertedItems, error: verifyError } = await supabase
+          .from('proforma_items')
+          .select('product_id')
+          .eq('proforma_id', proformaData.id);
+
+        if (verifyError) {
+          console.warn('Warning: Could not verify proforma items after creation:', verifyError);
+        } else if (insertedItems) {
+          const insertedProductIds = insertedItems.map((item: any) => item.product_id);
+          if (new Set(insertedProductIds).size !== insertedProductIds.length) {
+            const uniqueDuplicates = [...new Set(
+              insertedProductIds.filter((id: string, index: number) => insertedProductIds.indexOf(id) !== index)
+            )];
+            console.error('Data integrity error: Duplicate items were created for proforma', proformaData.id);
+            throw new Error(`Data integrity error: Duplicate products found in created proforma: ${uniqueDuplicates.join(', ')}. Please contact support.`);
           }
         }
       }
