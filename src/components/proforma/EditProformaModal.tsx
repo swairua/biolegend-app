@@ -37,6 +37,7 @@ import { ProformaUpdateErrorHandler } from './ProformaUpdateErrorHandler';
 import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQL';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ProformaItem extends BaseProformaItem {
   // Extends the base ProformaItem with any additional UI-specific fields if needed
