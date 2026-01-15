@@ -203,7 +203,9 @@ export default function Proforma() {
         notes: `Converted from proforma ${proforma.proforma_number}`,
         terms: proforma.terms_and_conditions || 'Payment due within 30 days of invoice date.',
         invoiceDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        currencyCode: proforma.currency_code || 'KES',
+        exchangeRate: proforma.exchange_rate || 1
       });
       setSelectedProforma(proforma);
       setShowCreateInvoiceModal(true);
