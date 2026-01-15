@@ -481,7 +481,7 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invitations.map((invitation) => (
+                {paginatedInvitations.map((invitation) => (
                   <TableRow key={invitation.id}>
                     <TableCell>{invitation.email}</TableCell>
                     <TableCell>
@@ -517,6 +517,79 @@ export default function UserManagement() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Invitations Pagination Controls */}
+            {paginatedInvitations.length > 0 && totalInvitations > PAGE_SIZE && (
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentInvitationPage > 1) {
+                            setCurrentInvitationPage(currentInvitationPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentInvitationPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.ceil(totalInvitations / PAGE_SIZE) }).map((_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentInvitationPage;
+                      const isVisible = pageNum === 1 ||
+                                        pageNum === Math.ceil(totalInvitations / PAGE_SIZE) ||
+                                        (pageNum >= currentInvitationPage - 1 && pageNum <= currentInvitationPage + 1);
+
+                      if (!isVisible) {
+                        if (pageNum === currentInvitationPage - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${pageNum}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentInvitationPage(pageNum);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            isActive={isCurrentPage}
+                            className={isCurrentPage ? '' : 'cursor-pointer'}
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentInvitationPage < Math.ceil(totalInvitations / PAGE_SIZE)) {
+                            setCurrentInvitationPage(currentInvitationPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentInvitationPage >= Math.ceil(totalInvitations / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
