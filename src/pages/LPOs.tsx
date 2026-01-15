@@ -273,7 +273,7 @@ export default function LPOs() {
             <div className="flex items-center space-x-2">
               <ShoppingCart className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{totalLPOs}</p>
+                <p className="text-2xl font-bold">{totalCount}</p>
                 <p className="text-xs text-muted-foreground">Total LPOs</p>
               </div>
             </div>
