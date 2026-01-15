@@ -315,24 +315,31 @@ export const EditProformaModal = ({
 
 
   const removeItem = (id: string) => {
-    console.log('🗑️ DELETE CLICKED', { id, currentItemsCount: items.length });
-    console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+      setShowDeleteConfirm(true);
+    }
+  };
 
-    const itemToDelete = items.find(item => item.id === id);
-
-    setItems(prev => {
-      const filtered = prev.filter(item => {
-        const keep = item.id !== id;
-        console.log(`Comparing item ${item.id} with ${id}: keep=${keep}`);
-        return keep;
-      });
-      console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
-      return filtered;
-    });
-
-    // Show success toast after state update (outside of setState callback)
+  const handleConfirmDeleteItem = () => {
     if (itemToDelete) {
+      console.log('🗑️ DELETE CLICKED', { id: itemToDelete.id, currentItemsCount: items.length });
+      console.log('Items before delete:', items.map(i => ({ id: i.id, product: i.product_name })));
+
+      setItems(prev => {
+        const filtered = prev.filter(item => {
+          const keep = item.id !== itemToDelete.id;
+          console.log(`Comparing item ${item.id} with ${itemToDelete.id}: keep=${keep}`);
+          return keep;
+        });
+        console.log(`✅ Items after delete: ${filtered.length} items (was ${prev.length})`);
+        return filtered;
+      });
+
       toast.success(`${itemToDelete.product_name} removed from proforma`);
+      setItemToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
