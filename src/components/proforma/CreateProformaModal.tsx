@@ -256,6 +256,15 @@ export const CreateProformaModal = ({
     if (newItems.length > 0) {
       try {
         await saveAllNewItems(companyId);
+
+        // Update items array with actual product IDs
+        setItems(prevItems => prevItems.map(item => {
+          const actualId = tempIdToActualIdMap.get(item.product_id);
+          if (actualId) {
+            return { ...item, product_id: actualId };
+          }
+          return item;
+        }));
       } catch (error) {
         toast.error('Failed to save new items. Please try again.');
         return;
