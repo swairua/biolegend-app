@@ -17,14 +17,23 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import {
   Plus,
   Search,
@@ -43,7 +52,7 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
-import { useCreditNotes } from '@/hooks/useCreditNotes';
+import { useOptimizedCreditNotes } from '@/hooks/useOptimizedCreditNotes';
 import { toast } from 'sonner';
 import { CreateCreditNoteModal } from '@/components/credit-notes/CreateCreditNoteModal';
 import { ViewCreditNoteModal } from '@/components/credit-notes/ViewCreditNoteModal';
