@@ -238,7 +238,7 @@ export const CreateProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.customer_id) {
       toast.error('Please select a customer');
       return;
@@ -247,6 +247,16 @@ export const CreateProformaModal = ({
     if (items.length === 0) {
       toast.error('Please add at least one item');
       return;
+    }
+
+    // Save any new items before submitting the proforma
+    if (newItems.length > 0) {
+      try {
+        await saveAllNewItems(companyId);
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
     }
 
     try {
