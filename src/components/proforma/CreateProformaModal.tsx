@@ -22,10 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
-  Search,
+import {
+  Plus,
+  Trash2,
   Calculator,
   Receipt
 } from 'lucide-react';
@@ -34,6 +33,8 @@ import { useCreateProforma } from '@/hooks/useProforma';
 import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
+import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
+import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 
 interface ProformaItem {
   id: string;
@@ -82,6 +83,7 @@ export const CreateProformaModal = ({
   const { data: taxSettings } = useTaxSettings(companyId);
   const generateDocumentNumber = useGenerateDocumentNumber();
   const createProforma = useCreateProforma();
+  const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
@@ -124,7 +126,17 @@ export const CreateProformaModal = ({
     product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addItem = (product: any) => {
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (filteredProducts || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description,
+  }));
+
+  const addItem = (product: AutocompleteItem) => {
     // Check if product already exists in items
     const existingItem = items.find(item => item.product_id === product.id);
 
@@ -140,7 +152,7 @@ export const CreateProformaModal = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: product.selling_price,
+        unit_price: product.selling_price || 0,
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -163,6 +175,24 @@ export const CreateProformaModal = ({
 
     setShowProductSearch(false);
     setSearchTerm('');
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Create temporary ID for this item
+    const tempId = `new-${Date.now()}`;
+
+    // Add to new items queue for auto-save
+    addNewItem(itemData, tempId);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: tempId,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const updateItem = (id: string, field: keyof ProformaItem, value: any) => {
@@ -211,7 +241,7 @@ export const CreateProformaModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.customer_id) {
       toast.error('Please select a customer');
       return;
@@ -220,6 +250,25 @@ export const CreateProformaModal = ({
     if (items.length === 0) {
       toast.error('Please add at least one item');
       return;
+    }
+
+    // Save any new items before submitting the proforma
+    if (newItems.length > 0) {
+      try {
+        await saveAllNewItems(companyId);
+
+        // Update items array with actual product IDs
+        setItems(prevItems => prevItems.map(item => {
+          const actualId = tempIdToActualIdMap.get(item.product_id);
+          if (actualId) {
+            return { ...item, product_id: actualId };
+          }
+          return item;
+        }));
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
     }
 
     try {
@@ -301,6 +350,7 @@ export const CreateProformaModal = ({
     setItems([]);
     setSearchTerm('');
     setShowProductSearch(false);
+    clearNewItems();
     onOpenChange(false);
   };
 
@@ -399,34 +449,15 @@ export const CreateProformaModal = ({
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          placeholder="Search products..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {filteredProducts?.map((product) => (
-                          <div
-                            key={product.id}
-                            className="flex items-center justify-between p-2 border rounded cursor-pointer hover:bg-muted/50"
-                            onClick={() => addItem(product)}
-                          >
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {product.product_code} • {formatCurrency(product.selling_price)}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="ghost">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                      <ItemAutocomplete
+                        items={autocompleteItems}
+                        isLoading={false}
+                        onSelectItem={addItem}
+                        onCreateNewItem={handleCreateNewItem}
+                        placeholder="Search products..."
+                        allowNew={true}
+                        showPrices={true}
+                      />
                       <Button
                         type="button"
                         variant="outline"
@@ -438,6 +469,13 @@ export const CreateProformaModal = ({
                     </div>
                   </CardContent>
                 </Card>
+              )}
+              {newItems.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    {newItems.length} new product(s) will be added to your inventory when you submit.
+                  </p>
+                </div>
               )}
 
               {items.length === 0 ? (

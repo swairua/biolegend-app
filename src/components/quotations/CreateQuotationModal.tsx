@@ -22,10 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
-  Search,
+import {
+  Plus,
+  Trash2,
   Calculator
 } from 'lucide-react';
 import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
@@ -35,6 +34,8 @@ import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { getExchangeRate } from '@/utils/exchangeRates';
+import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
+import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 
 interface QuotationItem {
   id: string;
@@ -64,10 +65,10 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const [termsAndConditions, setTermsAndConditions] = useState('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
   
   const [items, setItems] = useState<QuotationItem[]>([]);
-  const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -88,10 +89,15 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
   const defaultTaxRate = defaultTax?.rate || 16; // Fallback to 16% if no default is set
 
-  const filteredProducts = products?.filter(product =>
-    product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
-    product.product_code.toLowerCase().includes(searchProduct.toLowerCase())
-  ) || [];
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (products || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description,
+  }));
 
   const calculateItemTotal = (quantity: number, unitPrice: number, taxPercentage: number, taxInclusive: boolean) => {
     const baseAmount = quantity * unitPrice;
@@ -118,9 +124,9 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     return baseAmount * (item.vat_percentage / 100);
   };
 
-  const addItem = (product: any) => {
+  const addItem = (product: AutocompleteItem) => {
     const existingItem = items.find(item => item.product_id === product.id);
-    
+
     if (existingItem) {
       // Increase quantity if item already exists
       updateItemQuantity(existingItem.id, existingItem.quantity + 1);
@@ -133,14 +139,31 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       product_name: product.name,
       description: product.description || product.name,
       quantity: 1,
-      unit_price: product.selling_price,
+      unit_price: product.selling_price || 0,
       vat_percentage: 0,
       vat_inclusive: false,
-      line_total: calculateItemTotal(1, product.selling_price, 0, false)
+      line_total: calculateItemTotal(1, product.selling_price || 0, 0, false)
     };
 
     setItems([...items, newItem]);
-    setSearchProduct('');
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Create temporary ID for this item
+    const tempId = `new-${Date.now()}`;
+
+    // Add to new items queue for auto-save
+    addNewItem(itemData, tempId);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: tempId,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const updateItemQuantity = (itemId: string, quantity: number) => {
@@ -229,6 +252,30 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     if (!validUntil) {
       toast.error('Please select a valid until date');
       return;
+    }
+
+    // Save any new items before submitting the quotation
+    if (newItems.length > 0) {
+      if (!currentCompany?.id) {
+        toast.error('No company selected. Cannot save new items.');
+        return;
+      }
+
+      try {
+        await saveAllNewItems(currentCompany.id);
+
+        // Update items array with actual product IDs
+        setItems(prevItems => prevItems.map(item => {
+          const actualId = tempIdToActualIdMap.get(item.product_id);
+          if (actualId) {
+            return { ...item, product_id: actualId };
+          }
+          return item;
+        }));
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -410,7 +457,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     setNotes('');
     setTermsAndConditions('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
     setItems([]);
-    setSearchProduct('');
+    clearNewItems();
   };
 
   return (
@@ -515,51 +562,22 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                 <CardTitle className="text-lg">Add Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Product Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products by name or code..."
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      className="pl-10"
-                    />
+                <ItemAutocomplete
+                  items={autocompleteItems}
+                  isLoading={loadingProducts}
+                  onSelectItem={addItem}
+                  onCreateNewItem={handleCreateNewItem}
+                  placeholder="Search products by name or code..."
+                  allowNew={true}
+                  showPrices={true}
+                />
+                {newItems.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      {newItems.length} new product(s) will be added to your inventory when you submit.
+                    </p>
                   </div>
-
-                  {/* Product List */}
-                  {searchProduct && (
-                    <div className="max-h-64 overflow-y-auto border rounded-lg">
-                      {loadingProducts ? (
-                        <div className="p-4 text-center text-muted-foreground">Loading products...</div>
-                      ) : filteredProducts.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground">No products found</div>
-                      ) : (
-                        filteredProducts.map((product) => (
-                          <div
-                            key={product.id}
-                            className="p-3 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 transition-smooth"
-                            onClick={() => addItem(product)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="font-medium">{product.name}</div>
-                                <div className="text-sm text-muted-foreground">{product.product_code}</div>
-                                {product.description && (
-                                  <div className="text-xs text-muted-foreground mt-1">{product.description}</div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold">{formatCurrency(product.selling_price)}</div>
-                                <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>

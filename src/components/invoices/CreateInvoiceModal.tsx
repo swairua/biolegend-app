@@ -25,7 +25,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
   Trash2,
-  Search,
   Calculator,
   Receipt,
   Loader2
@@ -39,6 +38,8 @@ import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
+import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
+import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 
 interface InvoiceItem {
   id: string;
@@ -108,6 +109,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const createInvoiceWithItems = useCreateInvoiceWithItems();
   const generateDocNumber = useGenerateDocumentNumber();
+  const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
@@ -142,6 +144,17 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
+
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (displayProducts || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price || product.unit_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description || `${product.name} - Product details`,
+    category_name: product.category_name,
+  }));
 
   const convertItemsByFactor = (factor: number) => {
     setItems(prev => prev.map(item => {
@@ -190,7 +203,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
   };
 
-  const addItem = (product: any) => {
+  const addItem = (product: AutocompleteItem) => {
     const existingItem = items.find(item => item.product_id === product.id);
 
     if (existingItem) {
@@ -199,7 +212,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
 
     // Use defensive price fallback - try selling_price first, then unit_price
-    const priceBase = Number(product.selling_price || product.unit_price || 0);
+    const priceBase = Number(product.selling_price || 0);
     if (isNaN(priceBase) || priceBase === 0) {
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product \"${product.name}\" has no price set`);
@@ -231,6 +244,24 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
     // Show success message with calculated totals
     toast.success(`Added "${product.name}" - ${formatCurrency(lineTotal)} (incl. tax)`);
+  };
+
+  const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
+    // Create temporary ID for this item
+    const tempId = `new-${Date.now()}`;
+
+    // Add to new items queue for auto-save
+    addNewItem(itemData, tempId);
+
+    // Return immediately with a temporary item that can be used in the form
+    return {
+      id: tempId,
+      name: itemData.name,
+      product_code: itemData.product_code,
+      selling_price: itemData.selling_price,
+      description: itemData.description,
+      stock_quantity: 0,
+    };
   };
 
   const calculateLineTotal = (item: InvoiceItem, quantity?: number, unitPrice?: number, discountPercentage?: number, taxPercentage?: number, taxInclusive?: boolean) => {
@@ -386,6 +417,25 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       return;
     }
 
+    // Save any new items before submitting the invoice
+    if (newItems.length > 0) {
+      try {
+        await saveAllNewItems(currentCompany.id);
+
+        // Update items array with actual product IDs
+        setItems(prevItems => prevItems.map(item => {
+          const actualId = tempIdToActualIdMap.get(item.product_id);
+          if (actualId) {
+            return { ...item, product_id: actualId };
+          }
+          return item;
+        }));
+      } catch (error) {
+        toast.error('Failed to save new items. Please try again.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmitProgress({
       step: 'Preparing invoice data...',
@@ -534,6 +584,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setTermsAndConditions('Payment due within 30 days of invoice date.');
     setItems([]);
     setSearchProduct('');
+    clearNewItems();
   };
 
   return (
@@ -671,60 +722,22 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                 <CardTitle className="text-lg">Add Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Product Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products by name or code..."
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      className="pl-10"
-                    />
+                <ItemAutocomplete
+                  items={autocompleteItems}
+                  isLoading={loadingProducts || isSearching}
+                  onSelectItem={addItem}
+                  onCreateNewItem={handleCreateNewItem}
+                  placeholder="Search products by name or code..."
+                  allowNew={true}
+                  showPrices={true}
+                />
+                {newItems.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      {newItems.length} new product(s) will be added to your inventory when you submit.
+                    </p>
                   </div>
-
-                  {/* Product List */}
-                  <div className="max-h-64 overflow-y-auto border rounded-lg">
-                    {(loadingProducts || isSearching) ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        {searchProduct ? 'Searching products...' : 'Loading products...'}
-                      </div>
-                    ) : (displayProducts && displayProducts.length === 0) ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        {searchProduct ? 'No products found' : 'No products available'}
-                      </div>
-                    ) : (
-                      (displayProducts || []).map((product) => (
-                        <div
-                          key={product.id}
-                          className="p-3 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 transition-smooth"
-                          onClick={() => addItem(product)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-sm text-muted-foreground">{product.product_code}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold">{formatCurrency(currencyCode === 'USD' ? (Number(product.unit_price) || 0) * exchangeRate : (Number(product.unit_price) || 0))}</div>
-                              <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
-                              {product.category_name && (
-                                <div className="text-xs text-muted-foreground">{product.category_name}</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Hint when no search term */}
-                  {!searchProduct && (
-                    <div className="text-sm text-muted-foreground text-center py-2">
-                      Start typing to search products, or select from popular items above
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
