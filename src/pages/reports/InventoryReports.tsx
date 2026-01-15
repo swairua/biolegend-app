@@ -195,12 +195,24 @@ export default function InventoryReports() {
     return <Badge variant="destructive">In Stock</Badge>;
   };
 
-  const filteredProducts = products?.filter(product => {
+  const allFilteredProducts = products?.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.product_code.toLowerCase().includes(searchTerm.toLowerCase());
     // For now, assuming no category filter since we don't have category data
     return matchesSearch;
   }) || [];
+
+  // Pagination for turnover analysis
+  const turnoverTotalCount = turnoverData.length;
+  const turnoverStartIndex = (currentTurnoverPage - 1) * PAGE_SIZE;
+  const turnoverEndIndex = turnoverStartIndex + PAGE_SIZE;
+  const paginatedTurnoverData = turnoverData.slice(turnoverStartIndex, turnoverEndIndex);
+
+  // Pagination for alerts table
+  const alertsTotalCount = allFilteredProducts.length;
+  const alertsStartIndex = (currentAlertsPage - 1) * PAGE_SIZE;
+  const alertsEndIndex = alertsStartIndex + PAGE_SIZE;
+  const filteredProducts = allFilteredProducts.slice(alertsStartIndex, alertsEndIndex);
 
   const handleExport = () => {
     toast.success('Inventory report exported successfully!');
