@@ -661,6 +661,15 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDeleteItem}
+        title="Delete Line Item"
+        description="This line item will be removed from the invoice. This action cannot be undone."
+        itemName={itemToDelete?.product_name}
+      />
     </Dialog>
   );
 }
