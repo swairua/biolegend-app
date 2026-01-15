@@ -116,6 +116,10 @@ export default function Invoices() {
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
