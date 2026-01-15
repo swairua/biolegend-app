@@ -89,10 +89,15 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
   const defaultTaxRate = defaultTax?.rate || 16; // Fallback to 16% if no default is set
 
-  const filteredProducts = products?.filter(product =>
-    product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
-    product.product_code.toLowerCase().includes(searchProduct.toLowerCase())
-  ) || [];
+  // Convert products to AutocompleteItem format
+  const autocompleteItems: AutocompleteItem[] = (products || []).map(product => ({
+    id: product.id,
+    name: product.name,
+    product_code: product.product_code,
+    selling_price: product.selling_price,
+    stock_quantity: product.stock_quantity,
+    description: product.description,
+  }));
 
   const calculateItemTotal = (quantity: number, unitPrice: number, taxPercentage: number, taxInclusive: boolean) => {
     const baseAmount = quantity * unitPrice;
