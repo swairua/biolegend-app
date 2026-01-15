@@ -33,6 +33,7 @@ export function CreditNoteReversalTestPanel() {
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [reportText, setReportText] = useState('');
+  const [showReversalConfirm, setShowReversalConfirm] = useState(false);
 
   const handleRunTests = async () => {
     if (!creditNoteId.trim()) {
