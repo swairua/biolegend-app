@@ -38,6 +38,8 @@ import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { ensureInvoiceCurrencyColumns } from '@/utils/ensureInvoiceCurrencyColumns';
+import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
+import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 
 interface InvoiceItem {
   id: string;
