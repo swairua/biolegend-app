@@ -63,10 +63,12 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [validUntil, setValidUntil] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
-  
+
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<QuotationItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
