@@ -87,6 +87,12 @@ export default function CreditNotes() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedCreditNote, setSelectedCreditNote] = useState<CreditNote | null>(null);
+  const [creditNoteToReverse, setCreditNoteToReverse] = useState<CreditNote | null>(null);
+  const [showReverseConfirm, setShowReverseConfirm] = useState(false);
+  const [reversalDetails, setReversalDetails] = useState<{
+    hasApplied: boolean;
+    affectsInventory: boolean;
+  } | null>(null);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
