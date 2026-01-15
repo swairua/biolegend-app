@@ -63,6 +63,8 @@ export default function LPOs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
+  const [lpoToDelete, setLpoToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
