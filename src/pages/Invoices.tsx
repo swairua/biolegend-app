@@ -123,8 +123,27 @@ export default function Invoices() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
-  // Use the fixed invoices hook
-  const { data: invoices, isLoading, error, refetch } = useInvoices(currentCompany?.id);
+  // Use the optimized invoices hook with pagination
+  const {
+    data: invoiceData,
+    isLoading,
+    error,
+    refetch
+  } = useOptimizedInvoices(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
+    dateFromFilter,
+    dateToFilter,
+    amountFromFilter: amountFromFilter ? parseFloat(amountFromFilter) : undefined,
+    amountToFilter: amountToFilter ? parseFloat(amountToFilter) : undefined
+  });
+
+  const invoices = invoiceData?.invoices || [];
+  const totalCount = invoiceData?.totalCount || 0;
+  const hasMore = invoiceData?.hasMore || false;
+
   const { currency, rate, format } = useCurrency();
   const deleteInvoice = useDeleteInvoice();
 
