@@ -1385,6 +1385,8 @@ export const useQuotations = (companyId?: string) => {
     queryFn: async () => {
       if (!companyId) return [];
 
+      console.log('🚀 useQuotations - Starting fetch for companyId:', companyId);
+
       try {
         // Step 1: Get quotations without embedded relationships
         let query = supabase
@@ -1414,17 +1416,40 @@ export const useQuotations = (companyId?: string) => {
         const { data: quotations, error: quotationsError } = await query;
 
         if (quotationsError) throw quotationsError;
-        if (!quotations || quotations.length === 0) return [];
+
+        console.log('✅ useQuotations - Fetched quotations:', {
+          count: quotations?.length || 0,
+          quotations: quotations?.map(q => ({ id: q.id, number: q.quotation_number, customerId: q.customer_id }))
+        });
+
+        if (!quotations || quotations.length === 0) {
+          console.log('⚠️ useQuotations - No quotations found');
+          return [];
+        }
 
         // Step 2: Get customers separately (filter out invalid UUIDs)
         const customerIds = [...new Set(quotations.map(quotation => quotation.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
-        const { data: customers } = customerIds.length > 0 ? await supabase
+        console.log('🔧 useQuotations - Fetching customers for IDs:', customerIds);
+        const { data: customers, error: customersError } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
           .in('id', customerIds) : { data: [] };
 
+        if (customersError) {
+          console.error('Error fetching customers for quotations:', customersError);
+          throw customersError;
+        }
+
+        console.log('✅ useQuotations - Fetched customers:', {
+          count: customers?.length || 0,
+          customerIds: customers?.map(c => c.id)
+        });
+
         // Step 3: Get quotation items separately
-        const { data: quotationItems } = await supabase
+        const quotationIdsForItems = quotations.map(quot => quot.id);
+        console.log('🔧 useQuotations - Fetching items for quotation IDs:', quotationIdsForItems);
+
+        const { data: quotationItems, error: itemsError } = await supabase
           .from('quotation_items')
           .select(`
             id,
@@ -1440,14 +1465,42 @@ export const useQuotations = (companyId?: string) => {
             line_total,
             sort_order
           `)
-          .in('quotation_id', quotations.map(quot => quot.id));
+          .in('quotation_id', quotationIdsForItems);
+
+        if (itemsError) {
+          console.error('Error fetching quotation items:', itemsError);
+          throw itemsError;
+        }
+
+        console.log('✅ useQuotations - Fetched quotation items:', {
+          count: quotationItems?.length || 0,
+          itemsByQuotation: quotationIdsForItems.map(qId => ({
+            quotationId: qId,
+            itemCount: (quotationItems || []).filter(item => item.quotation_id === qId).length
+          }))
+        });
 
         // Step 4: Get products for quotation items
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
-        const { data: products } = productIds.length > 0 ? await supabase
+        console.log('🔧 useQuotations - Fetching products for IDs:', {
+          count: productIds.length,
+          productIds
+        });
+
+        const { data: products, error: productsError } = productIds.length > 0 ? await supabase
           .from('products')
           .select('id, name, unit_of_measure')
           .in('id', productIds) : { data: [] };
+
+        if (productsError) {
+          console.error('Error fetching products for quotation items:', productsError);
+          throw productsError;
+        }
+
+        console.log('✅ useQuotations - Fetched products:', {
+          count: products?.length || 0,
+          productIds: products?.map(p => p.id)
+        });
 
         // Step 5: Create lookup maps
         const customerMap = new Map();
@@ -1458,6 +1511,14 @@ export const useQuotations = (companyId?: string) => {
         const productMap = new Map();
         (products || []).forEach(product => {
           productMap.set(product.id, product);
+        });
+
+        console.log('🔧 useQuotations - Fetched raw data:', {
+          quotationsCount: quotations.length,
+          quotationItemsCount: quotationItems?.length || 0,
+          productsCount: products?.length || 0,
+          customersCount: customers?.length || 0,
+          quotationItemsRaw: quotationItems
         });
 
         const itemsMap = new Map();
@@ -1471,19 +1532,39 @@ export const useQuotations = (companyId?: string) => {
           });
         });
 
+        console.log('🔧 useQuotations - Built itemsMap:', {
+          mapSize: itemsMap.size,
+          quotationIds: Array.from(itemsMap.keys())
+        });
+
         // Step 6: Combine data
-        return quotations.map(quotation => ({
-          ...quotation,
-          customers: customerMap.get(quotation.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null,
-            address: null,
-            city: null,
-            country: null
-          },
-          quotation_items: itemsMap.get(quotation.id) || []
-        }));
+        const result = quotations.map(quotation => {
+          const quotationItemsForThisQuote = itemsMap.get(quotation.id) || [];
+          console.log(`🔧 useQuotations - Quotation ${quotation.id}:`, {
+            quotationNumber: quotation.quotation_number,
+            itemsCount: quotationItemsForThisQuote.length,
+            items: quotationItemsForThisQuote
+          });
+          return {
+            ...quotation,
+            customers: customerMap.get(quotation.customer_id) || {
+              name: 'Unknown Customer',
+              email: null,
+              phone: null,
+              address: null,
+              city: null,
+              country: null
+            },
+            quotation_items: quotationItemsForThisQuote
+          };
+        });
+
+        console.log('✅ useQuotations - Final result:', {
+          quotationsCount: result.length,
+          firstQuotation: result[0]
+        });
+
+        return result;
 
       } catch (error) {
         console.error('Error in useQuotations:', error);

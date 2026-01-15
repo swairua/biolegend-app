@@ -121,19 +121,57 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   // Handle pre-selected customer and initial prefill from quotation
   useEffect(() => {
     if (open) {
+      console.log('📂 CreateInvoiceModal opened with props:', {
+        open,
+        hasPreSelectedCustomer: !!preSelectedCustomer,
+        preSelectedCustomerId: preSelectedCustomer?.id,
+        hasInitialItems: !!initialItems,
+        initialItemsCount: initialItems?.length || 0,
+        initialItems,
+        initialNotes,
+        initialTerms,
+        initialCurrencyCode,
+        initialExchangeRate
+      });
+
       if (preSelectedCustomer) {
+        console.log('✅ Setting preSelectedCustomer:', preSelectedCustomer.id);
         setSelectedCustomerId(preSelectedCustomer.id);
       }
       if (initialItems && initialItems.length > 0) {
-        setItems(initialItems.map((it, idx) => ({ ...it, id: it.id || `init-${idx}` })));
+        const mappedItems = initialItems.map((it, idx) => ({ ...it, id: it.id || `init-${idx}` }));
+        console.log('✅ Setting initial items in modal:', {
+          count: mappedItems.length,
+          mappedItems
+        });
+        setItems(mappedItems);
+      } else {
+        console.log('⚠️ No initial items provided or items array is empty');
       }
-      if (typeof initialNotes === 'string') setNotes(initialNotes);
-      if (typeof initialTerms === 'string') setTermsAndConditions(initialTerms);
+      if (typeof initialNotes === 'string') {
+        console.log('✅ Setting notes:', initialNotes);
+        setNotes(initialNotes);
+      }
+      if (typeof initialTerms === 'string') {
+        console.log('✅ Setting terms:', initialTerms);
+        setTermsAndConditions(initialTerms);
+      }
       if (typeof initialLpoNumber === 'string') setLpoNumber(initialLpoNumber);
-      if (typeof initialInvoiceDate === 'string') setInvoiceDate(initialInvoiceDate);
-      if (typeof initialDueDate === 'string') setDueDate(initialDueDate);
+      if (typeof initialInvoiceDate === 'string') {
+        console.log('✅ Setting invoice date:', initialInvoiceDate);
+        setInvoiceDate(initialInvoiceDate);
+      }
+      if (typeof initialDueDate === 'string') {
+        console.log('✅ Setting due date:', initialDueDate);
+        setDueDate(initialDueDate);
+      }
+      // Initialize previousRateRef with the initial exchange rate to ensure correct currency conversions
+      if (typeof initialExchangeRate === 'number') {
+        console.log('✅ Setting previousRateRef to:', initialExchangeRate);
+        previousRateRef.current = initialExchangeRate;
+      }
     }
-  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate]);
+  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, initialExchangeRate]);
 
   // Inherit global currency selection when opening the modal (unless initial currency was specified)
   useEffect(() => {
