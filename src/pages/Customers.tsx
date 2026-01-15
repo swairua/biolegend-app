@@ -565,6 +565,16 @@ export default function Customers() {
                             <DollarSign className="h-4 w-4 mr-1" />
                             <span className="hidden sm:inline">Statement</span>
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCustomer(customer)}
+                            title="Delete customer"
+                            className="bg-destructive-light text-destructive border-destructive/20 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
                         </div>
                       </div>
                     </TableCell>
