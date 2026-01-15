@@ -572,6 +572,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setTermsAndConditions('Payment due within 30 days of invoice date.');
     setItems([]);
     setSearchProduct('');
+    clearNewItems();
   };
 
   return (
