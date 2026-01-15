@@ -37,20 +37,23 @@ import {
   AlertTriangle,
   FileText,
   User,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUpdateLPO, useCompanies } from '@/hooks/useDatabase';
+import { useUpdateLPO, useCompanies, useDeleteLPO } from '@/hooks/useDatabase';
 import { useOptimizedLPOs } from '@/hooks/useOptimizedLPOs';
 import { downloadLPOPDF } from '@/utils/pdfGenerator';
 import { CreateLPOModal } from '@/components/lpo/CreateLPOModal';
 import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
 import { EditLPOModal } from '@/components/lpo/EditLPOModal';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { DatabaseAuditPanel } from '@/components/DatabaseAuditPanel';
 import { DirectForceMigration } from '@/components/DirectForceMigration';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { LPOCustomerSupplierAudit } from '@/components/LPOCustomerSupplierAudit';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LPOs() {
   const [showCreateModal, setShowCreateModal] = useState(false);
