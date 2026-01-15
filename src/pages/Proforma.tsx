@@ -403,55 +403,11 @@ export default function Proforma() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={async () => {
-                  if (!currentCompany?.id) {
-                    toast.error('No company selected');
-                    return;
-                  }
-
-                  const loadingToast = toast.loading('Finding and fixing duplicate items...');
-
-                  try {
-                    const result = await fixAllProformaDuplicates(currentCompany.id);
-
-                    console.log('Deduplication result:', {
-                      success: result.success,
-                      message: result.message,
-                      duplicates_found: result.duplicates_found,
-                      duplicates_fixed: result.duplicates_fixed,
-                      errors: result.errors,
-                      affected_proformas: result.affected_proformas
-                    });
-
-                    if (result.success) {
-                      toast.dismiss(loadingToast);
-                      if (result.duplicates_fixed > 0) {
-                        toast.success(`✅ Fixed ${result.duplicates_fixed} duplicate(s) in ${result.affected_proformas.length} proforma(s)`);
-                        refetch();
-                      } else {
-                        toast.success('No duplicates found');
-                      }
-                    } else {
-                      toast.dismiss(loadingToast);
-                      // Show detailed error message
-                      const errorDetails = result.errors.length > 0
-                        ? result.errors.join('\n')
-                        : 'Unknown error occurred';
-
-                      console.error('Deduplication failed with errors:', result.errors);
-                      toast.error(`Failed to fix duplicates:\n${errorDetails}`, {
-                        duration: 5000
-                      });
-                    }
-                  } catch (error) {
-                    toast.dismiss(loadingToast);
-                    const errorMsg = error instanceof Error ? error.message : String(error);
-                    console.error('Fix duplicates error:', error);
-                    toast.error(`Error fixing duplicates: ${errorMsg}`);
-                  }
-                }}
+                onClick={() => setShowRepairPanel(true)}
+                className="border-amber-300 hover:bg-amber-50"
               >
-                Fix Duplicate Items
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Repair Duplicates
               </Button>
               <Button
                 variant="outline"
