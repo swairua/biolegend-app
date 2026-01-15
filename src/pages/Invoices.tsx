@@ -576,13 +576,24 @@ Website: www.biolegendscientific.co.ke`;
                           <Eye className="h-4 w-4" />
                         </Button>
                         {invoice.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleEditInvoice(invoice)}
                             title="Edit invoice"
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {invoice.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteInvoice(invoice)}
+                            title="Delete invoice"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                         <Button
