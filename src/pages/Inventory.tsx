@@ -37,8 +37,11 @@ import {
   Package,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Trash2
 } from 'lucide-react';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InventoryItem {
   id: string;
