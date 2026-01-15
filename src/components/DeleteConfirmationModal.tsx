@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +15,7 @@ interface DeleteConfirmationModalProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   title?: string;
-  description?: string;
+  description?: string | ReactNode;
   itemName?: string;
   isLoading?: boolean;
   isDangerous?: boolean;
@@ -40,8 +41,14 @@ export function DeleteConfirmationModal({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {itemName ? `Are you sure you want to delete ${itemName}? ` : ''}
-            {description}
+            {typeof description === 'string' ? (
+              <>
+                {itemName ? `Are you sure you want to delete ${itemName}? ` : ''}
+                {description}
+              </>
+            ) : (
+              description
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
