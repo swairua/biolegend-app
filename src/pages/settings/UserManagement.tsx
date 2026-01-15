@@ -4,14 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { 
   Plus, 
@@ -88,6 +97,9 @@ export default function UserManagement() {
   } = useUserManagement();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentUserPage, setCurrentUserPage] = useState(1);
+  const [currentInvitationPage, setCurrentInvitationPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [modalState, setModalState] = useState<{
     type: 'create' | 'edit' | 'invite' | null;
     user?: UserProfile | null;
@@ -99,12 +111,22 @@ export default function UserManagement() {
 
   const stats = getUserStats();
 
-  const filteredUsers = users.filter(user =>
+  const allFilteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalUsers = allFilteredUsers.length;
+  const userStartIndex = (currentUserPage - 1) * PAGE_SIZE;
+  const userEndIndex = userStartIndex + PAGE_SIZE;
+  const filteredUsers = allFilteredUsers.slice(userStartIndex, userEndIndex);
+
+  const totalInvitations = invitations.length;
+  const invStartIndex = (currentInvitationPage - 1) * PAGE_SIZE;
+  const invEndIndex = invStartIndex + PAGE_SIZE;
+  const paginatedInvitations = invitations.slice(invStartIndex, invEndIndex);
 
   if (!isAdmin) {
     return (
@@ -364,6 +386,79 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           )}
+
+          {/* Pagination Controls */}
+          {!loading && filteredUsers.length > 0 && totalUsers > PAGE_SIZE && (
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentUserPage > 1) {
+                          setCurrentUserPage(currentUserPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentUserPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: Math.ceil(totalUsers / PAGE_SIZE) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    const isCurrentPage = pageNum === currentUserPage;
+                    const isVisible = pageNum === 1 ||
+                                      pageNum === Math.ceil(totalUsers / PAGE_SIZE) ||
+                                      (pageNum >= currentUserPage - 1 && pageNum <= currentUserPage + 1);
+
+                    if (!isVisible) {
+                      if (pageNum === currentUserPage - 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${pageNum}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentUserPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          isActive={isCurrentPage}
+                          className={isCurrentPage ? '' : 'cursor-pointer'}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentUserPage < Math.ceil(totalUsers / PAGE_SIZE)) {
+                          setCurrentUserPage(currentUserPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={currentUserPage >= Math.ceil(totalUsers / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -386,7 +481,7 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invitations.map((invitation) => (
+                {paginatedInvitations.map((invitation) => (
                   <TableRow key={invitation.id}>
                     <TableCell>{invitation.email}</TableCell>
                     <TableCell>
@@ -422,6 +517,79 @@ export default function UserManagement() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Invitations Pagination Controls */}
+            {paginatedInvitations.length > 0 && totalInvitations > PAGE_SIZE && (
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentInvitationPage > 1) {
+                            setCurrentInvitationPage(currentInvitationPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentInvitationPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.ceil(totalInvitations / PAGE_SIZE) }).map((_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentInvitationPage;
+                      const isVisible = pageNum === 1 ||
+                                        pageNum === Math.ceil(totalInvitations / PAGE_SIZE) ||
+                                        (pageNum >= currentInvitationPage - 1 && pageNum <= currentInvitationPage + 1);
+
+                      if (!isVisible) {
+                        if (pageNum === currentInvitationPage - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${pageNum}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentInvitationPage(pageNum);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            isActive={isCurrentPage}
+                            className={isCurrentPage ? '' : 'cursor-pointer'}
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentInvitationPage < Math.ceil(totalInvitations / PAGE_SIZE)) {
+                            setCurrentInvitationPage(currentInvitationPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentInvitationPage >= Math.ceil(totalInvitations / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

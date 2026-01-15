@@ -14,6 +14,15 @@ import {
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
   Users,
   Download,
   Send,
@@ -52,6 +61,8 @@ export default function CustomerStatements() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [dateRange, setDateRange] = useState('all_time');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [statementDate, setStatementDate] = useState(new Date().toISOString().split('T')[0]);
   const [showPreview, setShowPreview] = useState(false);
   const [previewCustomer, setPreviewCustomer] = useState<CustomerStatement | null>(null);
@@ -121,7 +132,7 @@ export default function CustomerStatements() {
   const customerStatements = calculateCustomerStatements();
 
   // Filter statements
-  const filteredStatements = customerStatements.filter(statement => {
+  const allFilteredStatements = customerStatements.filter(statement => {
     // Search filter
     const matchesSearch = statement.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          statement.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -146,21 +157,26 @@ export default function CustomerStatements() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate totals
-  const totalOutstanding = filteredStatements.reduce((sum, s) => sum + s.total_outstanding, 0);
-  const totalOverdue = filteredStatements.reduce((sum, s) => sum + s.overdue_amount, 0);
-  const totalCurrent = filteredStatements.reduce((sum, s) => sum + s.current_due, 0);
-  const overdueCustomers = filteredStatements.filter(s => s.overdue_amount > 0).length;
+  const totalCount = allFilteredStatements.length;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const filteredStatements = allFilteredStatements.slice(startIndex, endIndex);
+
+  // Calculate totals (from all filtered statements, not just current page)
+  const totalOutstanding = allFilteredStatements.reduce((sum, s) => sum + s.total_outstanding, 0);
+  const totalOverdue = allFilteredStatements.reduce((sum, s) => sum + s.overdue_amount, 0);
+  const totalCurrent = allFilteredStatements.reduce((sum, s) => sum + s.current_due, 0);
+  const overdueCustomers = allFilteredStatements.filter(s => s.overdue_amount > 0).length;
 
   const getStatusBadge = (statement: CustomerStatement) => {
     if (statement.total_outstanding === 0) {
-      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Paid Up</Badge>;
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" /> Paid Up</Badge>;
     }
     if (statement.overdue_amount > 0) {
-      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Overdue</Badge>;
+      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" /> Overdue</Badge>;
     }
     if (statement.current_due > 0) {
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Current</Badge>;
+      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Current</Badge>;
     }
     return <Badge variant="secondary">No Balance</Badge>;
   };
@@ -174,10 +190,10 @@ export default function CustomerStatements() {
   };
 
   const handleSelectAll = () => {
-    if (selectedCustomers.length === filteredStatements.length) {
+    if (selectedCustomers.length === allFilteredStatements.length) {
       setSelectedCustomers([]);
     } else {
-      setSelectedCustomers(filteredStatements.map(s => s.customer_id));
+      setSelectedCustomers(allFilteredStatements.map(s => s.customer_id));
     }
   };
 
@@ -458,7 +474,7 @@ export default function CustomerStatements() {
             <CardTitle>Customer Statements</CardTitle>
             <div className="flex items-center space-x-2">
               <Checkbox
-                checked={selectedCustomers.length === filteredStatements.length && filteredStatements.length > 0}
+                checked={selectedCustomers.length === allFilteredStatements.length && allFilteredStatements.length > 0}
                 onCheckedChange={handleSelectAll}
               />
               <Label className="text-sm">Select All</Label>

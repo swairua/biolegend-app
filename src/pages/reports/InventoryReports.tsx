@@ -12,12 +12,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Package, 
-  Download, 
-  Calendar, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
+  Package,
+  Download,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
   AlertTriangle,
   BarChart3,
   Search,
@@ -51,6 +60,9 @@ export default function InventoryReports() {
   const [reportType, setReportType] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [currentTurnoverPage, setCurrentTurnoverPage] = useState(1);
+  const [currentAlertsPage, setCurrentAlertsPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const { data: products } = useProducts();
   const { data: stockMovements } = useStockMovements();
@@ -183,12 +195,24 @@ export default function InventoryReports() {
     return <Badge variant="destructive">In Stock</Badge>;
   };
 
-  const filteredProducts = products?.filter(product => {
+  const allFilteredProducts = products?.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.product_code.toLowerCase().includes(searchTerm.toLowerCase());
     // For now, assuming no category filter since we don't have category data
     return matchesSearch;
   }) || [];
+
+  // Pagination for turnover analysis
+  const turnoverTotalCount = turnoverData.length;
+  const turnoverStartIndex = (currentTurnoverPage - 1) * PAGE_SIZE;
+  const turnoverEndIndex = turnoverStartIndex + PAGE_SIZE;
+  const paginatedTurnoverData = turnoverData.slice(turnoverStartIndex, turnoverEndIndex);
+
+  // Pagination for alerts table
+  const alertsTotalCount = allFilteredProducts.length;
+  const alertsStartIndex = (currentAlertsPage - 1) * PAGE_SIZE;
+  const alertsEndIndex = alertsStartIndex + PAGE_SIZE;
+  const filteredProducts = allFilteredProducts.slice(alertsStartIndex, alertsEndIndex);
 
   const handleExport = () => {
     toast.success('Inventory report exported successfully!');
@@ -393,7 +417,7 @@ export default function InventoryReports() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {turnoverData.map((item, index) => (
+                {paginatedTurnoverData.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.product}</TableCell>
                     <TableCell>{item.turnover.toFixed(1)}x</TableCell>
@@ -414,6 +438,79 @@ export default function InventoryReports() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls for Turnover */}
+            {paginatedTurnoverData.length > 0 && turnoverTotalCount > PAGE_SIZE && (
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentTurnoverPage > 1) {
+                            setCurrentTurnoverPage(currentTurnoverPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentTurnoverPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.ceil(turnoverTotalCount / PAGE_SIZE) }).map((_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentTurnoverPage;
+                      const isVisible = pageNum === 1 ||
+                                        pageNum === Math.ceil(turnoverTotalCount / PAGE_SIZE) ||
+                                        (pageNum >= currentTurnoverPage - 1 && pageNum <= currentTurnoverPage + 1);
+
+                      if (!isVisible) {
+                        if (pageNum === currentTurnoverPage - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${pageNum}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentTurnoverPage(pageNum);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            isActive={isCurrentPage}
+                            className={isCurrentPage ? '' : 'cursor-pointer'}
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentTurnoverPage < Math.ceil(turnoverTotalCount / PAGE_SIZE)) {
+                            setCurrentTurnoverPage(currentTurnoverPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className={currentTurnoverPage >= Math.ceil(turnoverTotalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -521,6 +618,79 @@ export default function InventoryReports() {
                   ))}
                 </TableBody>
               </Table>
+
+              {/* Pagination Controls for Alerts */}
+              {filteredProducts.length > 0 && alertsTotalCount > PAGE_SIZE && (
+                <div className="mt-6 flex flex-col items-center gap-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentAlertsPage > 1) {
+                              setCurrentAlertsPage(currentAlertsPage - 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentAlertsPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: Math.ceil(alertsTotalCount / PAGE_SIZE) }).map((_, i) => {
+                        const pageNum = i + 1;
+                        const isCurrentPage = pageNum === currentAlertsPage;
+                        const isVisible = pageNum === 1 ||
+                                          pageNum === Math.ceil(alertsTotalCount / PAGE_SIZE) ||
+                                          (pageNum >= currentAlertsPage - 1 && pageNum <= currentAlertsPage + 1);
+
+                        if (!isVisible) {
+                          if (pageNum === currentAlertsPage - 2) {
+                            return (
+                              <PaginationItem key={`ellipsis-${pageNum}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentAlertsPage(pageNum);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              isActive={isCurrentPage}
+                              className={isCurrentPage ? '' : 'cursor-pointer'}
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentAlertsPage < Math.ceil(alertsTotalCount / PAGE_SIZE)) {
+                              setCurrentAlertsPage(currentAlertsPage + 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentAlertsPage >= Math.ceil(alertsTotalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
