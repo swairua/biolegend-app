@@ -18,6 +18,8 @@ interface DeleteConfirmationModalProps {
   itemName?: string;
   isLoading?: boolean;
   isDangerous?: boolean;
+  actionLabel?: string;
+  loadingLabel?: string;
 }
 
 export function DeleteConfirmationModal({
@@ -29,6 +31,8 @@ export function DeleteConfirmationModal({
   itemName,
   isLoading = false,
   isDangerous = true,
+  actionLabel = 'Delete',
+  loadingLabel = 'Deleting...',
 }: DeleteConfirmationModalProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -47,7 +51,7 @@ export function DeleteConfirmationModal({
             disabled={isLoading}
             className={isDangerous ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? loadingLabel : actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
