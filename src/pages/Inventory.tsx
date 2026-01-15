@@ -95,10 +95,20 @@ export default function Inventory() {
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   // Fetch products from database
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: products, isLoading: loadingProducts, error: productsError } = useProducts(currentCompany?.id);
+
+  // Use optimized products hook with server-side pagination
+  const { data: productData, isLoading: loadingProducts, error: productsError, refetch } = useOptimizedProducts(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
 
   const handleAddItem = () => {
     setShowAddModal(true);
@@ -148,16 +158,13 @@ export default function Inventory() {
   };
 
   // Transform products data to inventory items
-  const inventory: InventoryItem[] = products?.map(product => ({
+  const inventory: InventoryItem[] = productData?.products?.map(product => ({
     ...product,
     status: getStockStatus(product.stock_quantity || 0, product.minimum_stock_level || 0)
   })) || [];
 
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.product_categories?.name && item.product_categories.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const totalCount = productData?.totalCount || 0;
+  const filteredInventory = inventory;
 
   const formatCurrency = useFormatCurrency();
   const totalValue = inventory.reduce((sum, item) => {
