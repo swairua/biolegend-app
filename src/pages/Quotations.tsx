@@ -24,16 +24,7 @@ import {
   Send,
   Trash2
 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useQuotations, useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
@@ -656,28 +647,15 @@ Website: www.biolegendscientific.co.ke`;
       )}
 
       {/* Delete Confirmation Modal */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Quotation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete quotation{' '}
-              <span className="font-semibold">{quotationToDelete?.quotation_number}</span>?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteQuotation.isPending}
-            >
-              {deleteQuotation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Quotation?"
+        description="This action cannot be undone."
+        itemName={quotationToDelete?.quotation_number}
+        isLoading={deleteQuotation.isPending}
+      />
     </div>
   );
 }
