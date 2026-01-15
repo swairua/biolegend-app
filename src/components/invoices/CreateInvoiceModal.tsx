@@ -132,8 +132,12 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       if (typeof initialLpoNumber === 'string') setLpoNumber(initialLpoNumber);
       if (typeof initialInvoiceDate === 'string') setInvoiceDate(initialInvoiceDate);
       if (typeof initialDueDate === 'string') setDueDate(initialDueDate);
+      // Initialize previousRateRef with the initial exchange rate to ensure correct currency conversions
+      if (typeof initialExchangeRate === 'number') {
+        previousRateRef.current = initialExchangeRate;
+      }
     }
-  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate]);
+  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, initialExchangeRate]);
 
   // Inherit global currency selection when opening the modal (unless initial currency was specified)
   useEffect(() => {
