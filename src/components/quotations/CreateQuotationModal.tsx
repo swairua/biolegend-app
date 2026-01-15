@@ -65,10 +65,10 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const [termsAndConditions, setTermsAndConditions] = useState('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
   
   const [items, setItems] = useState<QuotationItem[]>([]);
-  const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const { newItems, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
