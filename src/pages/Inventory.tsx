@@ -156,6 +156,36 @@ export default function Inventory() {
     toast.success('Item updated successfully!');
   };
 
+  const handleDeleteItem = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', itemToDelete.id);
+
+      if (error) throw error;
+
+      toast.success('Inventory item deleted successfully');
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete inventory item';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleAdjustmentSuccess = () => {
     setShowAdjustmentModal(false);
     setSelectedItem(null);
