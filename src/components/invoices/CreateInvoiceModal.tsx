@@ -699,60 +699,22 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                 <CardTitle className="text-lg">Add Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Product Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products by name or code..."
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      className="pl-10"
-                    />
+                <ItemAutocomplete
+                  items={autocompleteItems}
+                  isLoading={loadingProducts || isSearching}
+                  onSelectItem={addItem}
+                  onCreateNewItem={handleCreateNewItem}
+                  placeholder="Search products by name or code..."
+                  allowNew={true}
+                  showPrices={true}
+                />
+                {newItems.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      {newItems.length} new product(s) will be added to your inventory when you submit.
+                    </p>
                   </div>
-
-                  {/* Product List */}
-                  <div className="max-h-64 overflow-y-auto border rounded-lg">
-                    {(loadingProducts || isSearching) ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        {searchProduct ? 'Searching products...' : 'Loading products...'}
-                      </div>
-                    ) : (displayProducts && displayProducts.length === 0) ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        {searchProduct ? 'No products found' : 'No products available'}
-                      </div>
-                    ) : (
-                      (displayProducts || []).map((product) => (
-                        <div
-                          key={product.id}
-                          className="p-3 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 transition-smooth"
-                          onClick={() => addItem(product)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-sm text-muted-foreground">{product.product_code}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold">{formatCurrency(currencyCode === 'USD' ? (Number(product.unit_price) || 0) * exchangeRate : (Number(product.unit_price) || 0))}</div>
-                              <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
-                              {product.category_name && (
-                                <div className="text-xs text-muted-foreground">{product.category_name}</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Hint when no search term */}
-                  {!searchProduct && (
-                    <div className="text-sm text-muted-foreground text-center py-2">
-                      Start typing to search products, or select from popular items above
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
