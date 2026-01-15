@@ -769,8 +769,6 @@ Website: www.biolegendscientific.co.ke`;
         isLoading={deleteQuotation.isPending}
       />
 
-      {/* Diagnostic Panel - Remove after debugging */}
-      <QuotationConversionDiagnostic />
     </div>
   );
 }
