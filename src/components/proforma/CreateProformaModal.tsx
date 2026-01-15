@@ -426,34 +426,15 @@ export const CreateProformaModal = ({
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          placeholder="Search products..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {filteredProducts?.map((product) => (
-                          <div
-                            key={product.id}
-                            className="flex items-center justify-between p-2 border rounded cursor-pointer hover:bg-muted/50"
-                            onClick={() => addItem(product)}
-                          >
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {product.product_code} • {formatCurrency(product.selling_price)}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="ghost">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                      <ItemAutocomplete
+                        items={autocompleteItems}
+                        isLoading={false}
+                        onSelectItem={addItem}
+                        onCreateNewItem={handleCreateNewItem}
+                        placeholder="Search products..."
+                        allowNew={true}
+                        showPrices={true}
+                      />
                       <Button
                         type="button"
                         variant="outline"
@@ -465,6 +446,13 @@ export const CreateProformaModal = ({
                     </div>
                   </CardContent>
                 </Card>
+              )}
+              {newItems.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    {newItems.length} new product(s) will be added to your inventory when you submit.
+                  </p>
+                </div>
               )}
 
               {items.length === 0 ? (
