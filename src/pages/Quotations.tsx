@@ -258,16 +258,22 @@ Website: www.biolegendscientific.co.ke`;
     }
   };
 
-  const handleDeleteQuotation = async (quotation: Quotation) => {
+  const handleDeleteQuotation = (quotation: Quotation) => {
     if (quotation.status === 'converted') {
       toast.error('Cannot delete a converted quotation');
       return;
     }
-    const confirm = window.confirm(`Delete quotation ${quotation.quotation_number}? This action cannot be undone.`);
-    if (!confirm) return;
+    setQuotationToDelete(quotation);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!quotationToDelete?.id) return;
     try {
-      await deleteQuotation.mutateAsync(quotation.id);
+      await deleteQuotation.mutateAsync(quotationToDelete.id);
       toast.success('Quotation deleted successfully');
+      setShowDeleteConfirm(false);
+      setQuotationToDelete(null);
       refetch();
     } catch (error) {
       console.error('Error deleting quotation:', error);
