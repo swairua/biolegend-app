@@ -81,6 +81,7 @@ export default function LPOs() {
     searchTerm
   });
   const updateLPO = useUpdateLPO();
+  const deleteLPO = useDeleteLPO();
 
   const lpos = lpoData?.lpos || [];
   const totalCount = lpoData?.totalCount || 0;
