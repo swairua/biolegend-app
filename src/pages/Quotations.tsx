@@ -305,7 +305,14 @@ Website: www.biolegendscientific.co.ke`;
         line_total: Number(qi.line_total || (Number(qi.quantity || 0) * Number(qi.unit_price || 0)))
       }));
 
-      setInvoicePrefill({
+      console.log('📦 Mapped items for invoice:', {
+        mappedItemsCount: items.length,
+        mappedItems: items,
+        originalItemsCount: quotation.quotation_items?.length || 0,
+        originalItems: quotation.quotation_items
+      });
+
+      const invoicePrefillData = {
         customer: quotation.customers,
         items,
         notes: `Converted from quotation ${quotation.quotation_number}`,
@@ -314,7 +321,10 @@ Website: www.biolegendscientific.co.ke`;
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         currencyCode: quotation.currency_code || 'KES',
         exchangeRate: quotation.exchange_rate || 1
-      });
+      };
+
+      console.log('💾 Setting invoice prefill:', invoicePrefillData);
+      setInvoicePrefill(invoicePrefillData);
       setSelectedQuotation(quotation);
       setShowCreateInvoiceModal(true);
     } catch (error) {
