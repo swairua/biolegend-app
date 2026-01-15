@@ -12,12 +12,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Package, 
-  Download, 
-  Calendar, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
+  Package,
+  Download,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
   AlertTriangle,
   BarChart3,
   Search,
