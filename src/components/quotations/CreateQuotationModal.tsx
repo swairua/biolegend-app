@@ -535,51 +535,22 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                 <CardTitle className="text-lg">Add Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Product Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products by name or code..."
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      className="pl-10"
-                    />
+                <ItemAutocomplete
+                  items={autocompleteItems}
+                  isLoading={loadingProducts}
+                  onSelectItem={addItem}
+                  onCreateNewItem={handleCreateNewItem}
+                  placeholder="Search products by name or code..."
+                  allowNew={true}
+                  showPrices={true}
+                />
+                {newItems.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      {newItems.length} new product(s) will be added to your inventory when you submit.
+                    </p>
                   </div>
-
-                  {/* Product List */}
-                  {searchProduct && (
-                    <div className="max-h-64 overflow-y-auto border rounded-lg">
-                      {loadingProducts ? (
-                        <div className="p-4 text-center text-muted-foreground">Loading products...</div>
-                      ) : filteredProducts.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground">No products found</div>
-                      ) : (
-                        filteredProducts.map((product) => (
-                          <div
-                            key={product.id}
-                            className="p-3 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 transition-smooth"
-                            onClick={() => addItem(product)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="font-medium">{product.name}</div>
-                                <div className="text-sm text-muted-foreground">{product.product_code}</div>
-                                {product.description && (
-                                  <div className="text-xs text-muted-foreground mt-1">{product.description}</div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold">{formatCurrency(product.selling_price)}</div>
-                                <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
