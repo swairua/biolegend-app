@@ -111,6 +111,9 @@ export default function Customers() {
     creditLimitFilter: creditLimitFilter as 'all' | 'with_limit' | 'no_limit'
   });
 
+  // Fetch unique cities for filter dropdown
+  const { data: citiesList = [] } = useCustomerCities(currentCompany?.id);
+
   const customers = customerData?.customers || [];
   const totalCount = customerData?.totalCount || 0;
   const filteredCustomers = customers;
