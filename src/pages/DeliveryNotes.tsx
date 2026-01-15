@@ -568,6 +568,17 @@ export default function DeliveryNotes() {
         onSendEmail={handleSendEmail}
         onMarkDelivered={handleMarkDelivered}
       />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Delivery Note?"
+        description="This action will delete the delivery note and all its items. The linked invoice will not be affected."
+        itemName={deliveryNoteToDelete?.delivery_note_number || deliveryNoteToDelete?.delivery_number}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
