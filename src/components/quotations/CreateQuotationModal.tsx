@@ -67,6 +67,8 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<QuotationItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
