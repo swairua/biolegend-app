@@ -1385,6 +1385,8 @@ export const useQuotations = (companyId?: string) => {
     queryFn: async () => {
       if (!companyId) return [];
 
+      console.log('🚀 useQuotations - Starting fetch for companyId:', companyId);
+
       try {
         // Step 1: Get quotations without embedded relationships
         let query = supabase
