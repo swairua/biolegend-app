@@ -67,6 +67,8 @@ export const CreateProformaModalFixed = ({
   const [proformaNumber, setProformaNumber] = useState('');
   const [tablesStatus, setTablesStatus] = useState<'checking' | 'ready' | 'missing' | 'error'>('checking');
   const [functionError, setFunctionError] = useState<string>('');
+  const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
