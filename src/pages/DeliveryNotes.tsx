@@ -52,19 +52,25 @@ export default function DeliveryNotes() {
   const [selectedDeliveryNote, setSelectedDeliveryNote] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: deliveryNotes, isLoading, error } = useDeliveryNotes(currentCompany?.id);
+
+  // Use optimized delivery notes hook with server-side pagination
+  const { data: deliveryNoteData, isLoading, error, refetch } = useOptimizedDeliveryNotes(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
   const updateDeliveryNote = useUpdateDeliveryNote();
 
-  const mappedDeliveryNotes = deliveryNotes?.map(mapDeliveryNoteForDisplay) || [];
-
-  const filteredDeliveryNotes = mappedDeliveryNotes.filter(note =>
-    (note.delivery_note_number || note.delivery_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tracking_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const deliveryNotes = deliveryNoteData?.deliveryNotes || [];
+  const totalCount = deliveryNoteData?.totalCount || 0;
+  const filteredDeliveryNotes = deliveryNotes;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
