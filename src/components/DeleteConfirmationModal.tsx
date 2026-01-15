@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,10 +15,12 @@ interface DeleteConfirmationModalProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   title?: string;
-  description?: string;
+  description?: string | ReactNode;
   itemName?: string;
   isLoading?: boolean;
   isDangerous?: boolean;
+  actionLabel?: string;
+  loadingLabel?: string;
 }
 
 export function DeleteConfirmationModal({
@@ -29,6 +32,8 @@ export function DeleteConfirmationModal({
   itemName,
   isLoading = false,
   isDangerous = true,
+  actionLabel = 'Delete',
+  loadingLabel = 'Deleting...',
 }: DeleteConfirmationModalProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -36,8 +41,14 @@ export function DeleteConfirmationModal({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {itemName ? `Are you sure you want to delete ${itemName}? ` : ''}
-            {description}
+            {typeof description === 'string' ? (
+              <>
+                {itemName ? `Are you sure you want to delete ${itemName}? ` : ''}
+                {description}
+              </>
+            ) : (
+              description
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -47,7 +58,7 @@ export function DeleteConfirmationModal({
             disabled={isLoading}
             className={isDangerous ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? loadingLabel : actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

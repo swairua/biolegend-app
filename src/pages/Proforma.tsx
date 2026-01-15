@@ -4,16 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import {
   Dialog,
   DialogContent,
@@ -179,6 +170,14 @@ export default function Proforma() {
 
   const handleCreateInvoice = async (proforma: ProformaWithItems) => {
     try {
+      console.log('🔍 handleCreateInvoice - Proforma data:', {
+        id: proforma.id,
+        number: proforma.proforma_number,
+        hasItems: !!proforma.proforma_items,
+        itemsCount: proforma.proforma_items?.length || 0,
+        proforma_items: proforma.proforma_items
+      });
+
       if (!currentCompany?.id) {
         toast.error('No company selected.');
         return;
@@ -676,28 +675,15 @@ export default function Proforma() {
       )}
 
       {/* Delete Confirmation Modal */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Proforma Invoice?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete proforma invoice{' '}
-              <span className="font-semibold">{proformaToDelete?.proforma_number}</span>?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteProforma.isPending}
-            >
-              {deleteProforma.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Proforma Invoice?"
+        description="This action cannot be undone."
+        itemName={proformaToDelete?.proforma_number}
+        isLoading={deleteProforma.isPending}
+      />
 
       {/* Repair Panel Modal */}
       {showRepairPanel && currentCompany?.id && (
