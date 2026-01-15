@@ -1424,7 +1424,7 @@ export const useQuotations = (companyId?: string) => {
           .in('id', customerIds) : { data: [] };
 
         // Step 3: Get quotation items separately
-        const { data: quotationItems } = await supabase
+        const { data: quotationItems, error: itemsError } = await supabase
           .from('quotation_items')
           .select(`
             id,
@@ -1441,6 +1441,11 @@ export const useQuotations = (companyId?: string) => {
             sort_order
           `)
           .in('quotation_id', quotations.map(quot => quot.id));
+
+        if (itemsError) {
+          console.error('Error fetching quotation items:', itemsError);
+          throw itemsError;
+        }
 
         // Step 4: Get products for quotation items
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
