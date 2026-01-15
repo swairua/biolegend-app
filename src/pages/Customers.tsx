@@ -93,35 +93,27 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
   const [creditLimitFilter, setCreditLimitFilter] = useState('all');
-  
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers, isLoading, error } = useCustomers(currentCompany?.id);
 
-  // Filter and search logic
-  const filteredCustomers = customers?.filter(customer => {
-    // Search filter
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.customer_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Use optimized customers hook with server-side pagination
+  const { data: customerData, isLoading, error, refetch } = useOptimizedCustomers(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm,
+    statusFilter: statusFilter as 'all' | 'active' | 'inactive',
+    cityFilter: cityFilter !== 'all' ? cityFilter : undefined,
+    creditLimitFilter: creditLimitFilter as 'all' | 'with_limit' | 'no_limit'
+  });
 
-    // Status filter
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && customer.is_active !== false) ||
-      (statusFilter === 'inactive' && customer.is_active === false);
-
-    // City filter
-    const matchesCity = cityFilter === 'all' || customer.city === cityFilter;
-
-    // Credit limit filter
-    const matchesCreditLimit = creditLimitFilter === 'all' ||
-      (creditLimitFilter === 'no_limit' && !customer.credit_limit) ||
-      (creditLimitFilter === 'with_limit' && customer.credit_limit);
-
-    return matchesSearch && matchesStatus && matchesCity && matchesCreditLimit;
-  }) || [];
+  const customers = customerData?.customers || [];
+  const totalCount = customerData?.totalCount || 0;
+  const filteredCustomers = customers;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => {
