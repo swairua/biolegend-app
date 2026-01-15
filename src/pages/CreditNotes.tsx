@@ -578,6 +578,62 @@ export default function CreditNotes() {
         creditNote={selectedCreditNote}
         onSuccess={handleCreateSuccess}
       />
+
+      {/* Reverse Credit Note Confirmation Modal */}
+      <AlertDialog open={showReverseConfirm} onOpenChange={setShowReverseConfirm}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverse Credit Note?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-foreground">
+                  {creditNoteToReverse?.credit_note_number}
+                </p>
+                <div className="mt-2 space-y-1 text-xs">
+                  <p>Status: <span className="font-medium">{creditNoteToReverse?.status.toUpperCase()}</span></p>
+                  <p>Amount: <span className="font-medium">{formatCurrency(creditNoteToReverse?.total_amount || 0)}</span></p>
+                  <p>Applied: <span className="font-medium">{formatCurrency(creditNoteToReverse?.applied_amount || 0)}</span></p>
+                  <p>Balance: <span className="font-medium">{formatCurrency(creditNoteToReverse?.balance || 0)}</span></p>
+                </div>
+              </div>
+              <div className="border-t pt-3">
+                {reversalDetails?.hasApplied ? (
+                  <div className="space-y-2">
+                    <p className="font-medium text-warning">⚠️ This credit note has been applied to invoices.</p>
+                    <p className="text-xs">Reversing will:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Cancel the credit note</li>
+                      <li>Remove all allocations</li>
+                      <li>Restore invoice balances</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs">This credit note hasn't been applied yet. Reversing will:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Cancel the credit note</li>
+                    </ul>
+                  </div>
+                )}
+                {reversalDetails?.affectsInventory && (
+                  <p className="text-xs mt-2">• Reverse stock movements</p>
+                )}
+              </div>
+              <p className="text-xs font-medium text-destructive">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReversal}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={reverseCreditNote.isPending}
+            >
+              {reverseCreditNote.isPending ? 'Reversing...' : 'Reverse'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
