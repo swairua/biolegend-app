@@ -34,6 +34,8 @@ export function ForceTaxSettings({ companyId }: ForceTaxSettingsProps) {
   const [editingTax, setEditingTax] = useState<string | null>(null);
   const [newTax, setNewTax] = useState({ name: '', rate: 0, is_default: false });
   const [showNewTaxForm, setShowNewTaxForm] = useState(false);
+  const [taxToDelete, setTaxToDelete] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: taxSettings, isLoading, error } = useForceTaxSettings(companyId);
   const createTaxSetting = useForceCreateTaxSetting();
