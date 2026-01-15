@@ -27,7 +27,8 @@ import {
   Search,
   Calculator,
   Receipt,
-  Edit
+  Edit,
+  AlertTriangle
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateProforma, type ProformaItem as BaseProformaItem } from '@/hooks/useProforma';
