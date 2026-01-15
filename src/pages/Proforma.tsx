@@ -170,6 +170,14 @@ export default function Proforma() {
 
   const handleCreateInvoice = async (proforma: ProformaWithItems) => {
     try {
+      console.log('🔍 handleCreateInvoice - Proforma data:', {
+        id: proforma.id,
+        number: proforma.proforma_number,
+        hasItems: !!proforma.proforma_items,
+        itemsCount: proforma.proforma_items?.length || 0,
+        proforma_items: proforma.proforma_items
+      });
+
       if (!currentCompany?.id) {
         toast.error('No company selected.');
         return;
