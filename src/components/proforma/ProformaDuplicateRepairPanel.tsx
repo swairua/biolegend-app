@@ -10,9 +10,9 @@ import { toast } from 'sonner';
 import {
   findAllProformasWithDuplicates,
   findProformaDuplicates,
-  deduplicateProformaItems,
   type DuplicateItemGroup
 } from '@/utils/proformaDeduplication';
+import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQL';
 import { calculateDocumentTotals } from '@/utils/taxCalculation';
 import { supabase } from '@/integrations/supabase/client';
 
