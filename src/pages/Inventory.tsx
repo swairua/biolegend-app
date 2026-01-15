@@ -428,6 +428,15 @@ export default function Inventory() {
                             Restock
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteItem(item)}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
