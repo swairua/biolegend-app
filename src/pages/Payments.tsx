@@ -164,11 +164,16 @@ export default function Payments() {
 
   // Removed inline PDF generation function - now using utility function
 
-  const filteredPayments = payments.filter(payment =>
+  const allFilteredPayments = payments.filter(payment =>
     payment.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.payment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.payment_allocations?.some(alloc => alloc.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const totalCount = allFilteredPayments.length;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const filteredPayments = allFilteredPayments.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
