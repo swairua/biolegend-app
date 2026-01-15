@@ -101,6 +101,9 @@ export const CreateLPOModal = ({
   });
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [newlyCreatedSupplierId, setNewlyCreatedSupplierId] = useState<string | null>(null);
+  const [showSupplierConflictWarning, setShowSupplierConflictWarning] = useState(false);
+  const [supplierConflictData, setSupplierConflictData] = useState<{ entityName: string; invoiceCount: number } | null>(null);
+  const [proceedWithConflict, setProceedWithConflict] = useState(false);
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
