@@ -20,10 +20,18 @@ export interface NewItemWithDefaults extends NewItemData {
   track_inventory: boolean;
 }
 
+interface SavedProduct {
+  tempId: string;
+  actualId: string;
+  product_code: string;
+  name: string;
+}
+
 interface UseNewItemsAutoSaveReturn {
   newItems: NewItemData[];
-  addNewItem: (item: NewItemData) => void;
-  saveAllNewItems: (companyId: string) => Promise<void>;
+  tempIdToActualIdMap: Map<string, string>;
+  addNewItem: (item: NewItemData, tempId: string) => void;
+  saveAllNewItems: (companyId: string) => Promise<SavedProduct[]>;
   clearNewItems: () => void;
 }
 
@@ -33,9 +41,11 @@ interface UseNewItemsAutoSaveReturn {
  */
 export const useNewItemsAutoSave = (): UseNewItemsAutoSaveReturn => {
   const [newItems, setNewItems] = useState<NewItemData[]>([]);
+  const [tempIdMap, setTempIdMap] = useState<Map<string, NewItemData>>(new Map());
+  const [tempIdToActualIdMap, setTempIdToActualIdMap] = useState<Map<string, string>>(new Map());
   const createProduct = useCreateProduct();
 
-  const addNewItem = useCallback((item: NewItemData) => {
+  const addNewItem = useCallback((item: NewItemData, tempId: string) => {
     // Check if item already exists
     const exists = newItems.some(
       (existing) => existing.product_code.toLowerCase() === item.product_code.toLowerCase()
@@ -47,13 +57,15 @@ export const useNewItemsAutoSave = (): UseNewItemsAutoSaveReturn => {
     }
 
     setNewItems((prev) => [...prev, item]);
+    setTempIdMap((prev) => new Map(prev).set(tempId, item));
   }, [newItems]);
 
   const saveAllNewItems = useCallback(
-    async (companyId: string) => {
-      if (newItems.length === 0) return;
+    async (companyId: string): Promise<SavedProduct[]> => {
+      if (newItems.length === 0) return [];
 
-      const promises = newItems.map(async (item) => {
+      const savedProducts: SavedProduct[] = [];
+      const promises = newItems.map(async (item, index) => {
         try {
           // Create product with default attributes
           const productData = {
@@ -70,8 +82,28 @@ export const useNewItemsAutoSave = (): UseNewItemsAutoSaveReturn => {
             track_inventory: true, // Track inventory by default
           };
 
-          await createProduct.mutateAsync(productData);
-          console.log(`Product "${item.name}" saved successfully`);
+          const createdProduct = await createProduct.mutateAsync(productData);
+          console.log(`Product "${item.name}" saved successfully with ID: ${createdProduct.id}`);
+
+          // Find the temp ID for this product
+          let tempId = '';
+          tempIdMap.forEach((value, key) => {
+            if (value.product_code === item.product_code) {
+              tempId = key;
+            }
+          });
+
+          const savedProduct = {
+            tempId: tempId || `new-${index}`,
+            actualId: createdProduct.id,
+            product_code: item.product_code,
+            name: item.name,
+          };
+
+          savedProducts.push(savedProduct);
+          setTempIdToActualIdMap((prev) => new Map(prev).set(tempId, createdProduct.id));
+
+          return savedProduct;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error';
           console.error(`Failed to save product "${item.name}":`, message);
@@ -83,21 +115,27 @@ export const useNewItemsAutoSave = (): UseNewItemsAutoSaveReturn => {
         await Promise.all(promises);
         toast.success(`${newItems.length} new product(s) saved to inventory`);
         setNewItems([]);
+        setTempIdMap(new Map());
+        return savedProducts;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         toast.error(`Failed to save some products: ${message}`);
         // Don't clear items on error - let user retry
+        throw error;
       }
     },
-    [newItems, createProduct]
+    [newItems, createProduct, tempIdMap]
   );
 
   const clearNewItems = useCallback(() => {
     setNewItems([]);
+    setTempIdMap(new Map());
+    setTempIdToActualIdMap(new Map());
   }, []);
 
   return {
     newItems,
+    tempIdToActualIdMap,
     addNewItem,
     saveAllNewItems,
     clearNewItems,
