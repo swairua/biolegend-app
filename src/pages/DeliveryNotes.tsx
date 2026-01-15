@@ -173,6 +173,47 @@ export default function DeliveryNotes() {
     toast.success('Delivery note created successfully!');
   };
 
+  const handleDeleteDeliveryNote = (deliveryNote: any) => {
+    setDeliveryNoteToDelete(deliveryNote);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deliveryNoteToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      // First, delete delivery note items
+      const { error: itemsError } = await supabase
+        .from('delivery_note_items')
+        .delete()
+        .eq('delivery_note_id', deliveryNoteToDelete.id);
+
+      if (itemsError && !itemsError.message.includes('relation') && !itemsError.message.includes('does not exist')) {
+        throw itemsError;
+      }
+
+      // Then delete the delivery note itself
+      const { error: deleteError } = await supabase
+        .from('delivery_notes')
+        .delete()
+        .eq('id', deliveryNoteToDelete.id);
+
+      if (deleteError) throw deleteError;
+
+      toast.success('Delivery note deleted successfully');
+      setShowDeleteConfirm(false);
+      setDeliveryNoteToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting delivery note:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete delivery note';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Calculate stats
   const totalDeliveryNotes = deliveryNotes?.length || 0;
   const inTransit = deliveryNotes?.filter(note => note.status === 'in_transit').length || 0;
