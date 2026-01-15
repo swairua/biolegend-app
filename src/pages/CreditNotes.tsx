@@ -151,6 +151,28 @@ export default function CreditNotes() {
     toast.success('Filters cleared');
   };
 
+  const handleInitiateReversal = (creditNote: CreditNote) => {
+    setCreditNoteToReverse(creditNote);
+    setReversalDetails({
+      hasApplied: (creditNote.applied_amount || 0) > 0,
+      affectsInventory: creditNote.affects_inventory || false
+    });
+    setShowReverseConfirm(true);
+  };
+
+  const handleConfirmReversal = async () => {
+    if (!creditNoteToReverse?.id) return;
+    try {
+      await reverseCreditNote.mutateAsync({ creditNoteId: creditNoteToReverse.id });
+      setShowReverseConfirm(false);
+      setCreditNoteToReverse(null);
+      setReversalDetails(null);
+      refetch();
+    } catch (e) {
+      // handled in hook toast
+    }
+  };
+
   // Check if we have the credit_notes table available
   const hasCreditNotesTable = !error || !(
     error.message.includes('relation "credit_notes" does not exist') ||
