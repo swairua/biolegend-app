@@ -35,6 +35,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ProformaItem {
   id: string;
