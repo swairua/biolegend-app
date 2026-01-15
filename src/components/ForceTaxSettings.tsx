@@ -7,10 +7,20 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Edit, Trash2, Check, X, Zap } from 'lucide-react';
-import { 
-  useForceTaxSettings, 
-  useForceCreateTaxSetting, 
-  useForceUpdateTaxSetting, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  useForceTaxSettings,
+  useForceCreateTaxSetting,
+  useForceUpdateTaxSetting,
   useForceDeleteTaxSetting,
   useForceSetupTaxSettings
 } from '@/hooks/useForceTaxSettings';
