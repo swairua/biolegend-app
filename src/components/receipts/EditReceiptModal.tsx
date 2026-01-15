@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ReceiptItem {
   id: string;
