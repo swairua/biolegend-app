@@ -36,6 +36,7 @@ import { convertAmount } from '@/utils/currency';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface QuotationItem {
   id: string;
