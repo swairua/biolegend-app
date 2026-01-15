@@ -108,55 +108,76 @@ export const ProformaDuplicateRepairPanel = ({
     );
 
     try {
-      // Run deduplication
-      const result = await deduplicateProformaItems(proformaId);
+      console.log('🧹 Starting SQL cleanup for proforma:', proformaId);
 
-      if (result.success) {
-        // Recalculate totals
-        const { data: items, error: fetchError } = await supabase
-          .from('proforma_items')
-          .select('quantity, unit_price, tax_percentage, tax_amount, tax_inclusive, discount_percentage')
-          .eq('proforma_id', proformaId);
+      // Run SQL-based deduplication (more reliable)
+      const cleanupResult = await cleanupProformaDuplicatesSQL(proformaId);
 
-        if (!fetchError && items && items.length > 0) {
-          const totals = calculateDocumentTotals(items);
-          
-          // Update proforma totals
-          await supabase
-            .from('proforma_invoices')
-            .update({
-              subtotal: totals.subtotal,
-              tax_amount: totals.tax_total,
-              total_amount: totals.total_amount
-            })
-            .eq('id', proformaId);
-        }
-
-        // Update UI
-        setProformasWithDuplicates(prev =>
-          prev.map(pf =>
-            pf.proforma_id === proformaId
-              ? { ...pf, is_repairing: false, is_repaired: true }
-              : pf
-          )
-        );
-
-        toast.success(
-          `✅ Repaired! Fixed ${result.duplicates_fixed} product(s). Items: ${proformasWithDuplicates.find(p => p.proforma_id === proformaId)?.total_items || 0} → ${result.duplicates_found > 0 ? 'consolidated' : 'verified'}`
-        );
-
-        // Reload details to show updates
-        if (selectedProformaId === proformaId) {
-          loadProformaDetails(proformaId);
-        }
-
-        // Call the callback
-        onRepairComplete?.();
-      } else {
-        throw new Error(result.message);
+      if (!cleanupResult.success) {
+        throw new Error(cleanupResult.message);
       }
+
+      // Recalculate totals based on remaining items
+      const { data: items, error: fetchError } = await supabase
+        .from('proforma_items')
+        .select('quantity, unit_price, tax_percentage, tax_amount, tax_inclusive, discount_percentage')
+        .eq('proforma_id', proformaId);
+
+      if (!fetchError && items && items.length > 0) {
+        const totals = calculateDocumentTotals(items);
+
+        console.log('📊 Recalculated totals:', totals);
+
+        // Update proforma totals
+        const { error: updateError } = await supabase
+          .from('proforma_invoices')
+          .update({
+            subtotal: totals.subtotal,
+            tax_amount: totals.tax_total,
+            total_amount: totals.total_amount
+          })
+          .eq('id', proformaId);
+
+        if (updateError) {
+          console.warn('⚠️ Failed to update totals:', updateError.message);
+        }
+      } else {
+        console.warn('⚠️ No items found to recalculate totals');
+      }
+
+      const beforeItemCount = proformasWithDuplicates.find(p => p.proforma_id === proformaId)?.total_items || 0;
+      const afterItemCount = (items?.length || 0);
+
+      // Update UI
+      setProformasWithDuplicates(prev =>
+        prev.map(pf =>
+          pf.proforma_id === proformaId
+            ? { ...pf, is_repairing: false, is_repaired: true, total_items: afterItemCount }
+            : pf
+        )
+      );
+
+      toast.success(
+        `✅ Repaired! Removed ${cleanupResult.duplicatesRemoved} duplicate(s). Items: ${beforeItemCount} → ${afterItemCount}`
+      );
+
+      console.log('✅ Repair complete:', {
+        duplicatesRemoved: cleanupResult.duplicatesRemoved,
+        beforeItemCount,
+        afterItemCount
+      });
+
+      // Reload details to show updates
+      if (selectedProformaId === proformaId) {
+        loadProformaDetails(proformaId);
+      }
+
+      // Call the callback
+      onRepairComplete?.();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Repair failed:', errorMsg);
+
       setProformasWithDuplicates(prev =>
         prev.map(pf =>
           pf.proforma_id === proformaId
