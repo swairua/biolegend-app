@@ -21,6 +21,15 @@ import {
   TableRow
 } from '@/components/ui/table';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import {
   Plus,
   Search,
   Filter,
@@ -36,7 +45,7 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import { useProformas, useConvertProformaToInvoice, useDeleteProforma, type ProformaWithItems } from '@/hooks/useProforma';
+import { useOptimizedProformas } from '@/hooks/useOptimizedProformas';
 import { useCompanies } from '@/hooks/useDatabase';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
