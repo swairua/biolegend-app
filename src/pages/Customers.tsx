@@ -367,9 +367,9 @@ export default function Customers() {
           <CardTitle className="flex items-center space-x-2">
             <Building2 className="h-5 w-5 text-primary" />
             <span>Customers List</span>
-            {!isLoading && (
+            {!isLoading && totalCount > 0 && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCustomers.length} customers
+                {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount}
               </Badge>
             )}
           </CardTitle>
