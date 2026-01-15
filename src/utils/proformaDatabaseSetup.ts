@@ -48,6 +48,11 @@ CREATE INDEX IF NOT EXISTS idx_proforma_invoices_status ON proforma_invoices(sta
 CREATE INDEX IF NOT EXISTS idx_proforma_items_proforma_id ON proforma_items(proforma_id);
 CREATE INDEX IF NOT EXISTS idx_proforma_items_product_id ON proforma_items(product_id);
 
+-- Add unique constraint to prevent duplicate products in same proforma
+CREATE UNIQUE INDEX IF NOT EXISTS ux_proforma_items_proforma_product
+ON proforma_items(proforma_id, product_id)
+WHERE product_id IS NOT NULL;
+
 -- Enable RLS (Row Level Security)
 ALTER TABLE proforma_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proforma_items ENABLE ROW LEVEL SECURITY;
