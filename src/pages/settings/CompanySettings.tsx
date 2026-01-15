@@ -591,14 +591,19 @@ export default function CompanySettings() {
     }
   };
 
-  const handleDeleteTax = async (taxId: string) => {
-    if (!confirm('Are you sure you want to delete this tax setting?')) {
-      return;
-    }
+  const handleInitiateDeleteTax = (taxId: string) => {
+    setTaxToDelete(taxId);
+    setShowDeleteTaxConfirm(true);
+  };
+
+  const handleConfirmDeleteTax = async () => {
+    if (!taxToDelete) return;
 
     try {
-      await deleteTaxSetting.mutateAsync(taxId);
+      await deleteTaxSetting.mutateAsync(taxToDelete);
       toast.success('Tax setting deleted successfully');
+      setShowDeleteTaxConfirm(false);
+      setTaxToDelete(null);
     } catch (error) {
       console.error('Tax deletion error:', error);
 
