@@ -618,6 +618,79 @@ export default function InventoryReports() {
                   ))}
                 </TableBody>
               </Table>
+
+              {/* Pagination Controls for Alerts */}
+              {filteredProducts.length > 0 && alertsTotalCount > PAGE_SIZE && (
+                <div className="mt-6 flex flex-col items-center gap-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentAlertsPage > 1) {
+                              setCurrentAlertsPage(currentAlertsPage - 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentAlertsPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: Math.ceil(alertsTotalCount / PAGE_SIZE) }).map((_, i) => {
+                        const pageNum = i + 1;
+                        const isCurrentPage = pageNum === currentAlertsPage;
+                        const isVisible = pageNum === 1 ||
+                                          pageNum === Math.ceil(alertsTotalCount / PAGE_SIZE) ||
+                                          (pageNum >= currentAlertsPage - 1 && pageNum <= currentAlertsPage + 1);
+
+                        if (!isVisible) {
+                          if (pageNum === currentAlertsPage - 2) {
+                            return (
+                              <PaginationItem key={`ellipsis-${pageNum}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentAlertsPage(pageNum);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              isActive={isCurrentPage}
+                              className={isCurrentPage ? '' : 'cursor-pointer'}
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentAlertsPage < Math.ceil(alertsTotalCount / PAGE_SIZE)) {
+                              setCurrentAlertsPage(currentAlertsPage + 1);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={currentAlertsPage >= Math.ceil(alertsTotalCount / PAGE_SIZE) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
