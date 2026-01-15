@@ -9,16 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Building2, Save, Upload, Plus, Trash2, Edit, Check, X, Image, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies, useUpdateCompany, useCreateCompany, useTaxSettings, useCreateTaxSetting, useUpdateTaxSetting, useDeleteTaxSetting } from '@/hooks/useDatabase';
 import { toast } from 'sonner';
 import { ForceTaxSettings } from '@/components/ForceTaxSettings';
@@ -985,26 +976,14 @@ export default function CompanySettings() {
       </div>
 
       {/* Delete Tax Setting Confirmation Modal */}
-      <AlertDialog open={showDeleteTaxConfirm} onOpenChange={setShowDeleteTaxConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tax Setting?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this tax setting? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDeleteTax}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteTaxSetting.isPending}
-            >
-              {deleteTaxSetting.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        open={showDeleteTaxConfirm}
+        onOpenChange={setShowDeleteTaxConfirm}
+        onConfirm={handleConfirmDeleteTax}
+        title="Delete Tax Setting?"
+        description="This action cannot be undone."
+        isLoading={deleteTaxSetting.isPending}
+      />
     </div>
   );
 }
