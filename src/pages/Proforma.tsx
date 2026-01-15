@@ -46,6 +46,7 @@ import { CreateProformaModalOptimized } from '@/components/proforma/CreateProfor
 import { EditProformaModal } from '@/components/proforma/EditProformaModal';
 import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
+import { ProformaDuplicateRepairPanel } from '@/components/proforma/ProformaDuplicateRepairPanel';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
 import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
