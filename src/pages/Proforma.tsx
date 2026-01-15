@@ -66,30 +66,35 @@ export default function Proforma() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedProforma, setSelectedProforma] = useState<ProformaWithItems | null>(null);
+  const [selectedProforma, setSelectedProforma] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
-  const [proformaToDelete, setProformaToDelete] = useState<ProformaWithItems | null>(null);
+  const [proformaToDelete, setProformaToDelete] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRepairPanel, setShowRepairPanel] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Get company data
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
-  // Use proper proforma hooks
-  const { data: proformas = [], isLoading, refetch } = useProformas(currentCompany?.id);
-  const convertToInvoice = useConvertProformaToInvoice();
-  const deleteProforma = useDeleteProforma();
+  // Use optimized proformas hook with server-side pagination
+  const { data: proformaData, isLoading, refetch } = useOptimizedProformas(currentCompany?.id, {
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    searchTerm
+  });
+
+  const proformas = proformaData?.proformas || [];
+  const totalCount = proformaData?.totalCount || 0;
+  const filteredProformas = proformas;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
-
-  const filteredProformas = proformas.filter(proforma =>
-    proforma.proforma_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    proforma.customers?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
