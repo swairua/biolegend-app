@@ -580,6 +580,24 @@ export const EditProformaModal = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Duplicate Items Warning */}
+          {duplicateItemIds.length > 0 && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900">Duplicate Items Detected</h3>
+                  <p className="text-sm text-amber-800 mt-1">
+                    Found {duplicateItemIds.length} duplicate item(s) in the database. These will be automatically cleaned up when you save.
+                  </p>
+                  <p className="text-xs text-amber-700 mt-2">
+                    The items shown below are deduplicated. Saving will consolidate the duplicates and update totals.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error Handler */}
           {updateError && proforma && (
             <ProformaUpdateErrorHandler
