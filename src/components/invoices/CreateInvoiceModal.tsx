@@ -93,6 +93,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     current: number;
     total: number;
   } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InvoiceItem | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
