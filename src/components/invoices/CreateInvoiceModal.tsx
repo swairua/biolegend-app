@@ -109,7 +109,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const createInvoiceWithItems = useCreateInvoiceWithItems();
   const generateDocNumber = useGenerateDocumentNumber();
-  const { newItems, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
+  const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
