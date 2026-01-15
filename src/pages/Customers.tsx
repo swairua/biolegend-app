@@ -335,8 +335,8 @@ export default function Customers() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Cities</SelectItem>
-                        {Array.from(new Set(customers?.map(c => c.city).filter(Boolean))).map(city => (
-                          <SelectItem key={city} value={city!}>{city}</SelectItem>
+                        {citiesList.map(city => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
