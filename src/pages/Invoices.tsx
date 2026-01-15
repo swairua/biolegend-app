@@ -326,6 +326,7 @@ Website: www.biolegendscientific.co.ke`;
     setAmountFromFilter('');
     setAmountToFilter('');
     setSearchTerm('');
+    setCurrentPage(1);
     toast.success('Filters cleared');
   };
 
