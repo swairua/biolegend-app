@@ -97,6 +97,9 @@ export default function UserManagement() {
   } = useUserManagement();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentUserPage, setCurrentUserPage] = useState(1);
+  const [currentInvitationPage, setCurrentInvitationPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [modalState, setModalState] = useState<{
     type: 'create' | 'edit' | 'invite' | null;
     user?: UserProfile | null;
