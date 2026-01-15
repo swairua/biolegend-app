@@ -218,7 +218,8 @@ CREATE TABLE proforma_items (
     unit_price DECIMAL(15,2) NOT NULL,
     discount_percentage DECIMAL(5,2) DEFAULT 0,
     line_total DECIMAL(15,2) NOT NULL,
-    sort_order INTEGER DEFAULT 0
+    sort_order INTEGER DEFAULT 0,
+    CONSTRAINT ux_proforma_items_proforma_product UNIQUE (proforma_id, product_id)
 );
 
 -- Delivery notes table

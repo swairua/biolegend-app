@@ -232,6 +232,16 @@ export const useCreateProforma = () => {
 
       // Create the proforma items
       if (items.length > 0) {
+        // Validate for duplicate products in items before insertion
+        const productIds = items.map(item => item.product_id).filter(Boolean);
+        if (new Set(productIds).size !== productIds.length) {
+          const uniqueDuplicates = [...new Set(
+            productIds.filter((id, index) => productIds.indexOf(id) !== index)
+          )];
+          await supabase.from('proforma_invoices').delete().eq('id', proformaData.id);
+          throw new Error(`Duplicate products detected in items: ${uniqueDuplicates.join(', ')}. Please add each product only once.`);
+        }
+
         const proformaItemsFull = items.map(item => ({
           proforma_id: proformaData.id,
           product_id: item.product_id,
@@ -281,6 +291,29 @@ export const useCreateProforma = () => {
             // Try to delete the proforma if items creation failed
             await supabase.from('proforma_invoices').delete().eq('id', proformaData.id);
             throw new Error(`Failed to create proforma items: ${retryMessage}`);
+          }
+        }
+      }
+
+      // Post-insert verification: ensure no duplicate product_ids were created
+      if (items.length > 0) {
+        const { data: insertedItems, error: verifyError } = await supabase
+          .from('proforma_items')
+          .select('product_id')
+          .eq('proforma_id', proformaData.id);
+
+        if (verifyError) {
+          console.warn('Warning: Could not verify proforma items after creation:', verifyError);
+        } else if (insertedItems) {
+          const insertedProductIds = insertedItems.map(item => item.product_id);
+          if (new Set(insertedProductIds).size !== insertedProductIds.length) {
+            const uniqueDuplicates = [...new Set(
+              insertedProductIds.filter((id, index) => insertedProductIds.indexOf(id) !== index)
+            )];
+            console.error('Data integrity error: Duplicate items were created for proforma', proformaData.id);
+            // Note: We don't delete here because items are already inserted.
+            // The unique constraint should prevent this, but if it happens, it's a critical DB issue.
+            throw new Error(`Data integrity error: Duplicate products found in created proforma: ${uniqueDuplicates.join(', ')}. Please contact support.`);
           }
         }
       }
