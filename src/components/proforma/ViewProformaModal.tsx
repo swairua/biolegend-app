@@ -65,15 +65,40 @@ interface ViewProformaModalProps {
   onCreateInvoice?: (proforma: Proforma) => void;
 }
 
-export const ViewProformaModal = ({ 
-  open, 
-  onOpenChange, 
+export const ViewProformaModal = ({
+  open,
+  onOpenChange,
   proforma,
   onDownloadPDF,
   onSendEmail,
   onCreateInvoice
 }: ViewProformaModalProps) => {
   if (!proforma) return null;
+
+  // 🔍 Deduplicate items for display
+  const { deduplicatedItems, hasDuplicates, duplicateCount } = useMemo(() => {
+    if (!proforma.proforma_items || proforma.proforma_items.length === 0) {
+      return { deduplicatedItems: [], hasDuplicates: false, duplicateCount: 0 };
+    }
+
+    const productMap = new Map<string, ProformaItem>();
+    let duplicateCount = 0;
+
+    proforma.proforma_items.forEach((item) => {
+      const key = item.product_id;
+      if (productMap.has(key)) {
+        duplicateCount++;
+      } else {
+        productMap.set(key, item);
+      }
+    });
+
+    return {
+      deduplicatedItems: Array.from(productMap.values()),
+      hasDuplicates: duplicateCount > 0,
+      duplicateCount
+    };
+  }, [proforma.proforma_items]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
