@@ -109,10 +109,11 @@ export default function Invoices() {
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  
+
   // Use the fixed invoices hook
   const { data: invoices, isLoading, error, refetch } = useInvoices(currentCompany?.id);
   const { currency, rate, format } = useCurrency();
+  const deleteInvoice = useDeleteInvoice();
 
   // Filter and search logic
   const filteredInvoices = invoices?.filter(invoice => {
