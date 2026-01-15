@@ -1454,10 +1454,15 @@ export const useQuotations = (companyId?: string) => {
 
         // Step 4: Get products for quotation items
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
-        const { data: products } = productIds.length > 0 ? await supabase
+        const { data: products, error: productsError } = productIds.length > 0 ? await supabase
           .from('products')
           .select('id, name, unit_of_measure')
           .in('id', productIds) : { data: [] };
+
+        if (productsError) {
+          console.error('Error fetching products for quotation items:', productsError);
+          throw productsError;
+        }
 
         // Step 5: Create lookup maps
         const customerMap = new Map();
