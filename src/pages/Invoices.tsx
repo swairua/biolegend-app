@@ -36,7 +36,8 @@ import {
   Send,
   Calendar,
   Receipt,
-  Truck
+  Truck,
+  Trash2
 } from 'lucide-react';
 import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
