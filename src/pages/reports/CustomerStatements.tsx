@@ -190,10 +190,10 @@ export default function CustomerStatements() {
   };
 
   const handleSelectAll = () => {
-    if (selectedCustomers.length === filteredStatements.length) {
+    if (selectedCustomers.length === allFilteredStatements.length) {
       setSelectedCustomers([]);
     } else {
-      setSelectedCustomers(filteredStatements.map(s => s.customer_id));
+      setSelectedCustomers(allFilteredStatements.map(s => s.customer_id));
     }
   };
 
