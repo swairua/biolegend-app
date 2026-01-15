@@ -46,10 +46,12 @@ import {
   FileText,
   DollarSign,
   Building2,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
-import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
+import { useCreateCustomer, useCompanies, useCustomerInvoices, useCustomerPayments, useDeleteCustomer } from '@/hooks/useDatabase';
 import { useOptimizedCustomers, useCustomerCities } from '@/hooks/useOptimizedCustomers';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EditCustomerModal } from '@/components/customers/EditCustomerModal';
