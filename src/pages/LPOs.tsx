@@ -642,6 +642,17 @@ export default function LPOs() {
         lpo={selectedLPO}
         onSuccess={handleEditSuccess}
       />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Local Purchase Order?"
+        description="This action will delete the LPO and all its items. This cannot be undone."
+        itemName={lpoToDelete?.lpo_number}
+        isLoading={deleteLPO.isPending}
+      />
     </div>
   );
 }
