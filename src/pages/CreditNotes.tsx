@@ -526,42 +526,7 @@ export default function CreditNotes() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={async () => {
-                                // Show detailed confirmation based on credit note state
-                                let confirmationMessage = `Reverse credit note ${creditNote.credit_note_number}?\n\n`;
-                                confirmationMessage += `Status: ${creditNote.status.toUpperCase()}\n`;
-                                confirmationMessage += `Amount: ${formatCurrency(creditNote.total_amount)}\n`;
-                                confirmationMessage += `Applied: ${formatCurrency(creditNote.applied_amount || 0)}\n`;
-                                confirmationMessage += `Balance: ${formatCurrency(creditNote.balance || 0)}\n\n`;
-
-                                if ((creditNote.applied_amount || 0) > 0) {
-                                  confirmationMessage += `⚠️ This credit note has been applied to invoices.\n`;
-                                  confirmationMessage += `Reversing will:\n`;
-                                  confirmationMessage += `• Cancel the credit note\n`;
-                                  confirmationMessage += `• Remove all allocations\n`;
-                                  confirmationMessage += `• Restore invoice balances\n`;
-                                } else {
-                                  confirmationMessage += `This credit note hasn't been applied yet.\n`;
-                                  confirmationMessage += `Reversing will:\n`;
-                                  confirmationMessage += `• Cancel the credit note\n`;
-                                }
-
-                                if (creditNote.affects_inventory) {
-                                  confirmationMessage += `• Reverse stock movements\n`;
-                                }
-
-                                confirmationMessage += `\nThis action cannot be undone.`;
-
-                                const ok = window.confirm(confirmationMessage);
-                                if (!ok) return;
-
-                                try {
-                                  await reverseCreditNote.mutateAsync({ creditNoteId: creditNote.id });
-                                  refetch();
-                                } catch (e) {
-                                  // handled in hook toast
-                                }
-                              }}
+                              onClick={() => handleInitiateReversal(creditNote)}
                               className="text-muted-foreground hover:text-destructive"
                               disabled={reverseCreditNote.isPending}
                             >
