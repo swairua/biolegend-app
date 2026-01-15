@@ -111,12 +111,22 @@ export default function UserManagement() {
 
   const stats = getUserStats();
 
-  const filteredUsers = users.filter(user =>
+  const allFilteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalUsers = allFilteredUsers.length;
+  const userStartIndex = (currentUserPage - 1) * PAGE_SIZE;
+  const userEndIndex = userStartIndex + PAGE_SIZE;
+  const filteredUsers = allFilteredUsers.slice(userStartIndex, userEndIndex);
+
+  const totalInvitations = invitations.length;
+  const invStartIndex = (currentInvitationPage - 1) * PAGE_SIZE;
+  const invEndIndex = invStartIndex + PAGE_SIZE;
+  const paginatedInvitations = invitations.slice(invStartIndex, invEndIndex);
 
   if (!isAdmin) {
     return (
