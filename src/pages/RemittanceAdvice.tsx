@@ -110,12 +110,17 @@ const RemittanceAdvice = () => {
     }
   };
 
-  const filteredRemittances = remittances.filter(remittance => {
+  const allFilteredRemittances = remittances.filter(remittance => {
     const matchesSearch = (remittance.customers?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (remittance.advice_number || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || remittance.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalCount = allFilteredRemittances.length;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const filteredRemittances = allFilteredRemittances.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
