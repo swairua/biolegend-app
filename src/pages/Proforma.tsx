@@ -691,6 +691,29 @@ export default function Proforma() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Repair Panel Modal */}
+      {showRepairPanel && currentCompany?.id && (
+        <Dialog open={showRepairPanel} onOpenChange={setShowRepairPanel}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                Repair Duplicate Items
+              </DialogTitle>
+              <DialogDescription>
+                Scan and repair proformas with duplicate items
+              </DialogDescription>
+            </DialogHeader>
+            <ProformaDuplicateRepairPanel
+              companyId={currentCompany.id}
+              onRepairComplete={() => {
+                refetch();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
