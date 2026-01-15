@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface QuotationItem {
   id: string;
