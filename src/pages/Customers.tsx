@@ -127,6 +127,8 @@ export default function Customers() {
     return format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
   };
 
+  const deleteCustomer = useDeleteCustomer();
+
 
   const handleCreateCustomer = () => {
     setShowCreateModal(true);
