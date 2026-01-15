@@ -274,6 +274,14 @@ Website: www.biolegendscientific.co.ke`;
 
   const handleConvertToInvoice = async (quotation: Quotation) => {
     try {
+      console.log('🔍 handleConvertToInvoice - Quotation data:', {
+        id: quotation.id,
+        number: quotation.quotation_number,
+        hasItems: !!quotation.quotation_items,
+        itemsCount: quotation.quotation_items?.length || 0,
+        quotation_items: quotation.quotation_items
+      });
+
       if (!currentCompany?.id) {
         toast.error('No company selected.');
         return;
