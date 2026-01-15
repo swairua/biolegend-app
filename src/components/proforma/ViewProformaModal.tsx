@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   FileText,
   Download,
@@ -18,7 +20,8 @@ import {
   Calendar,
   User,
   Receipt,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/taxCalculation';
 
@@ -62,15 +65,40 @@ interface ViewProformaModalProps {
   onCreateInvoice?: (proforma: Proforma) => void;
 }
 
-export const ViewProformaModal = ({ 
-  open, 
-  onOpenChange, 
+export const ViewProformaModal = ({
+  open,
+  onOpenChange,
   proforma,
   onDownloadPDF,
   onSendEmail,
   onCreateInvoice
 }: ViewProformaModalProps) => {
   if (!proforma) return null;
+
+  // 🔍 Deduplicate items for display
+  const { deduplicatedItems, hasDuplicates, duplicateCount } = useMemo(() => {
+    if (!proforma.proforma_items || proforma.proforma_items.length === 0) {
+      return { deduplicatedItems: [], hasDuplicates: false, duplicateCount: 0 };
+    }
+
+    const productMap = new Map<string, ProformaItem>();
+    let duplicateCount = 0;
+
+    proforma.proforma_items.forEach((item) => {
+      const key = item.product_id;
+      if (productMap.has(key)) {
+        duplicateCount++;
+      } else {
+        productMap.set(key, item);
+      }
+    });
+
+    return {
+      deduplicatedItems: Array.from(productMap.values()),
+      hasDuplicates: duplicateCount > 0,
+      duplicateCount
+    };
+  }, [proforma.proforma_items]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -119,6 +147,17 @@ export const ViewProformaModal = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Duplicate Items Warning */}
+          {hasDuplicates && (
+            <Alert className="border-amber-300 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                ⚠️ This proforma has <strong>{duplicateCount} duplicate item(s)</strong> in the database.
+                The display below shows deduplicated items. Use <strong>"Repair Duplicates"</strong> from the Proforma list page to permanently clean up the database.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Header Information */}
           <Card>
             <CardHeader>
@@ -188,10 +227,17 @@ export const ViewProformaModal = ({
           )}
 
           {/* Items */}
-          {proforma.proforma_items && proforma.proforma_items.length > 0 && (
+          {deduplicatedItems && deduplicatedItems.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Items</CardTitle>
+                <CardTitle>
+                  Items
+                  {hasDuplicates && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Showing {deduplicatedItems.length} deduplicated items (DB has {proforma.proforma_items?.length || 0})
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -207,7 +253,7 @@ export const ViewProformaModal = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {proforma.proforma_items.map((item) => (
+                    {deduplicatedItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.product_name}</TableCell>
                         <TableCell>{item.description}</TableCell>

@@ -15,6 +15,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -35,7 +42,8 @@ import {
   Receipt,
   FileText,
   CheckCircle,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { useProformas, useConvertProformaToInvoice, useDeleteProforma, type ProformaWithItems } from '@/hooks/useProforma';
 import { useCompanies } from '@/hooks/useDatabase';
@@ -46,6 +54,7 @@ import { CreateProformaModalOptimized } from '@/components/proforma/CreateProfor
 import { EditProformaModal } from '@/components/proforma/EditProformaModal';
 import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
+import { ProformaDuplicateRepairPanel } from '@/components/proforma/ProformaDuplicateRepairPanel';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
 import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
@@ -63,6 +72,7 @@ export default function Proforma() {
   const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
   const [proformaToDelete, setProformaToDelete] = useState<ProformaWithItems | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRepairPanel, setShowRepairPanel] = useState(false);
 
   // Get company data
   const { data: companies } = useCompanies();
@@ -401,55 +411,11 @@ export default function Proforma() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={async () => {
-                  if (!currentCompany?.id) {
-                    toast.error('No company selected');
-                    return;
-                  }
-
-                  const loadingToast = toast.loading('Finding and fixing duplicate items...');
-
-                  try {
-                    const result = await fixAllProformaDuplicates(currentCompany.id);
-
-                    console.log('Deduplication result:', {
-                      success: result.success,
-                      message: result.message,
-                      duplicates_found: result.duplicates_found,
-                      duplicates_fixed: result.duplicates_fixed,
-                      errors: result.errors,
-                      affected_proformas: result.affected_proformas
-                    });
-
-                    if (result.success) {
-                      toast.dismiss(loadingToast);
-                      if (result.duplicates_fixed > 0) {
-                        toast.success(`✅ Fixed ${result.duplicates_fixed} duplicate(s) in ${result.affected_proformas.length} proforma(s)`);
-                        refetch();
-                      } else {
-                        toast.success('No duplicates found');
-                      }
-                    } else {
-                      toast.dismiss(loadingToast);
-                      // Show detailed error message
-                      const errorDetails = result.errors.length > 0
-                        ? result.errors.join('\n')
-                        : 'Unknown error occurred';
-
-                      console.error('Deduplication failed with errors:', result.errors);
-                      toast.error(`Failed to fix duplicates:\n${errorDetails}`, {
-                        duration: 5000
-                      });
-                    }
-                  } catch (error) {
-                    toast.dismiss(loadingToast);
-                    const errorMsg = error instanceof Error ? error.message : String(error);
-                    console.error('Fix duplicates error:', error);
-                    toast.error(`Error fixing duplicates: ${errorMsg}`);
-                  }
-                }}
+                onClick={() => setShowRepairPanel(true)}
+                className="border-amber-300 hover:bg-amber-50"
               >
-                Fix Duplicate Items
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Repair Duplicates
               </Button>
               <Button
                 variant="outline"
@@ -732,6 +698,29 @@ export default function Proforma() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Repair Panel Modal */}
+      {showRepairPanel && currentCompany?.id && (
+        <Dialog open={showRepairPanel} onOpenChange={setShowRepairPanel}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                Repair Duplicate Items
+              </DialogTitle>
+              <DialogDescription>
+                Scan and repair proformas with duplicate items
+              </DialogDescription>
+            </DialogHeader>
+            <ProformaDuplicateRepairPanel
+              companyId={currentCompany.id}
+              onRepairComplete={() => {
+                refetch();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
