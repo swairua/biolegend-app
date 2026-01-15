@@ -25,7 +25,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
   Trash2,
-  Search,
   Calculator,
   Receipt,
   Loader2
