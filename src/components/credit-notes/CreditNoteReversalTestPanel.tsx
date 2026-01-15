@@ -221,6 +221,28 @@ export function CreditNoteReversalTestPanel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reversal Confirmation Modal */}
+      <AlertDialog open={showReversalConfirm} onOpenChange={setShowReversalConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverse Credit Note?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reverse this credit note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReversal}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isRunning}
+            >
+              {isRunning ? 'Reversing...' : 'Reverse'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
