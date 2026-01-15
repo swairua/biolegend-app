@@ -12,16 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { 
   Plus, 
   Search, 
@@ -459,26 +450,14 @@ export default function UserManagement() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, user: deleteDialog.user })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {deleteDialog.user?.full_name || deleteDialog.user?.email}? 
-              This action cannot be undone and will permanently remove the user's access to the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteUser}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, user: deleteDialog.user })}
+        onConfirm={handleDeleteUser}
+        title="Delete User?"
+        description="This action cannot be undone and will permanently remove the user's access to the system."
+        itemName={deleteDialog.user?.full_name || deleteDialog.user?.email}
+      />
     </div>
   );
 }
