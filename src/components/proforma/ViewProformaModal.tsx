@@ -227,10 +227,17 @@ export const ViewProformaModal = ({
           )}
 
           {/* Items */}
-          {proforma.proforma_items && proforma.proforma_items.length > 0 && (
+          {deduplicatedItems && deduplicatedItems.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Items</CardTitle>
+                <CardTitle>
+                  Items
+                  {hasDuplicates && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Showing {deduplicatedItems.length} deduplicated items (DB has {proforma.proforma_items?.length || 0})
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -246,7 +253,7 @@ export const ViewProformaModal = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {proforma.proforma_items.map((item) => (
+                    {deduplicatedItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.product_name}</TableCell>
                         <TableCell>{item.description}</TableCell>
