@@ -757,11 +757,11 @@ export const useDeleteProforma = () => {
 
       // Delete the proforma invoice
       console.log('📋 Step 3: Deleting proforma invoice...');
-      const { error: deleteProformaError, count } = await supabase
+      const { data: deletedData, error: deleteProformaError } = await supabase
         .from('proforma_invoices')
         .delete()
         .eq('id', proformaId)
-        .select('id', { count: 'exact' });
+        .select('id');
 
       if (deleteProformaError) {
         const errorMessage = serializeError(deleteProformaError);
@@ -769,7 +769,13 @@ export const useDeleteProforma = () => {
         throw new Error(`Failed to delete proforma: ${errorMessage}`);
       }
 
-      console.log('✅ Delete query executed, rows affected:', count);
+      const rowsAffected = deletedData?.length || 0;
+      console.log('✅ Delete query executed, rows affected:', rowsAffected);
+
+      if (rowsAffected === 0) {
+        console.error('❌ CRITICAL: No rows were deleted - RLS may be blocking the delete');
+        throw new Error('Delete operation failed: RLS policy may be blocking the delete. Check permissions.');
+      }
 
       // Verify the deletion was successful
       console.log('📋 Step 4: Verifying deletion...');
