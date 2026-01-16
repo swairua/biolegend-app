@@ -787,6 +787,40 @@ export default function CreditNotes() {
         loadingLabel="Reversing..."
         isLoading={reverseCreditNote.isPending}
       />
+
+      {/* Delete Credit Note Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Credit Note?"
+        description={
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="font-semibold text-foreground">
+                {creditNoteToDelete?.credit_note_number}
+              </p>
+              <div className="mt-2 space-y-1 text-xs">
+                <p>Status: <span className="font-medium">{creditNoteToDelete?.status.toUpperCase()}</span></p>
+                <p>Amount: <span className="font-medium">{formatCurrency(creditNoteToDelete?.total_amount || 0)}</span></p>
+              </div>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-xs">Deleting this credit note will:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs mt-2">
+                <li>Remove the credit note from the system</li>
+                {(creditNoteToDelete?.applied_amount || 0) > 0 && (
+                  <li>Reverse applied amounts from related invoices</li>
+                )}
+              </ul>
+            </div>
+            <p className="text-xs font-medium text-destructive">This action cannot be undone.</p>
+          </div>
+        }
+        actionLabel="Delete"
+        loadingLabel="Deleting..."
+        isDestructive={true}
+      />
     </div>
   );
 }
