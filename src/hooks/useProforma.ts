@@ -640,6 +640,7 @@ export const useUpdateProforma = () => {
         // Invalidate cache to force fresh data
         console.log('🔄 Invalidating cache for fresh data...');
         await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+        await queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
         await queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
         console.log('🔄 Cache invalidated');
 
