@@ -248,6 +248,48 @@ export const CreateProformaModalOptimized = ({
     return calculateDocumentTotals(taxableItems);
   };
 
+  const createProformaWithRetry = async (
+    proformaData: any,
+    itemsToSubmit: ProformaItem[],
+    maxRetries: number = 3
+  ): Promise<void> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await createProforma.mutateAsync({
+          proforma: proformaData,
+          items: itemsToSubmit
+        });
+        return; // Success - exit the function
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+
+        // Check if this is a duplicate key error
+        if (errorMessage.includes('proforma_invoices_proforma_number_key')) {
+          if (attempt < maxRetries) {
+            console.warn(`Duplicate proforma number detected, retrying... (attempt ${attempt}/${maxRetries})`);
+
+            // Generate a new proforma number
+            try {
+              const newNumber = await generateNextProformaNumber();
+              proformaData.proforma_number = newNumber;
+              setProformaNumber(newNumber);
+
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 200));
+              continue; // Retry with new number
+            } catch (genError) {
+              console.error('Failed to generate new proforma number:', genError);
+              throw error; // Throw original error
+            }
+          }
+        }
+
+        // Not a retryable error or max retries exceeded - throw
+        throw error;
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -325,11 +367,8 @@ export const CreateProformaModalOptimized = ({
         fx_date: formData.proforma_date
       };
 
-      // Create proforma in database
-      await createProforma.mutateAsync({
-        proforma: proformaData,
-        items: itemsToSubmit
-      });
+      // Create proforma in database with retry logic for duplicate numbers
+      await createProformaWithRetry(proformaData, itemsToSubmit);
 
       toast.success('Proforma invoice created successfully!');
       onSuccess?.();
