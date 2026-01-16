@@ -824,6 +824,7 @@ export const useConvertProformaToInvoice = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
       toast.success(`Proforma invoice ${data.proforma_number} converted to invoice!`);
     },
