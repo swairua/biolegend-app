@@ -129,13 +129,17 @@ export const useOptimizedCreditNotes = (
         )
       ];
 
-      const { data: customers } =
+      const { data: customers, error: customerError } =
         customerIds.length > 0
           ? await supabase
               .from('customers')
-              .select('id, name, email, phone, customer_code')
+              .select('id, name, email, phone')
               .in('id', customerIds)
           : { data: [] };
+
+      if (customerError) {
+        console.warn('⚠️ Failed to fetch customers:', customerError?.message);
+      }
 
       // Fetch credit note items
       const { data: creditNoteItems } = await supabase
