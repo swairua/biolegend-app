@@ -172,7 +172,6 @@ export const CreateProformaModal = ({
     }
 
     setShowProductSearch(false);
-    setSearchTerm('');
   };
 
   const handleCreateNewItem = async (itemData: NewItemData): Promise<AutocompleteItem> => {
