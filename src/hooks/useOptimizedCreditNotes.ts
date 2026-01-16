@@ -105,8 +105,8 @@ export const useOptimizedCreditNotes = (
       const { data: creditNotes, error, count } = await query;
 
       if (error) {
-        console.error('❌ Credit notes query failed:', error);
-        throw error;
+        console.error('❌ Credit notes query failed:', error?.message || JSON.stringify(error));
+        throw new Error(error?.message || 'Failed to fetch credit notes');
       }
 
       if (!creditNotes || creditNotes.length === 0) {
