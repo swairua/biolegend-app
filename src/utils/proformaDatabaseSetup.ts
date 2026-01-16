@@ -57,69 +57,89 @@ WHERE product_id IS NOT NULL;
 ALTER TABLE proforma_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proforma_items ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for proforma_invoices
+-- RLS Policies for proforma_invoices with improved NULL handling
 CREATE POLICY IF NOT EXISTS "Users can view proformas from their company" ON proforma_invoices
     FOR SELECT USING (
-        company_id IN (
-            SELECT company_id FROM profiles WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.company_id IS NOT NULL
+            AND profiles.company_id = proforma_invoices.company_id
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can insert proformas for their company" ON proforma_invoices
     FOR INSERT WITH CHECK (
-        company_id IN (
-            SELECT company_id FROM profiles WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.company_id IS NOT NULL
+            AND profiles.company_id = proforma_invoices.company_id
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can update proformas from their company" ON proforma_invoices
     FOR UPDATE USING (
-        company_id IN (
-            SELECT company_id FROM profiles WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.company_id IS NOT NULL
+            AND profiles.company_id = proforma_invoices.company_id
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can delete proformas from their company" ON proforma_invoices
     FOR DELETE USING (
-        company_id IN (
-            SELECT company_id FROM profiles WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.company_id IS NOT NULL
+            AND profiles.company_id = proforma_invoices.company_id
         )
     );
 
--- RLS Policies for proforma_items
+-- RLS Policies for proforma_items with improved NULL handling
 CREATE POLICY IF NOT EXISTS "Users can view proforma items from their company" ON proforma_items
     FOR SELECT USING (
-        proforma_id IN (
-            SELECT id FROM proforma_invoices WHERE company_id IN (
-                SELECT company_id FROM profiles WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM proforma_invoices pi
+            INNER JOIN profiles p ON p.company_id = pi.company_id
+            WHERE pi.id = proforma_items.proforma_id
+            AND p.id = auth.uid()
+            AND p.company_id IS NOT NULL
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can insert proforma items for their company" ON proforma_items
     FOR INSERT WITH CHECK (
-        proforma_id IN (
-            SELECT id FROM proforma_invoices WHERE company_id IN (
-                SELECT company_id FROM profiles WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM proforma_invoices pi
+            INNER JOIN profiles p ON p.company_id = pi.company_id
+            WHERE pi.id = proforma_items.proforma_id
+            AND p.id = auth.uid()
+            AND p.company_id IS NOT NULL
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can update proforma items from their company" ON proforma_items
     FOR UPDATE USING (
-        proforma_id IN (
-            SELECT id FROM proforma_invoices WHERE company_id IN (
-                SELECT company_id FROM profiles WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM proforma_invoices pi
+            INNER JOIN profiles p ON p.company_id = pi.company_id
+            WHERE pi.id = proforma_items.proforma_id
+            AND p.id = auth.uid()
+            AND p.company_id IS NOT NULL
         )
     );
 
 CREATE POLICY IF NOT EXISTS "Users can delete proforma items from their company" ON proforma_items
     FOR DELETE USING (
-        proforma_id IN (
-            SELECT id FROM proforma_invoices WHERE company_id IN (
-                SELECT company_id FROM profiles WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM proforma_invoices pi
+            INNER JOIN profiles p ON p.company_id = pi.company_id
+            WHERE pi.id = proforma_items.proforma_id
+            AND p.id = auth.uid()
+            AND p.company_id IS NOT NULL
         )
     );
 

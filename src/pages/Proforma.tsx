@@ -57,6 +57,7 @@ import { EditProformaModal } from '@/components/proforma/EditProformaModal';
 import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { ProformaSetupBanner } from '@/components/proforma/ProformaSetupBanner';
 import { ProformaDuplicateRepairPanel } from '@/components/proforma/ProformaDuplicateRepairPanel';
+import { ProformaRLSFixer } from '@/components/proforma/ProformaRLSFixer';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
 import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
@@ -75,6 +76,8 @@ export default function Proforma() {
   const [proformaToDelete, setProformaToDelete] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRepairPanel, setShowRepairPanel] = useState(false);
+  const [showRLSFixer, setShowRLSFixer] = useState(false);
+  const [rlsErrorProformaId, setRlsErrorProformaId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -274,9 +277,12 @@ export default function Proforma() {
     } catch (error) {
       console.error('Error deleting proforma:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      // Note: If error is due to RLS, the mutation's onError will have already shown a diagnostic
-      // Only show additional error if not already handled
-      if (!message.includes('RLS')) {
+      // If error is due to RLS, show the diagnostic/fix tool
+      if (message.includes('RLS')) {
+        setRlsErrorProformaId(proformaToDelete.id);
+        setShowRLSFixer(true);
+        toast.error('RLS policy issue detected. Opening diagnostic tool...');
+      } else {
         toast.error(`Error deleting proforma: ${message}`);
       }
     }
@@ -818,6 +824,21 @@ export default function Proforma() {
                 refetch();
               }}
             />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* RLS Diagnostic & Fix Modal */}
+      {showRLSFixer && (
+        <Dialog open={showRLSFixer} onOpenChange={setShowRLSFixer}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Row Level Security Diagnostic Tool</DialogTitle>
+              <DialogDescription>
+                Diagnose and fix RLS policy issues preventing proforma operations
+              </DialogDescription>
+            </DialogHeader>
+            <ProformaRLSFixer proformaId={rlsErrorProformaId || undefined} />
           </DialogContent>
         </Dialog>
       )}
