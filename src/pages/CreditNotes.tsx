@@ -719,6 +719,7 @@ export default function CreditNotes() {
         open={showViewModal}
         onOpenChange={setShowViewModal}
         creditNote={selectedCreditNote}
+        onDelete={handleDeleteCreditNote}
       />
 
       {/* Edit Credit Note Modal */}
