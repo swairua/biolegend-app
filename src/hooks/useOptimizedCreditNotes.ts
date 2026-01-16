@@ -5,18 +5,20 @@ export interface OptimizedCreditNote {
   id: string;
   company_id: string;
   customer_id: string;
+  invoice_id?: string;
   credit_note_number: string;
   credit_note_date: string;
   subtotal?: number;
   tax_amount?: number;
   total_amount?: number;
   applied_amount?: number;
-  remaining_amount?: number;
-  status: 'draft' | 'issued' | 'applied' | 'reversed';
+  balance?: number;
+  affects_inventory?: boolean;
+  status: 'draft' | 'sent' | 'applied' | 'cancelled';
   reason?: string;
   notes?: string;
-  currency_code?: 'KES' | 'USD';
-  exchange_rate?: number;
+  terms_and_conditions?: string;
+  created_by?: string;
   created_at?: string;
   updated_at?: string;
   customers?: {
@@ -24,9 +26,7 @@ export interface OptimizedCreditNote {
     name: string;
     email?: string;
     phone?: string;
-    address?: string;
-    city?: string;
-    country?: string;
+    customer_code?: string;
   };
   credit_note_items?: Array<{
     id: string;
