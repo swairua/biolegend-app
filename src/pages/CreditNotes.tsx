@@ -182,7 +182,7 @@ export default function CreditNotes() {
     if (!creditNoteToDelete?.id) return;
 
     try {
-      // Delete credit note allocations first (reverse applied amounts)
+      // Get credit note allocations to reverse amounts
       const { data: allocations, error: allocError } = await supabase
         .from('credit_note_allocations')
         .select('invoice_id, allocated_amount')
@@ -195,20 +195,20 @@ export default function CreditNotes() {
       // If there are allocations, update the invoices to remove the applied amount
       if (allocations && allocations.length > 0) {
         for (const allocation of allocations) {
-          // Update the invoice to decrement paid_amount
-          const { error: updateError } = await supabase
+          // Get current paid_amount
+          const { data: invoice, error: fetchError } = await supabase
             .from('invoices')
-            .update({
-              paid_amount: supabase.rpc('decrement_amount', {
-                row_id: allocation.invoice_id,
-                amount: allocation.allocated_amount
-              })
-            })
-            .eq('id', allocation.invoice_id);
+            .select('paid_amount')
+            .eq('id', allocation.invoice_id)
+            .single();
 
-          if (updateError && !updateError.message.includes('relation') && !updateError.message.includes('does not exist')) {
-            // Log but don't fail - try to continue
-            console.warn('Warning updating invoice:', updateError);
+          if (!fetchError && invoice) {
+            // Decrement paid_amount by the allocated amount
+            const newPaidAmount = Math.max(0, (invoice.paid_amount || 0) - allocation.allocated_amount);
+            await supabase
+              .from('invoices')
+              .update({ paid_amount: newPaidAmount })
+              .eq('id', allocation.invoice_id);
           }
         }
       }
