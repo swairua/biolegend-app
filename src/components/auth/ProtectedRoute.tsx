@@ -58,22 +58,19 @@ export function ProtectedRoute({
     );
   }
 
-  // Check authentication
+  // Check authentication - redirect to login if not authenticated
   if (requireAuth && !isAuthenticated) {
+    // Redirect to login page
+    useEffect(() => {
+      navigate('/login', { replace: true });
+    }, [navigate]);
+
     return fallback || (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
-            <p className="text-muted-foreground mb-4">
-              Please sign in to access this page.
-            </p>
-            <Button onClick={() => window.location.reload()}>
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
       </div>
     );
   }
