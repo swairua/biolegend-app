@@ -48,14 +48,17 @@ const App = () => {
       <Sonner />
       <Layout>
         <Routes>
+          {/* Public Login Route */}
+          <Route path="/login" element={<EnhancedLogin />} />
+
           {/* Dashboard */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Index />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Sales & Customer Management */}
