@@ -142,10 +142,14 @@ export const useOptimizedCreditNotes = (
       }
 
       // Fetch credit note items
-      const { data: creditNoteItems } = await supabase
+      const { data: creditNoteItems, error: itemsError } = await supabase
         .from('credit_note_items')
         .select('id, credit_note_id, product_id, description, quantity, unit_price, tax_percentage, tax_amount, line_total')
         .in('credit_note_id', creditNotes.map((cn) => cn.id));
+
+      if (itemsError) {
+        console.warn('⚠️ Failed to fetch credit note items:', itemsError?.message);
+      }
 
       // Create maps
       const customerMap = new Map();
