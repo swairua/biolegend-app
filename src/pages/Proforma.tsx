@@ -827,6 +827,21 @@ export default function Proforma() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* RLS Diagnostic & Fix Modal */}
+      {showRLSFixer && (
+        <Dialog open={showRLSFixer} onOpenChange={setShowRLSFixer}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Row Level Security Diagnostic Tool</DialogTitle>
+              <DialogDescription>
+                Diagnose and fix RLS policy issues preventing proforma operations
+              </DialogDescription>
+            </DialogHeader>
+            <ProformaRLSFixer proformaId={rlsErrorProformaId || undefined} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
