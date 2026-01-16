@@ -806,9 +806,26 @@ export const useDeleteProforma = () => {
 
       toast.success('Proforma invoice deleted successfully!');
     },
-    onError: (error) => {
+    onError: async (error, proformaId) => {
       const errorMessage = serializeError(error);
       console.error('❌ onError callback triggered:', errorMessage);
+
+      // If it's an RLS or permission issue, run diagnostics
+      if (errorMessage.toLowerCase().includes('permission') ||
+          errorMessage.toLowerCase().includes('access') ||
+          errorMessage.toLowerCase().includes('policy') ||
+          errorMessage.toLowerCase().includes('rls') ||
+          errorMessage.toLowerCase().includes('denied')) {
+        console.log('🔍 Running RLS diagnostics...');
+        try {
+          const diagnostics = await diagnoseProformaRLS(proformaId);
+          const diagnosticsLog = formatRLSDiagnostics(diagnostics);
+          console.error('RLS Diagnostics:\n' + diagnosticsLog);
+        } catch (diagError) {
+          console.error('RLS diagnostics failed:', diagError);
+        }
+      }
+
       toast.error(`Error deleting proforma: ${errorMessage}`);
     },
   });
