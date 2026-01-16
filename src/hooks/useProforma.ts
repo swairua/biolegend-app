@@ -703,8 +703,9 @@ export const useDeleteProforma = () => {
       }
     },
     onSuccess: async () => {
-      // Refetch queries to ensure UI is updated with latest data
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+      // Invalidate both the old and optimized query keys to ensure list refreshes
+      await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
       toast.success('Proforma invoice deleted successfully!');
     },
     onError: (error) => {
