@@ -277,9 +277,12 @@ export default function Proforma() {
     } catch (error) {
       console.error('Error deleting proforma:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      // Note: If error is due to RLS, the mutation's onError will have already shown a diagnostic
-      // Only show additional error if not already handled
-      if (!message.includes('RLS')) {
+      // If error is due to RLS, show the diagnostic/fix tool
+      if (message.includes('RLS')) {
+        setRlsErrorProformaId(proformaToDelete.id);
+        setShowRLSFixer(true);
+        toast.error('RLS policy issue detected. Opening diagnostic tool...');
+      } else {
         toast.error(`Error deleting proforma: ${message}`);
       }
     }
