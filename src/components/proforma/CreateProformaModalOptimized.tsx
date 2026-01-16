@@ -262,9 +262,10 @@ export const CreateProformaModalOptimized = ({
         return; // Success - exit the function
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        const isDuplicateKeyError = isUniqueViolationError(error);
 
         // Check if this is a duplicate key error
-        if (errorMessage.includes('proforma_invoices_proforma_number_key')) {
+        if (isDuplicateKeyError) {
           if (attempt < maxRetries) {
             console.warn(`Duplicate proforma number detected, retrying... (attempt ${attempt}/${maxRetries})`);
 
@@ -281,6 +282,9 @@ export const CreateProformaModalOptimized = ({
               console.error('Failed to generate new proforma number:', genError);
               throw error; // Throw original error
             }
+          } else {
+            console.error(`Failed to create proforma after ${maxRetries} attempts due to duplicate number`);
+            throw new Error('Unable to generate a unique proforma number after multiple attempts. Please try again.');
           }
         }
 
@@ -288,6 +292,34 @@ export const CreateProformaModalOptimized = ({
         throw error;
       }
     }
+  };
+
+  // Helper function to detect unique violation errors using multiple strategies
+  const isUniqueViolationError = (error: any): boolean => {
+    if (!error) return false;
+
+    const errorString = error instanceof Error ? error.message : JSON.stringify(error);
+
+    // Strategy 1: Check for PostgreSQL SQLSTATE code (23505 = unique_violation)
+    if (error && typeof error === 'object') {
+      const code = (error as any).code;
+      if (code === '23505') return true;
+    }
+
+    // Strategy 2: Check for constraint name in error message
+    if (errorString.includes('proforma_invoices_proforma_number_key') ||
+        errorString.includes('proforma_number_key')) {
+      return true;
+    }
+
+    // Strategy 3: Check for common unique violation keywords
+    if (errorString.includes('unique constraint') ||
+        errorString.includes('duplicate') ||
+        errorString.includes('already exists')) {
+      return true;
+    }
+
+    return false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -307,18 +339,33 @@ export const CreateProformaModalOptimized = ({
     let itemsToSubmit = items;
     if (newItems.length > 0) {
       try {
-        await saveAllNewItems(companyId);
+        console.log('📦 Saving new items before creating proforma...');
+        // Use the returned mapping from saveAllNewItems instead of relying on hook state
+        const savedProducts = await saveAllNewItems(companyId);
 
-        // Update items array with actual product IDs (without setState to avoid race condition)
+        // Build a mapping from the returned savedProducts
+        const savedProductMap = new Map<string, string>();
+        savedProducts.forEach(product => {
+          savedProductMap.set(product.tempId, product.actualId);
+        });
+
+        console.log(`✅ Saved ${savedProducts.length} new products, mapping:`, savedProductMap);
+
+        // Update items array with actual product IDs using the returned mapping
         itemsToSubmit = items.map(item => {
-          const actualId = tempIdToActualIdMap.get(item.product_id);
+          const actualId = savedProductMap.get(item.product_id);
           if (actualId) {
+            console.log(`Mapped temp ID ${item.product_id} to actual ID ${actualId}`);
             return { ...item, product_id: actualId };
           }
           return item;
         });
+
+        console.log('📦 Items to submit with mapped IDs:', itemsToSubmit);
       } catch (error) {
-        toast.error('Failed to save new items. Please try again.');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to save new items:', errorMessage);
+        toast.error(`Failed to save new items: ${errorMessage}`);
         return;
       }
     }

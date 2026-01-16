@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { calculateDocumentTotals, type TaxableItem } from '@/utils/taxCalculation';
 import { parseErrorMessage } from '@/utils/errorHelpers';
-import { logProformaRLSDiagnostics } from '@/utils/rlsDiagnostics';
+import { logProformaRLSDiagnostics, diagnoseProformaRLS, formatRLSDiagnostics } from '@/utils/rlsDiagnostics';
 
 export interface ProformaItem {
   id?: string;
@@ -321,7 +321,9 @@ export const useCreateProforma = () => {
       return proformaData;
     },
     onSuccess: (data) => {
+      // Invalidate both the old and optimized query keys to ensure list refreshes
       queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
       toast.success(`Proforma invoice ${data.proforma_number} created successfully!`);
     },
     onError: (error) => {
@@ -638,6 +640,7 @@ export const useUpdateProforma = () => {
         // Invalidate cache to force fresh data
         console.log('🔄 Invalidating cache for fresh data...');
         await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+        await queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
         await queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
         console.log('🔄 Cache invalidated');
 
@@ -689,25 +692,146 @@ export const useDeleteProforma = () => {
 
   return useMutation({
     mutationFn: async (proformaId: string) => {
-      const { error } = await supabase
+      console.log('🗑️  ========================================');
+      console.log('🗑️  MUTATION: Deleting proforma invoice');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
+
+      // First verify the proforma exists
+      console.log('📋 Step 1: Verifying proforma exists...');
+      const { data: existingProforma, error: checkError } = await supabase
+        .from('proforma_invoices')
+        .select('id, proforma_number, company_id, customer_id')
+        .eq('id', proformaId)
+        .maybeSingle();
+
+      if (checkError) {
+        const errorMessage = serializeError(checkError);
+        console.error('❌ Error checking proforma:', errorMessage);
+        throw new Error(`Failed to check proforma existence: ${errorMessage}`);
+      }
+
+      if (!existingProforma) {
+        console.warn('⚠️ Proforma not found with ID:', proformaId);
+        throw new Error(`Proforma with ID ${proformaId} not found`);
+      }
+
+      console.log('✅ Found proforma:', existingProforma.proforma_number);
+
+      // Check user auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('❌ Not authenticated');
+        throw new Error('Authentication required to delete proforma');
+      }
+      console.log('✅ User authenticated:', user.id);
+
+      // Get user profile to check company access
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn('⚠️ Could not check user profile:', profileError);
+      } else if (userProfile && userProfile.company_id !== existingProforma.company_id) {
+        console.error('❌ Company mismatch - user company:', userProfile.company_id, 'proforma company:', existingProforma.company_id);
+        throw new Error('Access denied: You can only delete proformas from your company');
+      }
+
+      // Now delete the proforma
+      console.log('📋 Step 2: Deleting proforma items...');
+      const { error: deleteItemsError } = await supabase
+        .from('proforma_items')
+        .delete()
+        .eq('proforma_id', proformaId);
+
+      if (deleteItemsError) {
+        const errorMessage = serializeError(deleteItemsError);
+        console.error('⚠️ Warning deleting proforma items:', errorMessage);
+        // Don't throw - items might be empty or already gone
+      } else {
+        console.log('✅ Proforma items deleted');
+      }
+
+      // Delete the proforma invoice
+      console.log('📋 Step 3: Deleting proforma invoice...');
+      const { data: deletedData, error: deleteProformaError } = await supabase
         .from('proforma_invoices')
         .delete()
-        .eq('id', proformaId);
+        .eq('id', proformaId)
+        .select('id');
 
-      if (error) {
-        const errorMessage = serializeError(error);
-        console.error('Error deleting proforma:', errorMessage);
+      if (deleteProformaError) {
+        const errorMessage = serializeError(deleteProformaError);
+        console.error('❌ Error deleting proforma:', errorMessage);
         throw new Error(`Failed to delete proforma: ${errorMessage}`);
       }
+
+      const rowsAffected = deletedData?.length || 0;
+      console.log('✅ Delete query executed, rows affected:', rowsAffected);
+
+      if (rowsAffected === 0) {
+        console.error('❌ CRITICAL: No rows were deleted - RLS may be blocking the delete');
+        throw new Error('Delete operation failed: RLS policy may be blocking the delete. Check permissions.');
+      }
+
+      // Verify the deletion was successful
+      console.log('📋 Step 4: Verifying deletion...');
+      const { data: verifyProforma, error: verifyError } = await supabase
+        .from('proforma_invoices')
+        .select('id')
+        .eq('id', proformaId)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.warn('⚠️ Could not verify deletion:', verifyError);
+        // Don't throw - the delete likely succeeded
+      } else if (verifyProforma) {
+        console.error('❌ CRITICAL: Proforma still exists after delete!');
+        throw new Error('Delete operation failed: Proforma still exists in database');
+      } else {
+        console.log('✅ Verified: Proforma successfully deleted from database');
+      }
+
+      console.log('🎉 Delete mutation complete for ID:', proformaId);
+      return proformaId;
     },
-    onSuccess: async () => {
-      // Refetch queries to ensure UI is updated with latest data
-      await queryClient.refetchQueries({ queryKey: ['proforma_invoices'] });
+    onSuccess: async (proformaId) => {
+      console.log('✅ ========================================');
+      console.log('✅ onSuccess callback triggered');
+      console.log('=========================================');
+      console.log('Deleted proforma ID:', proformaId);
+
+      // Invalidate both the old and optimized query keys to ensure list refreshes
+      console.log('🔄 Invalidating queries...');
+      await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
+      console.log('✅ Queries invalidated');
+
       toast.success('Proforma invoice deleted successfully!');
     },
-    onError: (error) => {
+    onError: async (error, proformaId) => {
       const errorMessage = serializeError(error);
-      console.error('Error deleting proforma:', errorMessage);
+      console.error('❌ onError callback triggered:', errorMessage);
+
+      // If it's an RLS or permission issue, run diagnostics
+      if (errorMessage.toLowerCase().includes('permission') ||
+          errorMessage.toLowerCase().includes('access') ||
+          errorMessage.toLowerCase().includes('policy') ||
+          errorMessage.toLowerCase().includes('rls') ||
+          errorMessage.toLowerCase().includes('denied')) {
+        console.log('🔍 Running RLS diagnostics...');
+        try {
+          const diagnostics = await diagnoseProformaRLS(proformaId);
+          const diagnosticsLog = formatRLSDiagnostics(diagnostics);
+          console.error('RLS Diagnostics:\n' + diagnosticsLog);
+        } catch (diagError) {
+          console.error('RLS diagnostics failed:', diagError);
+        }
+      }
+
       toast.error(`Error deleting proforma: ${errorMessage}`);
     },
   });
@@ -795,6 +919,56 @@ export const useGenerateProformaNumber = () => {
 };
 
 /**
+ * Hook to accept a proforma invoice (change status to 'sent')
+ */
+export const useAcceptProforma = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (proformaId: string) => {
+      console.log('✅ ========================================');
+      console.log('✅ MUTATION: Accepting proforma invoice');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
+
+      // Update the proforma status to 'sent'
+      const { data, error } = await supabase
+        .from('proforma_invoices')
+        .update({ status: 'sent' })
+        .eq('id', proformaId)
+        .select('id, proforma_number, status')
+        .maybeSingle();
+
+      if (error) {
+        const errorMessage = serializeError(error);
+        console.error('❌ Error accepting proforma:', errorMessage);
+        throw new Error(`Failed to accept proforma: ${errorMessage}`);
+      }
+
+      if (!data) {
+        console.error('❌ Proforma not found or access denied');
+        throw new Error('Proforma not found or access denied');
+      }
+
+      console.log('✅ Proforma status updated to sent:', data.proforma_number);
+      return data;
+    },
+    onSuccess: (data) => {
+      console.log('✅ onSuccess callback triggered for accept');
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
+      toast.success(`Proforma invoice ${data.proforma_number} accepted!`);
+    },
+    onError: (error) => {
+      const errorMessage = serializeError(error);
+      console.error('❌ onError callback triggered:', errorMessage);
+      toast.error(`Error accepting proforma: ${errorMessage}`);
+    },
+  });
+};
+
+/**
  * Hook to convert proforma to invoice
  */
 export const useConvertProformaToInvoice = () => {
@@ -820,6 +994,7 @@ export const useConvertProformaToInvoice = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
       toast.success(`Proforma invoice ${data.proforma_number} converted to invoice!`);
     },

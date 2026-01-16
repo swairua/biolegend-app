@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { useOptimizedProformas } from '@/hooks/useOptimizedProformas';
 import { useCompanies, useConvertProformaToInvoice } from '@/hooks/useDatabase';
-import { useDeleteProforma } from '@/hooks/useProforma';
+import { useDeleteProforma, useAcceptProforma } from '@/hooks/useProforma';
 import type { ProformaWithItems } from '@/hooks/useProforma';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,6 +86,7 @@ export default function Proforma() {
 
   // Initialize mutations
   const deleteProforma = useDeleteProforma();
+  const acceptProforma = useAcceptProforma();
 
   // Use optimized proformas hook with server-side pagination
   const { data: proformaData, isLoading, refetch } = useOptimizedProformas(currentCompany?.id, {
@@ -246,9 +247,14 @@ export default function Proforma() {
   };
 
   const handleAcceptProforma = async (proforma: ProformaWithItems) => {
-    // TODO: Implement accept proforma mutation
-    toast.success(`Proforma ${proforma.proforma_number} marked as accepted`);
-    refetch();
+    try {
+      await acceptProforma.mutateAsync(proforma.id!);
+      await refetch();
+    } catch (error) {
+      console.error('Error accepting proforma:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error accepting proforma: ${message}`);
+    }
   };
 
   const handleDeleteClick = (proforma: ProformaWithItems) => {
@@ -261,14 +267,18 @@ export default function Proforma() {
 
     try {
       await deleteProforma.mutateAsync(proformaToDelete.id);
-      toast.success(`Proforma ${proformaToDelete.proforma_number} deleted successfully`);
+      // Note: The mutation already shows a success toast, so we just clean up the UI
       setShowDeleteConfirm(false);
       setProformaToDelete(null);
       await refetch();
     } catch (error) {
       console.error('Error deleting proforma:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Error deleting proforma: ${message}`);
+      // Note: If error is due to RLS, the mutation's onError will have already shown a diagnostic
+      // Only show additional error if not already handled
+      if (!message.includes('RLS')) {
+        toast.error(`Error deleting proforma: ${message}`);
+      }
     }
   };
 
