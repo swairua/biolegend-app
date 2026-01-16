@@ -251,7 +251,11 @@ export default function Receipts() {
       toast.success('Receipt deleted and related documents updated successfully');
       setShowDeleteConfirm(false);
       setReceiptToDelete(null);
-      refetch();
+
+      // Refresh the page after successful deletion
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error deleting receipt:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete receipt';
