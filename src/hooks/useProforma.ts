@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { calculateDocumentTotals, type TaxableItem } from '@/utils/taxCalculation';
 import { parseErrorMessage } from '@/utils/errorHelpers';
-import { logProformaRLSDiagnostics } from '@/utils/rlsDiagnostics';
+import { logProformaRLSDiagnostics, diagnoseProformaRLS, formatRLSDiagnostics } from '@/utils/rlsDiagnostics';
 
 export interface ProformaItem {
   id?: string;
