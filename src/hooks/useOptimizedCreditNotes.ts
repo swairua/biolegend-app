@@ -45,7 +45,7 @@ interface UseOptimizedCreditNotesOptions {
   page?: number;
   pageSize?: number;
   searchTerm?: string;
-  statusFilter?: 'all' | 'draft' | 'issued' | 'applied' | 'reversed';
+  statusFilter?: 'all' | 'draft' | 'sent' | 'applied' | 'cancelled';
 }
 
 export const useOptimizedCreditNotes = (
