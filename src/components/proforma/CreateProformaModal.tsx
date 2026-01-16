@@ -367,7 +367,6 @@ export const CreateProformaModal = ({
       terms_and_conditions: '',
     });
     setItems([]);
-    setSearchTerm('');
     setShowProductSearch(false);
     clearNewItems();
     onOpenChange(false);
