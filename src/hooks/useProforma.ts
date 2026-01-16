@@ -321,7 +321,9 @@ export const useCreateProforma = () => {
       return proformaData;
     },
     onSuccess: (data) => {
+      // Invalidate both the old and optimized query keys to ensure list refreshes
       queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
       toast.success(`Proforma invoice ${data.proforma_number} created successfully!`);
     },
     onError: (error) => {
