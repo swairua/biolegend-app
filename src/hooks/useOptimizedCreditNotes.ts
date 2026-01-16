@@ -133,7 +133,7 @@ export const useOptimizedCreditNotes = (
         customerIds.length > 0
           ? await supabase
               .from('customers')
-              .select('id, name, email, phone, address, city, country')
+              .select('id, name, email, phone, customer_code')
               .in('id', customerIds)
           : { data: [] };
 
