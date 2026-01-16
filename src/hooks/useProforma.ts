@@ -692,26 +692,123 @@ export const useDeleteProforma = () => {
 
   return useMutation({
     mutationFn: async (proformaId: string) => {
-      const { error } = await supabase
+      console.log('🗑️  ========================================');
+      console.log('🗑️  MUTATION: Deleting proforma invoice');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
+
+      // First verify the proforma exists
+      console.log('📋 Step 1: Verifying proforma exists...');
+      const { data: existingProforma, error: checkError } = await supabase
+        .from('proforma_invoices')
+        .select('id, proforma_number, company_id, customer_id')
+        .eq('id', proformaId)
+        .maybeSingle();
+
+      if (checkError) {
+        const errorMessage = serializeError(checkError);
+        console.error('❌ Error checking proforma:', errorMessage);
+        throw new Error(`Failed to check proforma existence: ${errorMessage}`);
+      }
+
+      if (!existingProforma) {
+        console.warn('⚠️ Proforma not found with ID:', proformaId);
+        throw new Error(`Proforma with ID ${proformaId} not found`);
+      }
+
+      console.log('✅ Found proforma:', existingProforma.proforma_number);
+
+      // Check user auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('❌ Not authenticated');
+        throw new Error('Authentication required to delete proforma');
+      }
+      console.log('✅ User authenticated:', user.id);
+
+      // Get user profile to check company access
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn('⚠️ Could not check user profile:', profileError);
+      } else if (userProfile && userProfile.company_id !== existingProforma.company_id) {
+        console.error('❌ Company mismatch - user company:', userProfile.company_id, 'proforma company:', existingProforma.company_id);
+        throw new Error('Access denied: You can only delete proformas from your company');
+      }
+
+      // Now delete the proforma
+      console.log('📋 Step 2: Deleting proforma items...');
+      const { error: deleteItemsError } = await supabase
+        .from('proforma_items')
+        .delete()
+        .eq('proforma_id', proformaId);
+
+      if (deleteItemsError) {
+        const errorMessage = serializeError(deleteItemsError);
+        console.error('⚠️ Warning deleting proforma items:', errorMessage);
+        // Don't throw - items might be empty or already gone
+      } else {
+        console.log('✅ Proforma items deleted');
+      }
+
+      // Delete the proforma invoice
+      console.log('📋 Step 3: Deleting proforma invoice...');
+      const { error: deleteProformaError, count } = await supabase
         .from('proforma_invoices')
         .delete()
-        .eq('id', proformaId);
+        .eq('id', proformaId)
+        .select('id', { count: 'exact' });
 
-      if (error) {
-        const errorMessage = serializeError(error);
-        console.error('Error deleting proforma:', errorMessage);
+      if (deleteProformaError) {
+        const errorMessage = serializeError(deleteProformaError);
+        console.error('❌ Error deleting proforma:', errorMessage);
         throw new Error(`Failed to delete proforma: ${errorMessage}`);
       }
+
+      console.log('✅ Delete query executed, rows affected:', count);
+
+      // Verify the deletion was successful
+      console.log('📋 Step 4: Verifying deletion...');
+      const { data: verifyProforma, error: verifyError } = await supabase
+        .from('proforma_invoices')
+        .select('id')
+        .eq('id', proformaId)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.warn('⚠️ Could not verify deletion:', verifyError);
+        // Don't throw - the delete likely succeeded
+      } else if (verifyProforma) {
+        console.error('❌ CRITICAL: Proforma still exists after delete!');
+        throw new Error('Delete operation failed: Proforma still exists in database');
+      } else {
+        console.log('✅ Verified: Proforma successfully deleted from database');
+      }
+
+      console.log('🎉 Delete mutation complete for ID:', proformaId);
+      return proformaId;
     },
-    onSuccess: async () => {
+    onSuccess: async (proformaId) => {
+      console.log('✅ ========================================');
+      console.log('✅ onSuccess callback triggered');
+      console.log('=========================================');
+      console.log('Deleted proforma ID:', proformaId);
+
       // Invalidate both the old and optimized query keys to ensure list refreshes
+      console.log('🔄 Invalidating queries...');
       await queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
       await queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
+      console.log('✅ Queries invalidated');
+
       toast.success('Proforma invoice deleted successfully!');
     },
     onError: (error) => {
       const errorMessage = serializeError(error);
-      console.error('Error deleting proforma:', errorMessage);
+      console.error('❌ onError callback triggered:', errorMessage);
       toast.error(`Error deleting proforma: ${errorMessage}`);
     },
   });
