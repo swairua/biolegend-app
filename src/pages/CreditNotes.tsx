@@ -173,6 +173,91 @@ export default function CreditNotes() {
     }
   };
 
+  const handleDeleteCreditNote = (creditNote: CreditNote) => {
+    setCreditNoteToDelete(creditNote);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!creditNoteToDelete?.id) return;
+
+    try {
+      // Delete credit note allocations first (reverse applied amounts)
+      const { data: allocations, error: allocError } = await supabase
+        .from('credit_note_allocations')
+        .select('invoice_id, allocated_amount')
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // If there are allocations, update the invoices to remove the applied amount
+      if (allocations && allocations.length > 0) {
+        for (const allocation of allocations) {
+          // Update the invoice to decrement paid_amount
+          const { error: updateError } = await supabase
+            .from('invoices')
+            .update({
+              paid_amount: supabase.rpc('decrement_amount', {
+                row_id: allocation.invoice_id,
+                amount: allocation.allocated_amount
+              })
+            })
+            .eq('id', allocation.invoice_id);
+
+          if (updateError && !updateError.message.includes('relation') && !updateError.message.includes('does not exist')) {
+            // Log but don't fail - try to continue
+            console.warn('Warning updating invoice:', updateError);
+          }
+        }
+      }
+
+      // Delete credit note allocations
+      const { error: deleteAllocError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (deleteAllocError && !deleteAllocError.message.includes('relation') && !deleteAllocError.message.includes('does not exist')) {
+        throw deleteAllocError;
+      }
+
+      // Delete credit note items
+      const { error: deleteItemsError } = await supabase
+        .from('credit_note_items')
+        .delete()
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (deleteItemsError && !deleteItemsError.message.includes('relation') && !deleteItemsError.message.includes('does not exist')) {
+        throw deleteItemsError;
+      }
+
+      // Finally delete the credit note
+      const { error: deleteCNError } = await supabase
+        .from('credit_notes')
+        .delete()
+        .eq('id', creditNoteToDelete.id);
+
+      if (deleteCNError) {
+        throw deleteCNError;
+      }
+
+      toast.success('Credit note deleted and records adjusted successfully');
+      setShowDeleteConfirm(false);
+      setCreditNoteToDelete(null);
+
+      // Refresh the page after successful deletion
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error deleting credit note:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete credit note';
+      toast.error(`Error: ${errorMsg}`);
+    }
+  };
+
   // Check if we have the credit_notes table available
   const hasCreditNotesTable = !error || !(
     error.message.includes('relation "credit_notes" does not exist') ||
