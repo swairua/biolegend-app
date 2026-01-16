@@ -18,7 +18,8 @@ import {
   Package,
   Download,
   Printer,
-  Send
+  Send,
+  Trash2
 } from 'lucide-react';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
@@ -29,9 +30,10 @@ interface ViewCreditNoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   creditNote: CreditNote | null;
+  onDelete?: (creditNote: CreditNote) => void;
 }
 
-export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCreditNoteModalProps) {
+export function ViewCreditNoteModal({ open, onOpenChange, creditNote, onDelete }: ViewCreditNoteModalProps) {
   const downloadPDF = useCreditNotePDFDownload();
 
   const { currency, rate, format } = useCurrency();
