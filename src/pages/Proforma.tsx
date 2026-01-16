@@ -76,6 +76,8 @@ export default function Proforma() {
   const [proformaToDelete, setProformaToDelete] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRepairPanel, setShowRepairPanel] = useState(false);
+  const [showRLSFixer, setShowRLSFixer] = useState(false);
+  const [rlsErrorProformaId, setRlsErrorProformaId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
