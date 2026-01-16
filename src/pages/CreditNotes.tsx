@@ -51,6 +51,7 @@ import {
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { supabase } from '@/integrations/supabase/client';
 import { convertAmount } from '@/utils/currency';
 import { useOptimizedCreditNotes } from '@/hooks/useOptimizedCreditNotes';
 import { toast } from 'sonner';
