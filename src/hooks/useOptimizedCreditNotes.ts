@@ -69,8 +69,6 @@ export const useOptimizedCreditNotes = (
           customer_id,
           credit_note_number,
           credit_note_date,
-          reference_document_type,
-          reference_document_id,
           subtotal,
           tax_amount,
           total_amount,
