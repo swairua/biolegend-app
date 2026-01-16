@@ -75,7 +75,6 @@ export const CreateProformaModal = ({
 
   const [items, setItems] = useState<ProformaItem[]>([]);
   const { currency, rate } = useCurrency();
-  const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [proformaNumber, setProformaNumber] = useState('');
   const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
