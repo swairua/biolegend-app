@@ -247,9 +247,14 @@ export default function Proforma() {
   };
 
   const handleAcceptProforma = async (proforma: ProformaWithItems) => {
-    // TODO: Implement accept proforma mutation
-    toast.success(`Proforma ${proforma.proforma_number} marked as accepted`);
-    refetch();
+    try {
+      await acceptProforma.mutateAsync(proforma.id!);
+      await refetch();
+    } catch (error) {
+      console.error('Error accepting proforma:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error accepting proforma: ${message}`);
+    }
   };
 
   const handleDeleteClick = (proforma: ProformaWithItems) => {
