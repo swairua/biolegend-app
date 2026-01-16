@@ -270,6 +270,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     }
 
     // Save any new items before submitting the quotation
+    let itemsToSubmit = items;
     if (newItems.length > 0) {
       if (!currentCompany?.id) {
         toast.error('No company selected. Cannot save new items.');
@@ -279,14 +280,14 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       try {
         await saveAllNewItems(currentCompany.id);
 
-        // Update items array with actual product IDs
-        setItems(prevItems => prevItems.map(item => {
+        // Update items array with actual product IDs (without setState to avoid race condition)
+        itemsToSubmit = items.map(item => {
           const actualId = tempIdToActualIdMap.get(item.product_id);
           if (actualId) {
             return { ...item, product_id: actualId };
           }
           return item;
-        }));
+        });
       } catch (error) {
         toast.error('Failed to save new items. Please try again.');
         return;
@@ -297,7 +298,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     try {
       console.log('Starting quotation creation process...');
       console.log('Selected customer:', selectedCustomerId);
-      console.log('Items count:', items.length);
+      console.log('Items count:', itemsToSubmit.length);
       console.log('Quotation date:', quotationDate);
       console.log('Valid until:', validUntil);
 
@@ -341,11 +342,17 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         }
       }
 
-      // Create quotation with items
+      // Create quotation with items - calculate totals using items to submit
       console.log('Preparing quotation data...');
-      const subtotalFinal = currency === 'USD' ? convertAmount(subtotal, 'KES', 'USD', effectiveRate) : subtotal;
-      const taxAmountFinal = currency === 'USD' ? convertAmount(taxAmount, 'KES', 'USD', effectiveRate) : taxAmount;
-      const totalAmountFinal = currency === 'USD' ? convertAmount(totalAmount, 'KES', 'USD', effectiveRate) : totalAmount;
+      const quotationSubtotal = itemsToSubmit.reduce((sum, item) => {
+        return sum + (item.quantity * item.unit_price);
+      }, 0);
+      const quotationTaxAmount = itemsToSubmit.reduce((sum, item) => sum + calculateTaxAmount(item), 0);
+      const quotationTotalAmount = itemsToSubmit.reduce((sum, item) => sum + item.line_total, 0);
+
+      const subtotalFinal = currency === 'USD' ? convertAmount(quotationSubtotal, 'KES', 'USD', effectiveRate) : quotationSubtotal;
+      const taxAmountFinal = currency === 'USD' ? convertAmount(quotationTaxAmount, 'KES', 'USD', effectiveRate) : quotationTaxAmount;
+      const totalAmountFinal = currency === 'USD' ? convertAmount(quotationTotalAmount, 'KES', 'USD', effectiveRate) : quotationTotalAmount;
 
       const quotationData = {
         company_id: currentCompany.id,
@@ -367,7 +374,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       console.log('Quotation data prepared:', quotationData);
 
       console.log('Preparing quotation items...');
-      const quotationItems = items.map(item => {
+      const quotationItems = itemsToSubmit.map(item => {
         // Validate item data
         if (!item.description || item.description.trim() === '') {
           throw new Error(`Item "${item.product_name}" is missing a description`);
