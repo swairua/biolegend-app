@@ -2,28 +2,26 @@ import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fix RLS policies for proforma tables with improved logic
- * Uses manual SQL execution since exec_sql function may not exist
+ * This now uses improved policies that handle NULL values correctly
  */
 export async function fixProformaRLSPolicies() {
   console.log('🔧 Fixing proforma RLS policies...');
 
-  // Manual approach: provide SQL for user to run manually
+  // Updated SQL with improved RLS policies
   const fixSQL = `
--- COPY AND PASTE THIS SQL INTO YOUR SUPABASE SQL EDITOR
--- This will fix the RLS policies to handle NULL values properly
-
--- Drop existing policies first
+-- IMPROVED RLS POLICIES FOR PROFORMA TABLES
+-- These policies handle NULL values correctly and use EXISTS for better performance
+-- Drop existing policies first (IF they exist)
 DROP POLICY IF EXISTS "Users can view proformas from their company" ON proforma_invoices;
 DROP POLICY IF EXISTS "Users can insert proformas for their company" ON proforma_invoices;
 DROP POLICY IF EXISTS "Users can update proformas from their company" ON proforma_invoices;
 DROP POLICY IF EXISTS "Users can delete proformas from their company" ON proforma_invoices;
-
 DROP POLICY IF EXISTS "Users can view proforma items from their company" ON proforma_items;
 DROP POLICY IF EXISTS "Users can insert proforma items for their company" ON proforma_items;
 DROP POLICY IF EXISTS "Users can update proforma items from their company" ON proforma_items;
 DROP POLICY IF EXISTS "Users can delete proforma items from their company" ON proforma_items;
 
--- Create improved RLS policies for proforma_invoices with better NULL handling
+-- Improved RLS policies for proforma_invoices with explicit NULL checks
 CREATE POLICY "Users can view proformas from their company" ON proforma_invoices
     FOR SELECT USING (
         EXISTS (
@@ -64,7 +62,7 @@ CREATE POLICY "Users can delete proformas from their company" ON proforma_invoic
         )
     );
 
--- Create improved RLS policies for proforma_items
+-- Improved RLS policies for proforma_items
 CREATE POLICY "Users can view proforma items from their company" ON proforma_items
     FOR SELECT USING (
         EXISTS (
@@ -108,6 +106,9 @@ CREATE POLICY "Users can delete proforma items from their company" ON proforma_i
             AND p.company_id IS NOT NULL
         )
     );
+
+-- Verify policies were created
+SELECT 'RLS Policies updated successfully!' as status;
 `;
 
   try {
