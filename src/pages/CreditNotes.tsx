@@ -95,6 +95,9 @@ export default function CreditNotes() {
     affectsInventory: boolean;
   } | null>(null);
 
+  const [creditNoteToDelete, setCreditNoteToDelete] = useState<CreditNote | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFromFilter, setDateFromFilter] = useState('');
