@@ -261,14 +261,18 @@ export default function Proforma() {
 
     try {
       await deleteProforma.mutateAsync(proformaToDelete.id);
-      toast.success(`Proforma ${proformaToDelete.proforma_number} deleted successfully`);
+      // Note: The mutation already shows a success toast, so we just clean up the UI
       setShowDeleteConfirm(false);
       setProformaToDelete(null);
       await refetch();
     } catch (error) {
       console.error('Error deleting proforma:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Error deleting proforma: ${message}`);
+      // Note: If error is due to RLS, the mutation's onError will have already shown a diagnostic
+      // Only show additional error if not already handled
+      if (!message.includes('RLS')) {
+        toast.error(`Error deleting proforma: ${message}`);
+      }
     }
   };
 
