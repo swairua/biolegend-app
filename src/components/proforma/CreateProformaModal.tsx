@@ -124,13 +124,9 @@ export const CreateProformaModal = ({
     }
   }, [open, generateDocumentNumber, companyId]);
 
-  const filteredProducts = products?.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   // Convert products to AutocompleteItem format
-  const autocompleteItems: AutocompleteItem[] = (filteredProducts || []).map(product => ({
+  // ItemAutocomplete handles its own filtering, so pass all products
+  const autocompleteItems: AutocompleteItem[] = (products || []).map(product => ({
     id: product.id,
     name: product.name,
     product_code: product.product_code,
