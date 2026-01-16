@@ -265,8 +265,21 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote, onDelete }
                   Send to Customer
                 </Button>
               )}
+              {creditNote.status === 'draft' && onDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    onDelete(creditNote);
+                    onOpenChange(false);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
             </div>
-            
+
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
