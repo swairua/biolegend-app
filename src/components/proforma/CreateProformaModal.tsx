@@ -268,18 +268,19 @@ export const CreateProformaModal = ({
     }
 
     // Save any new items before submitting the proforma
+    let itemsToSubmit = items;
     if (newItems.length > 0) {
       try {
         await saveAllNewItems(companyId);
 
-        // Update items array with actual product IDs
-        setItems(prevItems => prevItems.map(item => {
+        // Update items array with actual product IDs (without setState to avoid race condition)
+        itemsToSubmit = items.map(item => {
           const actualId = tempIdToActualIdMap.get(item.product_id);
           if (actualId) {
             return { ...item, product_id: actualId };
           }
           return item;
-        }));
+        });
       } catch (error) {
         toast.error('Failed to save new items. Please try again.');
         return;
@@ -287,7 +288,16 @@ export const CreateProformaModal = ({
     }
 
     try {
-      const totals = calculateTotals();
+      // Calculate totals using the items that will be submitted
+      const taxableItems: TaxableItem[] = itemsToSubmit.map(item => ({
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_percentage: item.tax_percentage,
+        tax_inclusive: item.tax_inclusive,
+        discount_percentage: item.discount_percentage,
+        discount_amount: item.discount_amount,
+      }));
+      const totals = calculateDocumentTotals(taxableItems);
 
       // Create proforma invoice using the correct table
       const proformaData = {
@@ -310,7 +320,7 @@ export const CreateProformaModal = ({
       // Create proforma in database
       await createProforma.mutateAsync({
         proforma: proformaData,
-        items: items
+        items: itemsToSubmit
       });
 
       toast.success('Proforma invoice created successfully!');
