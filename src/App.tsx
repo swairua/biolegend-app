@@ -6,6 +6,7 @@ import { enableResizeObserverErrorSuppression } from "@/utils/resizeObserverErro
 import { useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { EnhancedLogin } from "@/components/auth/EnhancedLogin";
 import Index from "./pages/Index";
 import Quotations from "./pages/Quotations";
 import Invoices from "./pages/Invoices";
@@ -47,14 +48,17 @@ const App = () => {
       <Sonner />
       <Layout>
         <Routes>
+          {/* Public Login Route */}
+          <Route path="/login" element={<EnhancedLogin />} />
+
           {/* Dashboard */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Index />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Sales & Customer Management */}

@@ -18,7 +18,8 @@ import {
   Package,
   Download,
   Printer,
-  Send
+  Send,
+  Trash2
 } from 'lucide-react';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
@@ -29,9 +30,10 @@ interface ViewCreditNoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   creditNote: CreditNote | null;
+  onDelete?: (creditNote: CreditNote) => void;
 }
 
-export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCreditNoteModalProps) {
+export function ViewCreditNoteModal({ open, onOpenChange, creditNote, onDelete }: ViewCreditNoteModalProps) {
   const downloadPDF = useCreditNotePDFDownload();
 
   const { currency, rate, format } = useCurrency();
@@ -263,8 +265,21 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCred
                   Send to Customer
                 </Button>
               )}
+              {creditNote.status === 'draft' && onDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    onDelete(creditNote);
+                    onOpenChange(false);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
             </div>
-            
+
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>

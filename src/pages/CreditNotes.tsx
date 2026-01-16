@@ -51,6 +51,7 @@ import {
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { supabase } from '@/integrations/supabase/client';
 import { convertAmount } from '@/utils/currency';
 import { useOptimizedCreditNotes } from '@/hooks/useOptimizedCreditNotes';
 import { toast } from 'sonner';
@@ -93,6 +94,9 @@ export default function CreditNotes() {
     hasApplied: boolean;
     affectsInventory: boolean;
   } | null>(null);
+
+  const [creditNoteToDelete, setCreditNoteToDelete] = useState<CreditNote | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -166,6 +170,91 @@ export default function CreditNotes() {
       refetch();
     } catch (e) {
       // handled in hook toast
+    }
+  };
+
+  const handleDeleteCreditNote = (creditNote: CreditNote) => {
+    setCreditNoteToDelete(creditNote);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!creditNoteToDelete?.id) return;
+
+    try {
+      // Get credit note allocations to reverse amounts
+      const { data: allocations, error: allocError } = await supabase
+        .from('credit_note_allocations')
+        .select('invoice_id, allocated_amount')
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // If there are allocations, update the invoices to remove the applied amount
+      if (allocations && allocations.length > 0) {
+        for (const allocation of allocations) {
+          // Get current paid_amount
+          const { data: invoice, error: fetchError } = await supabase
+            .from('invoices')
+            .select('paid_amount')
+            .eq('id', allocation.invoice_id)
+            .single();
+
+          if (!fetchError && invoice) {
+            // Decrement paid_amount by the allocated amount
+            const newPaidAmount = Math.max(0, (invoice.paid_amount || 0) - allocation.allocated_amount);
+            await supabase
+              .from('invoices')
+              .update({ paid_amount: newPaidAmount })
+              .eq('id', allocation.invoice_id);
+          }
+        }
+      }
+
+      // Delete credit note allocations
+      const { error: deleteAllocError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (deleteAllocError && !deleteAllocError.message.includes('relation') && !deleteAllocError.message.includes('does not exist')) {
+        throw deleteAllocError;
+      }
+
+      // Delete credit note items
+      const { error: deleteItemsError } = await supabase
+        .from('credit_note_items')
+        .delete()
+        .eq('credit_note_id', creditNoteToDelete.id);
+
+      if (deleteItemsError && !deleteItemsError.message.includes('relation') && !deleteItemsError.message.includes('does not exist')) {
+        throw deleteItemsError;
+      }
+
+      // Finally delete the credit note
+      const { error: deleteCNError } = await supabase
+        .from('credit_notes')
+        .delete()
+        .eq('id', creditNoteToDelete.id);
+
+      if (deleteCNError) {
+        throw deleteCNError;
+      }
+
+      toast.success('Credit note deleted and records adjusted successfully');
+      setShowDeleteConfirm(false);
+      setCreditNoteToDelete(null);
+
+      // Refresh the page after successful deletion
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error deleting credit note:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete credit note';
+      toast.error(`Error: ${errorMsg}`);
     }
   };
 
@@ -630,6 +719,7 @@ export default function CreditNotes() {
         open={showViewModal}
         onOpenChange={setShowViewModal}
         creditNote={selectedCreditNote}
+        onDelete={handleDeleteCreditNote}
       />
 
       {/* Edit Credit Note Modal */}
@@ -696,6 +786,40 @@ export default function CreditNotes() {
         actionLabel="Reverse"
         loadingLabel="Reversing..."
         isLoading={reverseCreditNote.isPending}
+      />
+
+      {/* Delete Credit Note Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Credit Note?"
+        description={
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="font-semibold text-foreground">
+                {creditNoteToDelete?.credit_note_number}
+              </p>
+              <div className="mt-2 space-y-1 text-xs">
+                <p>Status: <span className="font-medium">{creditNoteToDelete?.status.toUpperCase()}</span></p>
+                <p>Amount: <span className="font-medium">{formatCurrency(creditNoteToDelete?.total_amount || 0)}</span></p>
+              </div>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-xs">Deleting this credit note will:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs mt-2">
+                <li>Remove the credit note from the system</li>
+                {(creditNoteToDelete?.applied_amount || 0) > 0 && (
+                  <li>Reverse applied amounts from related invoices</li>
+                )}
+              </ul>
+            </div>
+            <p className="text-xs font-medium text-destructive">This action cannot be undone.</p>
+          </div>
+        }
+        actionLabel="Delete"
+        loadingLabel="Deleting..."
+        isDestructive={true}
       />
     </div>
   );

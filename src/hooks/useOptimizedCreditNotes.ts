@@ -5,20 +5,20 @@ export interface OptimizedCreditNote {
   id: string;
   company_id: string;
   customer_id: string;
+  invoice_id?: string;
   credit_note_number: string;
   credit_note_date: string;
-  reference_document_type?: string;
-  reference_document_id?: string;
   subtotal?: number;
   tax_amount?: number;
   total_amount?: number;
   applied_amount?: number;
-  remaining_amount?: number;
-  status: 'draft' | 'issued' | 'applied' | 'reversed';
+  balance?: number;
+  affects_inventory?: boolean;
+  status: 'draft' | 'sent' | 'applied' | 'cancelled';
   reason?: string;
   notes?: string;
-  currency_code?: 'KES' | 'USD';
-  exchange_rate?: number;
+  terms_and_conditions?: string;
+  created_by?: string;
   created_at?: string;
   updated_at?: string;
   customers?: {
@@ -26,9 +26,7 @@ export interface OptimizedCreditNote {
     name: string;
     email?: string;
     phone?: string;
-    address?: string;
-    city?: string;
-    country?: string;
+    customer_code?: string;
   };
   credit_note_items?: Array<{
     id: string;
@@ -47,7 +45,7 @@ interface UseOptimizedCreditNotesOptions {
   page?: number;
   pageSize?: number;
   searchTerm?: string;
-  statusFilter?: 'all' | 'draft' | 'issued' | 'applied' | 'reversed';
+  statusFilter?: 'all' | 'draft' | 'sent' | 'applied' | 'cancelled';
 }
 
 export const useOptimizedCreditNotes = (
@@ -69,20 +67,20 @@ export const useOptimizedCreditNotes = (
           id,
           company_id,
           customer_id,
+          invoice_id,
           credit_note_number,
           credit_note_date,
-          reference_document_type,
-          reference_document_id,
           subtotal,
           tax_amount,
           total_amount,
           applied_amount,
-          remaining_amount,
+          balance,
+          affects_inventory,
           status,
           reason,
           notes,
-          currency_code,
-          exchange_rate,
+          terms_and_conditions,
+          created_by,
           created_at,
           updated_at
         `,
@@ -109,8 +107,8 @@ export const useOptimizedCreditNotes = (
       const { data: creditNotes, error, count } = await query;
 
       if (error) {
-        console.error('❌ Credit notes query failed:', error);
-        throw error;
+        console.error('❌ Credit notes query failed:', error?.message || JSON.stringify(error));
+        throw new Error(error?.message || 'Failed to fetch credit notes');
       }
 
       if (!creditNotes || creditNotes.length === 0) {
@@ -131,19 +129,27 @@ export const useOptimizedCreditNotes = (
         )
       ];
 
-      const { data: customers } =
+      const { data: customers, error: customerError } =
         customerIds.length > 0
           ? await supabase
               .from('customers')
-              .select('id, name, email, phone, address, city, country')
+              .select('id, name, email, phone')
               .in('id', customerIds)
           : { data: [] };
 
+      if (customerError) {
+        console.warn('⚠️ Failed to fetch customers:', customerError?.message);
+      }
+
       // Fetch credit note items
-      const { data: creditNoteItems } = await supabase
+      const { data: creditNoteItems, error: itemsError } = await supabase
         .from('credit_note_items')
         .select('id, credit_note_id, product_id, description, quantity, unit_price, tax_percentage, tax_amount, line_total')
         .in('credit_note_id', creditNotes.map((cn) => cn.id));
+
+      if (itemsError) {
+        console.warn('⚠️ Failed to fetch credit note items:', itemsError?.message);
+      }
 
       // Create maps
       const customerMap = new Map();
