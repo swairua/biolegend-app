@@ -7,8 +7,6 @@ export interface OptimizedCreditNote {
   customer_id: string;
   credit_note_number: string;
   credit_note_date: string;
-  reference_document_type?: string;
-  reference_document_id?: string;
   subtotal?: number;
   tax_amount?: number;
   total_amount?: number;
