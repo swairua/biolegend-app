@@ -86,6 +86,7 @@ export default function Proforma() {
 
   // Initialize mutations
   const deleteProforma = useDeleteProforma();
+  const acceptProforma = useAcceptProforma();
 
   // Use optimized proformas hook with server-side pagination
   const { data: proformaData, isLoading, refetch } = useOptimizedProformas(currentCompany?.id, {
