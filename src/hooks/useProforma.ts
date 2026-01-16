@@ -919,6 +919,56 @@ export const useGenerateProformaNumber = () => {
 };
 
 /**
+ * Hook to accept a proforma invoice (change status to 'sent')
+ */
+export const useAcceptProforma = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (proformaId: string) => {
+      console.log('✅ ========================================');
+      console.log('✅ MUTATION: Accepting proforma invoice');
+      console.log('=========================================');
+      console.log('Proforma ID:', proformaId);
+
+      // Update the proforma status to 'sent'
+      const { data, error } = await supabase
+        .from('proforma_invoices')
+        .update({ status: 'sent' })
+        .eq('id', proformaId)
+        .select('id, proforma_number, status')
+        .maybeSingle();
+
+      if (error) {
+        const errorMessage = serializeError(error);
+        console.error('❌ Error accepting proforma:', errorMessage);
+        throw new Error(`Failed to accept proforma: ${errorMessage}`);
+      }
+
+      if (!data) {
+        console.error('❌ Proforma not found or access denied');
+        throw new Error('Proforma not found or access denied');
+      }
+
+      console.log('✅ Proforma status updated to sent:', data.proforma_number);
+      return data;
+    },
+    onSuccess: (data) => {
+      console.log('✅ onSuccess callback triggered for accept');
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoices-optimized'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['proforma_invoice', data.id] });
+      toast.success(`Proforma invoice ${data.proforma_number} accepted!`);
+    },
+    onError: (error) => {
+      const errorMessage = serializeError(error);
+      console.error('❌ onError callback triggered:', errorMessage);
+      toast.error(`Error accepting proforma: ${errorMessage}`);
+    },
+  });
+};
+
+/**
  * Hook to convert proforma to invoice
  */
 export const useConvertProformaToInvoice = () => {
