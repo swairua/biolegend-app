@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { useOptimizedProformas } from '@/hooks/useOptimizedProformas';
 import { useCompanies, useConvertProformaToInvoice } from '@/hooks/useDatabase';
-import { useDeleteProforma } from '@/hooks/useProforma';
+import { useDeleteProforma, useAcceptProforma } from '@/hooks/useProforma';
 import type { ProformaWithItems } from '@/hooks/useProforma';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
