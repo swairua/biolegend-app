@@ -18,6 +18,7 @@ export function ProtectedRoute({
   requireAuth = true,
 }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
 
   // Detect if a Supabase auth token exists in localStorage (likely already signed in)
   const hasSupabaseToken = useMemo(() => {
