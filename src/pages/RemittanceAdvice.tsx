@@ -28,11 +28,13 @@ import {
   Edit,
   Calendar,
   CreditCard,
-  Building2
+  Building2,
+  Trash2
 } from 'lucide-react';
 import { downloadRemittancePDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
-import { useRemittanceAdvice, useCompanies } from '@/hooks/useDatabase';
+import { useRemittanceAdvice, useCompanies, useDeleteRemittanceAdvice } from '@/hooks/useDatabase';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { CreateRemittanceModal } from '@/components/remittance/CreateRemittanceModalFixed';
 import { ViewRemittanceModal } from '@/components/remittance/ViewRemittanceModal';
 import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal';
@@ -50,10 +52,17 @@ const RemittanceAdvice = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRemittance, setSelectedRemittance] = useState<any>(null);
+  const [selectedRemittances, setSelectedRemittances] = useState<Set<string>>(new Set());
+  const [remittanceToDelete, setRemittanceToDelete] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [remittancesToBulkDelete, setRemittancesToBulkDelete] = useState<any[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch live remittance advice data and company details
-  const { data: remittances = [], isLoading, error } = useRemittanceAdvice();
+  const { data: remittances = [], isLoading, error, refetch } = useRemittanceAdvice();
   const { data: companies = [] } = useCompanies();
+  const deleteRemittance = useDeleteRemittanceAdvice();
 
   // Get the current company (assuming first company for now)
   const currentCompany = companies[0];
@@ -107,6 +116,100 @@ const RemittanceAdvice = () => {
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast.error('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleToggleRemittanceSelection = (remittanceId: string) => {
+    const newSelected = new Set(selectedRemittances);
+    if (newSelected.has(remittanceId)) {
+      newSelected.delete(remittanceId);
+    } else {
+      newSelected.add(remittanceId);
+    }
+    setSelectedRemittances(newSelected);
+  };
+
+  const handleSelectAllRemittances = () => {
+    if (selectedRemittances.size === filteredRemittances.length) {
+      setSelectedRemittances(new Set());
+    } else {
+      setSelectedRemittances(new Set(filteredRemittances.map(r => r.id)));
+    }
+  };
+
+  const handleDeleteRemittance = (remittance: any) => {
+    setRemittanceToDelete(remittance);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!remittanceToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteRemittance.mutateAsync(remittanceToDelete.id);
+      toast.success('Remittance advice deleted successfully');
+      setShowDeleteConfirm(false);
+      setRemittanceToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting remittance advice:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete remittance advice';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const itemsToDelete = filteredRemittances.filter(r => selectedRemittances.has(r.id));
+    if (itemsToDelete.length === 0) {
+      toast.error('No remittance advice selected');
+      return;
+    }
+    setRemittancesToBulkDelete(itemsToDelete);
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const deleteResults = await Promise.allSettled(
+        remittancesToBulkDelete.map(r => deleteRemittance.mutateAsync(r.id))
+      );
+
+      const failedItems: string[] = [];
+      const successfulCount = deleteResults.filter((result, index) => {
+        if (result.status === 'fulfilled') {
+          return true;
+        } else {
+          failedItems.push(remittancesToBulkDelete[index].advice_number);
+          console.error(`Failed to delete remittance "${remittancesToBulkDelete[index].advice_number}":`, result.reason);
+          return false;
+        }
+      }).length;
+
+      if (failedItems.length > 0) {
+        const failureList = failedItems.slice(0, 3).join(', ');
+        const additionalCount = failedItems.length > 3 ? ` and ${failedItems.length - 3} more` : '';
+
+        if (successfulCount > 0) {
+          toast.success(`Deleted ${successfulCount} remittance advice successfully`);
+        }
+        toast.error(`Failed to delete: ${failureList}${additionalCount}`);
+      } else {
+        setShowBulkDeleteConfirm(false);
+        setRemittancesToBulkDelete([]);
+        setSelectedRemittances(new Set());
+        toast.success(`${successfulCount} remittance advice deleted successfully!`);
+        refetch();
+      }
+    } catch (error) {
+      console.error('Error bulk deleting remittance advice:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete remittance advice';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -213,6 +316,35 @@ const RemittanceAdvice = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedRemittances.size > 0 && (
+        <Card className="shadow-card bg-primary-light/20 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">
+                {selectedRemittances.size} remittance{selectedRemittances.size !== 1 ? 's' : ''} selected
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedRemittances(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Remittance Advice List */}
       <Card className="shadow-card">
         <CardHeader>
@@ -225,6 +357,15 @@ const RemittanceAdvice = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedRemittances.size === filteredRemittances.length && filteredRemittances.length > 0}
+                    onChange={handleSelectAllRemittances}
+                    className="rounded border-gray-300"
+                    title="Select all remittances"
+                  />
+                </TableHead>
                 <TableHead>Advice Number</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Date</TableHead>
@@ -237,6 +378,14 @@ const RemittanceAdvice = () => {
             <TableBody>
               {filteredRemittances.map((remittance) => (
                 <TableRow key={remittance.id} className="hover:bg-muted/50 transition-smooth">
+                  <TableCell className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedRemittances.has(remittance.id)}
+                      onChange={() => handleToggleRemittanceSelection(remittance.id)}
+                      className="rounded border-gray-300"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-primary" />

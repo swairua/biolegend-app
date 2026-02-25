@@ -1244,6 +1244,27 @@ export const useCreatePayment = () => {
   });
 };
 
+export const useDeletePayment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      return paymentId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
 // Remittance Advice hooks
 export const useRemittanceAdvice = (companyId?: string) => {
   return useQuery({
@@ -1395,6 +1416,35 @@ export const useUpdateRemittanceAdviceItems = () => {
         return data;
       }
       return [];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['remittance_advice'] });
+    },
+  });
+};
+
+export const useDeleteRemittanceAdvice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (remittanceId: string) => {
+      // Delete items first (they have foreign key references)
+      const { error: itemsError } = await supabase
+        .from('remittance_advice_items')
+        .delete()
+        .eq('remittance_advice_id', remittanceId);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the remittance advice
+      const { error } = await supabase
+        .from('remittance_advice')
+        .delete()
+        .eq('id', remittanceId);
+
+      if (error) throw error;
+
+      return remittanceId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['remittance_advice'] });
