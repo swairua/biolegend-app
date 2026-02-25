@@ -78,6 +78,9 @@ export default function Proforma() {
   const [showRepairPanel, setShowRepairPanel] = useState(false);
   const [showRLSFixer, setShowRLSFixer] = useState(false);
   const [rlsErrorProformaId, setRlsErrorProformaId] = useState<string | null>(null);
+  const [selectedProformas, setSelectedProformas] = useState<Set<string>>(new Set());
+  const [proformasToBulkDelete, setProformasToBulkDelete] = useState<ProformaWithItems[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -284,6 +287,58 @@ export default function Proforma() {
         toast.error('RLS policy issue detected. Opening diagnostic tool...');
       } else {
         toast.error(`Error deleting proforma: ${message}`);
+      }
+    }
+  };
+
+  const handleToggleProformaSelection = (proformaId: string) => {
+    const newSelected = new Set(selectedProformas);
+    if (newSelected.has(proformaId)) {
+      newSelected.delete(proformaId);
+    } else {
+      newSelected.add(proformaId);
+    }
+    setSelectedProformas(newSelected);
+  };
+
+  const handleSelectAllProformas = () => {
+    if (selectedProformas.size === filteredProformas.length) {
+      setSelectedProformas(new Set());
+    } else {
+      setSelectedProformas(new Set(filteredProformas.map(p => p.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const proformasToDelete = filteredProformas.filter(p => selectedProformas.has(p.id));
+    if (proformasToDelete.length === 0) {
+      toast.error('No proformas selected');
+      return;
+    }
+    setProformasToBulkDelete(proformasToDelete);
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    try {
+      const deletePromises = proformasToBulkDelete.map(proforma =>
+        deleteProforma.mutateAsync(proforma.id)
+      );
+      await Promise.all(deletePromises);
+
+      setShowBulkDeleteConfirm(false);
+      setProformasToBulkDelete([]);
+      setSelectedProformas(new Set());
+      toast.success(`${deletePromises.length} proforma(s) deleted successfully!`);
+      await refetch();
+    } catch (error) {
+      console.error('Error bulk deleting proformas:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (message.includes('RLS')) {
+        setShowRLSFixer(true);
+        toast.error('RLS policy issue detected. Opening diagnostic tool...');
+      } else {
+        toast.error(`Error deleting proforma(s): ${message}`);
       }
     }
   };
@@ -539,11 +594,50 @@ export default function Proforma() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Proforma #</TableHead>
-                  <TableHead>Customer</TableHead>
+            <>
+              {/* Bulk Actions Toolbar */}
+              {selectedProformas.size > 0 && (
+                <Card className="shadow-card bg-primary-light/20 border-primary/30 mb-4">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-foreground">
+                        {selectedProformas.size} proforma{selectedProformas.size !== 1 ? 's' : ''} selected
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedProformas(new Set())}
+                        >
+                          Clear Selection
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleBulkDelete}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Selected
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedProformas.size === filteredProformas.length && filteredProformas.length > 0}
+                        onChange={handleSelectAllProformas}
+                        className="rounded border-gray-300"
+                        title="Select all proformas"
+                      />
+                    </TableHead>
+                    <TableHead>Proforma #</TableHead>
+                    <TableHead>Customer</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Valid Until</TableHead>
                   <TableHead>Amount</TableHead>
@@ -554,6 +648,14 @@ export default function Proforma() {
               <TableBody>
                 {filteredProformas.map((proforma) => (
                   <TableRow key={proforma.id}>
+                    <TableCell className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedProformas.has(proforma.id)}
+                        onChange={() => handleToggleProformaSelection(proforma.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {proforma.proforma_number}
                     </TableCell>
@@ -638,23 +740,22 @@ export default function Proforma() {
                             <Receipt className="h-4 w-4" />
                           </Button>
                         )}
-                        {proforma.status === 'draft' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(proforma)}
-                            title="Delete Proforma"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(proforma)}
+                          title="Delete Proforma"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </>
           )}
 
           {/* Pagination Controls */}
@@ -803,6 +904,20 @@ export default function Proforma() {
         description="This action cannot be undone."
         itemName={proformaToDelete?.proforma_number}
         isLoading={deleteProforma.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete Multiple Proforma Invoices?"
+        description={`This action will permanently delete ${proformasToBulkDelete.length} proforma invoice(s). This cannot be undone.`}
+        itemName={`${proformasToBulkDelete.length} proformas`}
+        isLoading={deleteProforma.isPending}
+        isDangerous={true}
+        actionLabel="Delete All"
+        loadingLabel="Deleting..."
       />
 
       {/* Repair Panel Modal */}
