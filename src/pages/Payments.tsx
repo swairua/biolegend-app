@@ -31,9 +31,11 @@ import {
   Filter,
   Eye,
   DollarSign,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
-import { usePayments, useCompanies, useCreatePayment } from '@/hooks/useDatabase';
+import { usePayments, useCompanies, useCreatePayment, useDeletePayment } from '@/hooks/useDatabase';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -92,13 +94,20 @@ export default function Payments() {
   const PAGE_SIZE = 20;
   const formatCurrency = useFormatCurrency();
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [paymentsToBulkDelete, setPaymentsToBulkDelete] = useState<Payment[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch live payments data and company details
   const { data: companies = [] } = useCompanies();
   const currentCompany = companies[0];
-  const { data: payments = [], isLoading, error } = usePayments(currentCompany?.id);
+  const { data: payments = [], isLoading, error, refetch } = usePayments(currentCompany?.id);
   const { data: invoices = [] } = useInvoices(currentCompany?.id);
   const createPayment = useCreatePayment();
+  const deletePayment = useDeletePayment();
 
   const handleRecordPayment = () => {
     setShowRecordModal(true);
@@ -159,6 +168,100 @@ export default function Payments() {
     } catch (error) {
       console.error('Error downloading receipt:', error);
       toast.error('Failed to download receipt. Please try again.');
+    }
+  };
+
+  const handleTogglePaymentSelection = (paymentId: string) => {
+    const newSelected = new Set(selectedPayments);
+    if (newSelected.has(paymentId)) {
+      newSelected.delete(paymentId);
+    } else {
+      newSelected.add(paymentId);
+    }
+    setSelectedPayments(newSelected);
+  };
+
+  const handleSelectAllPayments = () => {
+    if (selectedPayments.size === filteredPayments.length) {
+      setSelectedPayments(new Set());
+    } else {
+      setSelectedPayments(new Set(filteredPayments.map(p => p.id)));
+    }
+  };
+
+  const handleDeletePayment = (payment: Payment) => {
+    setPaymentToDelete(payment);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!paymentToDelete?.id) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePayment.mutateAsync(paymentToDelete.id);
+      toast.success('Payment deleted successfully');
+      setShowDeleteConfirm(false);
+      setPaymentToDelete(null);
+      refetch();
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete payment';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const itemsToDelete = filteredPayments.filter(p => selectedPayments.has(p.id));
+    if (itemsToDelete.length === 0) {
+      toast.error('No payments selected');
+      return;
+    }
+    setPaymentsToBulkDelete(itemsToDelete);
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const deleteResults = await Promise.allSettled(
+        paymentsToBulkDelete.map(p => deletePayment.mutateAsync(p.id))
+      );
+
+      const failedItems: string[] = [];
+      const successfulCount = deleteResults.filter((result, index) => {
+        if (result.status === 'fulfilled') {
+          return true;
+        } else {
+          failedItems.push(paymentsToBulkDelete[index].payment_number);
+          console.error(`Failed to delete payment "${paymentsToBulkDelete[index].payment_number}":`, result.reason);
+          return false;
+        }
+      }).length;
+
+      if (failedItems.length > 0) {
+        const failureList = failedItems.slice(0, 3).join(', ');
+        const additionalCount = failedItems.length > 3 ? ` and ${failedItems.length - 3} more` : '';
+
+        if (successfulCount > 0) {
+          toast.success(`Deleted ${successfulCount} payment(s) successfully`);
+        }
+        toast.error(`Failed to delete: ${failureList}${additionalCount}`);
+      } else {
+        setShowBulkDeleteConfirm(false);
+        setPaymentsToBulkDelete([]);
+        setSelectedPayments(new Set());
+        toast.success(`${successfulCount} payment(s) deleted successfully!`);
+        refetch();
+      }
+    } catch (error) {
+      console.error('Error bulk deleting payments:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete payments';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -311,6 +414,35 @@ export default function Payments() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedPayments.size > 0 && (
+        <Card className="shadow-card bg-primary-light/20 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">
+                {selectedPayments.size} payment{selectedPayments.size !== 1 ? 's' : ''} selected
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPayments(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payments Table */}
       <Card className="shadow-card">
         <CardHeader>
@@ -338,6 +470,15 @@ export default function Payments() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedPayments.size === filteredPayments.length && filteredPayments.length > 0}
+                      onChange={handleSelectAllPayments}
+                      className="rounded border-gray-300"
+                      title="Select all payments"
+                    />
+                  </TableHead>
                   <TableHead>Payment Number</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Invoice</TableHead>
@@ -351,6 +492,14 @@ export default function Payments() {
               <TableBody>
                 {filteredPayments.map((payment) => (
                   <TableRow key={payment.id} className="hover:bg-muted/50">
+                    <TableCell className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedPayments.has(payment.id)}
+                        onChange={() => handleTogglePaymentSelection(payment.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{payment.payment_number}</TableCell>
                     <TableCell>{payment.customers?.name || 'N/A'}</TableCell>
                     <TableCell className="font-medium text-primary">
@@ -385,6 +534,15 @@ export default function Payments() {
                           title="Download receipt"
                         >
                           <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeletePayment(payment)}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete payment"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -489,6 +647,31 @@ export default function Payments() {
         payment={selectedPayment}
         onDownloadReceipt={handleDownloadReceipt}
         onSendReceipt={(payment) => toast.info(`Sending receipt for payment ${payment.payment_number}`)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Delete Payment?"
+        description="This action will permanently delete the payment record. This cannot be undone."
+        itemName={paymentToDelete?.payment_number}
+        isLoading={isDeleting}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete Multiple Payments?"
+        description={`This action will permanently delete ${paymentsToBulkDelete.length} payment record(s). This cannot be undone.`}
+        itemName={`${paymentsToBulkDelete.length} payments`}
+        isLoading={isDeleting}
+        isDangerous={true}
+        actionLabel="Delete All"
+        loadingLabel="Deleting..."
       />
     </div>
   );

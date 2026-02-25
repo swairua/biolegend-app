@@ -87,7 +87,6 @@ export const useOptimizedDeliveryNotes = (
           notes,
           delivered_by,
           received_by,
-          invoice_number,
           created_at,
           updated_at
         `,
