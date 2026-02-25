@@ -345,28 +345,118 @@ export const useProductCategories = (companyId?: string) => {
   });
 };
 
-// Optimized products hook (alias for useOptimizedProductSearch)
-export const useOptimizedProducts = (companyId?: string, options?: any) => {
-  const { data: searchResults } = useOptimizedProductSearch(companyId, true);
-  const { data: popularProducts } = usePopularProducts(companyId, 50);
+// Optimized products hook for inventory page with pagination
+export const useOptimizedProducts = (companyId?: string, options?: { page?: number; pageSize?: number; searchTerm?: string }) => {
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  // Return all products (search + popular) for the inventory page
-  const allProducts = useMemo(() => {
-    const products = searchResults || popularProducts || [];
-    return {
-      data: products,
-      total: products.length,
-      page: options?.page || 1,
-      pageSize: options?.pageSize || 20
-    };
-  }, [searchResults, popularProducts, options]);
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(options?.searchTerm || '');
+    }, 300);
 
-  return {
-    data: allProducts,
-    isLoading: false,
-    error: null,
-    refetch: () => {}
-  };
+    return () => clearTimeout(timer);
+  }, [options?.searchTerm]);
+
+  const page = options?.page || 1;
+  const pageSize = options?.pageSize || 20;
+
+  return useQuery({
+    queryKey: ['inventory_products', companyId, page, pageSize, debouncedSearchTerm],
+    queryFn: async () => {
+      if (!companyId) {
+        return {
+          products: [],
+          totalCount: 0,
+          page,
+          pageSize
+        };
+      }
+
+      try {
+        // Build the query
+        let query = supabase
+          .from('products')
+          .select(`
+            id,
+            product_code,
+            name,
+            description,
+            category_id,
+            unit_of_measure,
+            cost_price,
+            selling_price,
+            stock_quantity,
+            minimum_stock_level
+          `, { count: 'exact' })
+          .eq('company_id', companyId)
+          .eq('is_active', true);
+
+        // Add search filter if search term exists
+        if (debouncedSearchTerm.trim()) {
+          const searchPattern = `%${debouncedSearchTerm.trim()}%`;
+          query = query.or(`name.ilike.${searchPattern},product_code.ilike.${searchPattern}`);
+        }
+
+        // Apply pagination
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to).order('name');
+
+        const { data: products, error: productsError, count } = await query;
+
+        if (productsError) {
+          console.error('Error fetching inventory products:', productsError);
+          throw new Error(`Failed to fetch products: ${productsError.message}`);
+        }
+
+        // Get categories separately
+        const { data: categories, error: categoriesError } = await supabase
+          .from('product_categories')
+          .select('id, name')
+          .eq('company_id', companyId);
+
+        if (categoriesError) {
+          console.error('Error fetching categories:', categoriesError);
+          // Don't throw, just continue without categories
+        }
+
+        // Create category lookup map
+        const categoryMap = new Map();
+        (categories || []).forEach(cat => {
+          categoryMap.set(cat.id, { name: cat.name });
+        });
+
+        // Transform products to match InventoryItem interface
+        const transformedProducts = (products || []).map(product => ({
+          id: product.id,
+          product_code: product.product_code,
+          name: product.name,
+          description: product.description,
+          category_id: product.category_id,
+          unit_of_measure: product.unit_of_measure || 'pieces',
+          cost_price: product.cost_price || 0,
+          selling_price: product.selling_price || 0,
+          stock_quantity: product.stock_quantity || 0,
+          minimum_stock_level: product.minimum_stock_level || 0,
+          product_categories: product.category_id ? categoryMap.get(product.category_id) : null
+        }));
+
+        return {
+          products: transformedProducts,
+          totalCount: count || 0,
+          page,
+          pageSize
+        };
+      } catch (error) {
+        console.error('Error in useOptimizedProducts:', error);
+        throw error;
+      }
+    },
+    enabled: !!companyId,
+    staleTime: 30000,
+    retry: 1
+  });
 };
 
 // Inventory stats hook
