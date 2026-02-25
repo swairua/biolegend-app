@@ -151,7 +151,6 @@ const RemittanceAdvice = () => {
       toast.success('Remittance advice deleted successfully');
       setShowDeleteConfirm(false);
       setRemittanceToDelete(null);
-      refetch();
     } catch (error) {
       console.error('Error deleting remittance advice:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete remittance advice';
@@ -198,12 +197,13 @@ const RemittanceAdvice = () => {
         }
         toast.error(`Failed to delete: ${failureList}${additionalCount}`);
       } else {
-        setShowBulkDeleteConfirm(false);
-        setRemittancesToBulkDelete([]);
-        setSelectedRemittances(new Set());
         toast.success(`${successfulCount} remittance advice deleted successfully!`);
-        refetch();
       }
+
+      // Always close dialog and clear state after attempting all deletes
+      setShowBulkDeleteConfirm(false);
+      setRemittancesToBulkDelete([]);
+      setSelectedRemittances(new Set());
     } catch (error) {
       console.error('Error bulk deleting remittance advice:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete remittance advice';
