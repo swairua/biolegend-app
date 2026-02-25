@@ -332,7 +332,17 @@ Website: www.biolegendscientific.co.ke`;
     try {
       const invoiceIds = invoicesToBulkDelete.map(inv => inv.id);
 
-      // First, delete related payment allocations for all invoices
+      // First, delete related credit note allocations for all invoices
+      const { error: cnError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .in('invoice_id', invoiceIds);
+
+      if (cnError && !cnError.message.includes('relation') && !cnError.message.includes('does not exist')) {
+        throw cnError;
+      }
+
+      // Then delete related payment allocations for all invoices
       const { error: allocError } = await supabase
         .from('payment_allocations')
         .delete()
@@ -376,7 +386,17 @@ Website: www.biolegendscientific.co.ke`;
     }
 
     try {
-      // First, delete related payment allocations
+      // First, delete related credit note allocations
+      const { error: cnError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (cnError && !cnError.message.includes('relation') && !cnError.message.includes('does not exist')) {
+        throw cnError;
+      }
+
+      // Then delete related payment allocations
       const { error: allocError } = await supabase
         .from('payment_allocations')
         .delete()
