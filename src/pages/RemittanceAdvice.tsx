@@ -671,6 +671,30 @@ const RemittanceAdvice = () => {
           toast.success('Remittance advice updated successfully!');
         }}
       />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Remittance Advice"
+        description={`Are you sure you want to delete remittance advice ${remittanceToDelete?.advice_number}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        itemName="remittance advice"
+        isDangerous
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        title="Delete Remittance Advice"
+        description={`Are you sure you want to delete ${remittancesToBulkDelete.length} remittance advice? This action cannot be undone.`}
+        onConfirm={handleConfirmBulkDelete}
+        isLoading={isDeleting}
+        itemName="remittance advice"
+        isDangerous
+      />
     </div>
   );
 };
