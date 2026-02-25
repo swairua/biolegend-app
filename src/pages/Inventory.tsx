@@ -174,7 +174,10 @@ export default function Inventory() {
         .delete()
         .eq('id', itemToDelete.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error details:', error);
+        throw error;
+      }
 
       toast.success('Inventory item deleted successfully');
       setShowDeleteConfirm(false);
@@ -182,8 +185,17 @@ export default function Inventory() {
       refetch();
     } catch (error) {
       console.error('Error deleting item:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Failed to delete inventory item';
-      toast.error(`Error: ${errorMsg}`);
+      let errorMsg = 'Failed to delete inventory item';
+
+      if (error instanceof Error) {
+        errorMsg = error.message;
+        // Check if it's a foreign key constraint error
+        if (errorMsg.includes('violates foreign key constraint') || errorMsg.includes('referenc')) {
+          errorMsg = `Cannot delete "${itemToDelete.name}" because it's referenced in invoices, quotations, or delivery notes. Remove references first.`;
+        }
+      }
+
+      toast.error(errorMsg);
     } finally {
       setIsDeleting(false);
     }
@@ -220,22 +232,47 @@ export default function Inventory() {
   const handleConfirmBulkDelete = async () => {
     setIsDeleting(true);
     try {
-      const deletePromises = itemsToBulkDelete.map(item =>
-        supabase.from('products').delete().eq('id', item.id)
+      const deleteResults = await Promise.allSettled(
+        itemsToBulkDelete.map(item =>
+          supabase.from('products').delete().eq('id', item.id)
+        )
       );
-      const results = await Promise.all(deletePromises);
 
-      // Check for errors in any of the deletions
-      const errors = results.filter(result => result.error);
-      if (errors.length > 0) {
-        throw new Error(`Failed to delete ${errors.length} item(s)`);
+      // Separate successful and failed deletions
+      const failedItems: string[] = [];
+      const successfulCount = deleteResults.filter((result, index) => {
+        if (result.status === 'fulfilled') {
+          const { error } = result.value;
+          if (error) {
+            failedItems.push(itemsToBulkDelete[index].name);
+            console.error(`Failed to delete product "${itemsToBulkDelete[index].name}":`, error);
+            return false;
+          }
+          return true;
+        } else {
+          failedItems.push(itemsToBulkDelete[index].name);
+          console.error(`Unexpected error deleting product "${itemsToBulkDelete[index].name}":`, result.reason);
+          return false;
+        }
+      }).length;
+
+      // Provide detailed feedback
+      if (failedItems.length > 0) {
+        const failureList = failedItems.slice(0, 3).join(', ');
+        const additionalCount = failedItems.length > 3 ? ` and ${failedItems.length - 3} more` : '';
+        const errorDetails = `Products may be referenced in invoices, quotations, or delivery notes. Failed: ${failureList}${additionalCount}`;
+
+        if (successfulCount > 0) {
+          toast.success(`Deleted ${successfulCount} product(s) successfully`);
+        }
+        toast.error(errorDetails);
+      } else {
+        setShowBulkDeleteConfirm(false);
+        setItemsToBulkDelete([]);
+        setSelectedItems(new Set());
+        toast.success(`${successfulCount} product(s) deleted successfully!`);
+        refetch();
       }
-
-      setShowBulkDeleteConfirm(false);
-      setItemsToBulkDelete([]);
-      setSelectedItems(new Set());
-      toast.success(`${deletePromises.length} product(s) deleted successfully!`);
-      refetch();
     } catch (error) {
       console.error('Error bulk deleting items:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete products';
