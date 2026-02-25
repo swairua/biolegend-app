@@ -61,6 +61,7 @@ import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNot
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Invoice {
   id: string;
@@ -107,6 +108,9 @@ export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [invoicesToBulkDelete, setInvoicesToBulkDelete] = useState<Invoice[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -292,12 +296,97 @@ Website: www.biolegendscientific.co.ke`;
   };
 
   const handleDeleteInvoice = (invoice: Invoice) => {
-    if (invoice.status !== 'draft') {
-      toast.error('Only draft invoices can be deleted');
-      return;
-    }
     setInvoiceToDelete(invoice);
     setShowDeleteConfirm(true);
+  };
+
+  const handleToggleInvoiceSelection = (invoiceId: string) => {
+    const newSelected = new Set(selectedInvoices);
+    if (newSelected.has(invoiceId)) {
+      newSelected.delete(invoiceId);
+    } else {
+      newSelected.add(invoiceId);
+    }
+    setSelectedInvoices(newSelected);
+  };
+
+  const handleSelectAllInvoices = () => {
+    if (selectedInvoices.size === filteredInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const invoicesToDelete = filteredInvoices.filter(inv => selectedInvoices.has(inv.id));
+    if (invoicesToDelete.length === 0) {
+      toast.error('No invoices selected');
+      return;
+    }
+    setInvoicesToBulkDelete(invoicesToDelete);
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    try {
+      const invoiceIds = invoicesToBulkDelete.map(inv => inv.id);
+
+      // First, delete related credit notes for all invoices
+      const { error: crError } = await supabase
+        .from('credit_notes')
+        .delete()
+        .in('invoice_id', invoiceIds);
+
+      if (crError && !crError.message.includes('relation') && !crError.message.includes('does not exist')) {
+        throw crError;
+      }
+
+      // Then delete related credit note allocations for all invoices
+      const { error: cnError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .in('invoice_id', invoiceIds);
+
+      if (cnError && !cnError.message.includes('relation') && !cnError.message.includes('does not exist')) {
+        throw cnError;
+      }
+
+      // Then delete related payment allocations for all invoices
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .in('invoice_id', invoiceIds);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then unlink related delivery notes for all invoices
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .in('invoice_id', invoiceIds);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete all the invoices
+      const deletePromises = invoicesToBulkDelete.map(invoice =>
+        deleteInvoice.mutateAsync(invoice.id)
+      );
+      await Promise.all(deletePromises);
+
+      setShowBulkDeleteConfirm(false);
+      setInvoicesToBulkDelete([]);
+      setSelectedInvoices(new Set());
+      toast.success(`${deletePromises.length} invoice(s) deleted successfully!`);
+      refetch();
+    } catch (error) {
+      const errorMessage = parseErrorMessage(error);
+      toast.error(`Failed to delete invoice(s): ${errorMessage}`);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -307,6 +396,47 @@ Website: www.biolegendscientific.co.ke`;
     }
 
     try {
+      // First, delete related credit notes
+      const { error: crError } = await supabase
+        .from('credit_notes')
+        .delete()
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (crError && !crError.message.includes('relation') && !crError.message.includes('does not exist')) {
+        throw crError;
+      }
+
+      // Then delete related credit note allocations
+      const { error: cnError } = await supabase
+        .from('credit_note_allocations')
+        .delete()
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (cnError && !cnError.message.includes('relation') && !cnError.message.includes('does not exist')) {
+        throw cnError;
+      }
+
+      // Then delete related payment allocations
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then unlink related delivery notes
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete the invoice
       await deleteInvoice.mutateAsync(invoiceToDelete.id);
       setShowDeleteConfirm(false);
       setInvoiceToDelete(null);
@@ -474,6 +604,35 @@ Website: www.biolegendscientific.co.ke`;
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedInvoices.size > 0 && (
+        <Card className="shadow-card bg-primary-light/20 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">
+                {selectedInvoices.size} invoice{selectedInvoices.size !== 1 ? 's' : ''} selected
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedInvoices(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Invoices Table */}
       <Card className="shadow-card">
         <CardHeader>
@@ -527,6 +686,15 @@ Website: www.biolegendscientific.co.ke`;
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
+                      onChange={handleSelectAllInvoices}
+                      className="rounded border-gray-300"
+                      title="Select all invoices"
+                    />
+                  </TableHead>
                   <TableHead>Invoice Number</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Date</TableHead>
@@ -541,6 +709,14 @@ Website: www.biolegendscientific.co.ke`;
               <TableBody>
                 {filteredInvoices.map((invoice: Invoice) => (
                   <TableRow key={invoice.id} className="hover:bg-muted/50 transition-smooth">
+                    <TableCell className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoices.has(invoice.id)}
+                        onChange={() => handleToggleInvoiceSelection(invoice.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center space-x-2">
                         <Receipt className="h-4 w-4 text-primary" />
@@ -598,17 +774,15 @@ Website: www.biolegendscientific.co.ke`;
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        {invoice.status === 'draft' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteInvoice(invoice)}
-                            title="Delete invoice"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteInvoice(invoice)}
+                          title="Delete invoice"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -813,6 +987,20 @@ Website: www.biolegendscientific.co.ke`;
         isLoading={deleteInvoice.isPending}
         isDangerous={true}
         actionLabel="Delete"
+        loadingLabel="Deleting..."
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete Multiple Invoices"
+        description={`This action cannot be undone. ${invoicesToBulkDelete.length} invoice(s) will be permanently deleted.`}
+        itemName={`${invoicesToBulkDelete.length} invoices`}
+        isLoading={deleteInvoice.isPending}
+        isDangerous={true}
+        actionLabel="Delete All"
         loadingLabel="Deleting..."
       />
     </div>

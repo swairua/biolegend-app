@@ -100,6 +100,9 @@ export default function Inventory() {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [itemsToBulkDelete, setItemsToBulkDelete] = useState<InventoryItem[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -180,6 +183,62 @@ export default function Inventory() {
     } catch (error) {
       console.error('Error deleting item:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete inventory item';
+      toast.error(`Error: ${errorMsg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleToggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAllItems = () => {
+    if (selectedItems.size === filteredInventory.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredInventory.map(item => item.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const itemsToDelete = filteredInventory.filter(item => selectedItems.has(item.id));
+    if (itemsToDelete.length === 0) {
+      toast.error('No products selected');
+      return;
+    }
+    setItemsToBulkDelete(itemsToDelete);
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const deletePromises = itemsToBulkDelete.map(item =>
+        supabase.from('products').delete().eq('id', item.id)
+      );
+      const results = await Promise.all(deletePromises);
+
+      // Check for errors in any of the deletions
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} item(s)`);
+      }
+
+      setShowBulkDeleteConfirm(false);
+      setItemsToBulkDelete([]);
+      setSelectedItems(new Set());
+      toast.success(`${deletePromises.length} product(s) deleted successfully!`);
+      refetch();
+    } catch (error) {
+      console.error('Error bulk deleting items:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete products';
       toast.error(`Error: ${errorMsg}`);
     } finally {
       setIsDeleting(false);
@@ -344,6 +403,35 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedItems.size > 0 && (
+        <Card className="shadow-card bg-primary-light/20 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">
+                {selectedItems.size} product{selectedItems.size !== 1 ? 's' : ''} selected
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedItems(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Inventory Table */}
       <Card className="shadow-card">
         <CardHeader>
@@ -353,6 +441,15 @@ export default function Inventory() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.size === filteredInventory.length && filteredInventory.length > 0}
+                    onChange={handleSelectAllItems}
+                    className="rounded border-gray-300"
+                    title="Select all products"
+                  />
+                </TableHead>
                 <TableHead>Product Code</TableHead>
                 <TableHead>Product Name</TableHead>
                 <TableHead>Category</TableHead>
@@ -385,6 +482,14 @@ export default function Inventory() {
               ) : (
                 filteredInventory.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/50">
+                    <TableCell className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(item.id)}
+                        onChange={() => handleToggleItemSelection(item.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{item.product_code}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.product_categories?.name || '-'}</TableCell>
@@ -579,6 +684,20 @@ export default function Inventory() {
         description="This action will permanently delete the inventory item. This cannot be undone."
         itemName={itemToDelete?.name}
         isLoading={isDeleting}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete Multiple Products?"
+        description={`This action will permanently delete ${itemsToBulkDelete.length} product(s). This cannot be undone.`}
+        itemName={`${itemsToBulkDelete.length} products`}
+        isLoading={isDeleting}
+        isDangerous={true}
+        actionLabel="Delete All"
+        loadingLabel="Deleting..."
       />
 
     </div>
