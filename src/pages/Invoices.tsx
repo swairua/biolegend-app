@@ -61,6 +61,7 @@ import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNot
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Invoice {
   id: string;
@@ -329,6 +330,29 @@ Website: www.biolegendscientific.co.ke`;
 
   const handleConfirmBulkDelete = async () => {
     try {
+      const invoiceIds = invoicesToBulkDelete.map(inv => inv.id);
+
+      // First, delete related payment allocations for all invoices
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .in('invoice_id', invoiceIds);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then unlink related delivery notes for all invoices
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .in('invoice_id', invoiceIds);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete all the invoices
       const deletePromises = invoicesToBulkDelete.map(invoice =>
         deleteInvoice.mutateAsync(invoice.id)
       );
@@ -352,6 +376,27 @@ Website: www.biolegendscientific.co.ke`;
     }
 
     try {
+      // First, delete related payment allocations
+      const { error: allocError } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (allocError && !allocError.message.includes('relation') && !allocError.message.includes('does not exist')) {
+        throw allocError;
+      }
+
+      // Then unlink related delivery notes
+      const { error: dnError } = await supabase
+        .from('delivery_notes')
+        .update({ invoice_id: null })
+        .eq('invoice_id', invoiceToDelete.id);
+
+      if (dnError && !dnError.message.includes('relation') && !dnError.message.includes('does not exist')) {
+        throw dnError;
+      }
+
+      // Finally delete the invoice
       await deleteInvoice.mutateAsync(invoiceToDelete.id);
       setShowDeleteConfirm(false);
       setInvoiceToDelete(null);
