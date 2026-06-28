@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +32,8 @@ import {
 import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+import { getExchangeRate } from '@/utils/exchangeRates';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface QuotationItem {
@@ -69,8 +69,12 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<QuotationItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const previousRateRef = useRef<number>(1);
+
+  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
@@ -82,6 +86,53 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
   const defaultTaxRate = defaultTax?.rate || 16; // Fallback to 16% if no default is set
 
+  const convertItemsByFactor = (factor: number) => {
+    setItems(prev => prev.map(item => ({
+      ...item,
+      unit_price: parseFloat((item.unit_price * factor).toFixed(4)),
+      line_total: parseFloat((item.line_total * factor).toFixed(2))
+    })));
+  };
+
+  const handleCurrencyChange = async (newCurrency: 'KES' | 'USD') => {
+    try {
+      if (newCurrency === currencyCode) return;
+      let newRate = 1;
+      if (newCurrency === 'USD') {
+        toast.info('Fetching KES→USD rate...');
+        newRate = await getExchangeRate('KES', 'USD', quotationDate);
+        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+      } else {
+        newRate = 1;
+      }
+      const factor = newRate / previousRateRef.current;
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      setCurrencyCode(newCurrency);
+    } catch (e: any) {
+      console.error('Currency change failed:', e);
+      toast.error(e?.message || 'Failed to change currency');
+    }
+  };
+
+  const fetchAndSetRate = async () => {
+    try {
+      toast.info('Fetching exchange rate...');
+      const rate = await getExchangeRate('KES', currencyCode, quotationDate);
+      if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
+      const factor = rate / exchangeRate;
+      convertItemsByFactor(factor);
+      previousRateRef.current = rate;
+      setExchangeRate(rate);
+      toast.success(`Rate updated: 1 KES = ${rate.toFixed(6)} ${currencyCode}`);
+    } catch (e: any) {
+      console.error('Failed to fetch rate:', e);
+      toast.error(e?.message || 'Failed to fetch exchange rate');
+    }
+  };
+
   // Load quotation data when modal opens
   useEffect(() => {
     if (quotation && open) {
@@ -90,7 +141,13 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       setValidUntil(quotation.valid_until || '');
       setNotes(quotation.notes || '');
       setTermsAndConditions(quotation.terms_and_conditions || '');
-      
+
+      const currencyFromQuotation = (quotation.currency_code || 'KES') as 'KES' | 'USD';
+      setCurrencyCode(currencyFromQuotation);
+      const rateFromQuotation = quotation.exchange_rate || 1;
+      setExchangeRate(rateFromQuotation);
+      previousRateRef.current = rateFromQuotation;
+
       // Convert quotation items to local format
       const quotationItems = (quotation.quotation_items || []).map((item: any, index: number) => ({
         id: item.id || `existing-${index}`,
@@ -105,7 +162,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         tax_inclusive: item.tax_inclusive || false,
         line_total: item.line_total || 0,
       }));
-      
+
       setItems(quotationItems);
     }
   }, [quotation, open]);
