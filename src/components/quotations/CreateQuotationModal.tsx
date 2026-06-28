@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +32,7 @@ import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
@@ -64,13 +64,18 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   );
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
-  
+
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<QuotationItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+
+  const { currency: globalCurrency } = useCurrency();
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const previousRateRef = useRef<number>(1);
+
+  const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   // Get current user and company from context
@@ -91,6 +96,61 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
   const defaultTaxRate = defaultTax?.rate || 16; // Fallback to 16% if no default is set
+
+  // Inherit global currency selection when opening the modal
+  useEffect(() => {
+    if (!open) return;
+    if (globalCurrency && globalCurrency !== currencyCode) {
+      handleCurrencyChange(globalCurrency);
+    }
+  }, [open, globalCurrency]);
+
+  const convertItemsByFactor = (factor: number) => {
+    setItems(prev => prev.map(item => ({
+      ...item,
+      unit_price: parseFloat((item.unit_price * factor).toFixed(4)),
+      line_total: parseFloat((item.line_total * factor).toFixed(2))
+    })));
+  };
+
+  const handleCurrencyChange = async (newCurrency: 'KES' | 'USD') => {
+    try {
+      if (newCurrency === currencyCode) return;
+      let newRate = 1;
+      if (newCurrency === 'USD') {
+        toast.info('Fetching KES→USD rate...');
+        newRate = await getExchangeRate('KES', 'USD', quotationDate);
+        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+      } else {
+        newRate = 1;
+      }
+      const factor = newRate / previousRateRef.current;
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      setCurrencyCode(newCurrency);
+    } catch (e: any) {
+      console.error('Currency change failed:', e);
+      toast.error(e?.message || 'Failed to change currency');
+    }
+  };
+
+  const fetchAndSetRate = async () => {
+    try {
+      toast.info('Fetching exchange rate...');
+      const rate = await getExchangeRate('KES', currencyCode, quotationDate);
+      if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
+      const factor = rate / exchangeRate;
+      convertItemsByFactor(factor);
+      previousRateRef.current = rate;
+      setExchangeRate(rate);
+      toast.success(`Rate updated: 1 KES = ${rate.toFixed(6)} ${currencyCode}`);
+    } catch (e: any) {
+      console.error('Failed to fetch rate:', e);
+      toast.error(e?.message || 'Failed to fetch exchange rate');
+    }
+  };
 
   // Convert products to AutocompleteItem format
   const autocompleteItems: AutocompleteItem[] = (products || []).map(product => ({
@@ -136,16 +196,23 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       return;
     }
 
+    const priceBase = Number(product.selling_price || 0);
+    if (isNaN(priceBase) || priceBase === 0) {
+      console.warn('Product price missing or invalid for product:', product);
+      toast.warning(`Product "${product.name}" has no price set`);
+    }
+    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
+
     const newItem: QuotationItem = {
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name,
       description: product.description || product.name,
       quantity: 1,
-      unit_price: product.selling_price || 0,
+      unit_price: price,
       vat_percentage: 0,
       vat_inclusive: false,
-      line_total: calculateItemTotal(1, product.selling_price || 0, 0, false)
+      line_total: calculateItemTotal(1, price, 0, false)
     };
 
     setItems([...items, newItem]);
@@ -296,19 +363,11 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
 
     setIsSubmitting(true);
     try {
-      console.log('Starting quotation creation process...');
-      console.log('Selected customer:', selectedCustomerId);
-      console.log('Items count:', itemsToSubmit.length);
-      console.log('Quotation date:', quotationDate);
-      console.log('Valid until:', validUntil);
-
       // Generate quotation number
-      console.log('Generating quotation number...');
       const quotationNumber = await generateDocNumber.mutateAsync({
         companyId: currentCompany?.id || 'default-company-id',
         type: 'quotation'
       });
-      console.log('Generated quotation number:', quotationNumber);
 
       // Validate required fields
       if (!currentCompany?.id) {
@@ -328,31 +387,22 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         return;
       }
 
-      // Determine effective exchange rate and convert values if needed
-      let effectiveRate = currency === 'USD' ? rate : 1;
-      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
-        try {
-          const fetched = await getExchangeRate('KES', 'USD', quotationDate);
-          if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
-          effectiveRate = fetched;
-          toast.success(`Locked exchange rate for ${quotationDate}: ${fetched.toFixed(4)}`);
-        } catch (e: any) {
-          toast.error(e?.message || 'Failed to fetch exchange rate');
-          throw e;
+      // Lock exchange rate at creation time
+      let effectiveRate = exchangeRate;
+      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+        toast.info('Locking exchange rate for quotation date...');
+        effectiveRate = await getExchangeRate('KES', 'USD', quotationDate);
+        if (!effectiveRate || effectiveRate <= 0) {
+          throw new Error('Unable to fetch exchange rate for the selected date');
         }
       }
 
-      // Create quotation with items - calculate totals using items to submit
-      console.log('Preparing quotation data...');
+      // Calculate totals
       const quotationSubtotal = itemsToSubmit.reduce((sum, item) => {
         return sum + (item.quantity * item.unit_price);
       }, 0);
       const quotationTaxAmount = itemsToSubmit.reduce((sum, item) => sum + calculateTaxAmount(item), 0);
       const quotationTotalAmount = itemsToSubmit.reduce((sum, item) => sum + item.line_total, 0);
-
-      const subtotalFinal = currency === 'USD' ? convertAmount(quotationSubtotal, 'KES', 'USD', effectiveRate) : quotationSubtotal;
-      const taxAmountFinal = currency === 'USD' ? convertAmount(quotationTaxAmount, 'KES', 'USD', effectiveRate) : quotationTaxAmount;
-      const totalAmountFinal = currency === 'USD' ? convertAmount(quotationTotalAmount, 'KES', 'USD', effectiveRate) : quotationTotalAmount;
 
       const quotationData = {
         company_id: currentCompany.id,
@@ -361,19 +411,17 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         quotation_date: quotationDate,
         valid_until: validUntil,
         status: 'draft',
-        subtotal: subtotalFinal,
-        tax_amount: taxAmountFinal,
-        total_amount: totalAmountFinal,
+        subtotal: quotationSubtotal,
+        tax_amount: quotationTaxAmount,
+        total_amount: quotationTotalAmount,
         terms_and_conditions: termsAndConditions,
         notes: notes,
         created_by: profile.id,
-        currency_code: currency,
-        exchange_rate: currency === 'USD' ? effectiveRate : 1,
+        currency_code: currencyCode,
+        exchange_rate: currencyCode === 'USD' ? effectiveRate : 1,
         fx_date: quotationDate
       };
-      console.log('Quotation data prepared:', quotationData);
 
-      console.log('Preparing quotation items...');
       const quotationItems = itemsToSubmit.map(item => {
         // Validate item data
         if (!item.description || item.description.trim() === '') {
@@ -386,24 +434,19 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
           throw new Error(`Item "${item.product_name}" cannot have a negative unit price`);
         }
 
-        const unitPriceFinal = currency === 'USD' ? convertAmount(item.unit_price, 'KES', 'USD', effectiveRate) : item.unit_price;
         const taxAmountBase = calculateTaxAmount(item);
-        const taxAmountFinalItem = currency === 'USD' ? convertAmount(taxAmountBase, 'KES', 'USD', effectiveRate) : taxAmountBase;
-        const lineTotalFinal = currency === 'USD' ? convertAmount(item.line_total, 'KES', 'USD', effectiveRate) : item.line_total;
-
         return {
           product_id: item.product_id,
           description: item.description,
           quantity: item.quantity,
-          unit_price: unitPriceFinal,
+          unit_price: item.unit_price,
           discount_percentage: 0,
           tax_percentage: item.vat_percentage || 0,
-          tax_amount: taxAmountFinalItem,
+          tax_amount: taxAmountBase,
           tax_inclusive: item.vat_inclusive || false,
-          line_total: lineTotalFinal
+          line_total: item.line_total
         };
       });
-      console.log('Quotation items prepared:', quotationItems);
 
       // Validate quotation data
       if (!quotationData.customer_id) {
@@ -416,12 +459,10 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         throw new Error('Failed to generate quotation number');
       }
 
-      console.log('Submitting quotation to database...');
       await createQuotationWithItems.mutateAsync({
         quotation: quotationData,
         items: quotationItems
       });
-      console.log('Quotation created successfully!');
 
       toast.success(`Quotation ${quotationNumber} created successfully!`);
       onSuccess();
@@ -429,18 +470,13 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       resetForm();
     } catch (error) {
       console.error('Error creating quotation:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
 
       let errorMessage = 'Unknown error occurred';
 
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (error && typeof error === 'object') {
-        // Handle Supabase error objects
         const supabaseError = error as any;
-
-        // Check for common Supabase error patterns
         if (supabaseError.message) {
           errorMessage = supabaseError.message;
         } else if (supabaseError.details) {
@@ -449,18 +485,8 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
           errorMessage = supabaseError.hint;
         } else if (supabaseError.error?.message) {
           errorMessage = supabaseError.error.message;
-        } else if (supabaseError.statusText) {
-          errorMessage = supabaseError.statusText;
-        } else if (supabaseError.data?.message) {
-          errorMessage = supabaseError.data.message;
         } else {
-          // Last resort - try to extract meaningful info
-          const errorStr = JSON.stringify(error);
-          if (errorStr.length > 50) {
-            errorMessage = 'Database operation failed. Please check your data and try again.';
-          } else {
-            errorMessage = errorStr;
-          }
+          errorMessage = 'Database operation failed. Please check your data and try again.';
         }
       } else if (typeof error === 'string') {
         errorMessage = error;
@@ -479,6 +505,9 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     setNotes('');
     setTermsAndConditions('We trust that you will look at this quote satisfactorily........, looking forward to the order. Thank you for Your business!');
     setItems([]);
+    setCurrencyCode('KES');
+    setExchangeRate(1);
+    previousRateRef.current = 1;
     clearNewItems();
   };
 
@@ -527,6 +556,32 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                       )}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Currency */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency *</Label>
+                    <Select value={currencyCode} onValueChange={(v) => handleCurrencyChange(v as 'KES' | 'USD')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
+                        <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rate">Exchange Rate</Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="rate" value={`1 KES = ${exchangeRate.toFixed(6)} ${currencyCode}`} readOnly />
+                      <Button type="button" variant="outline" onClick={fetchAndSetRate} disabled={currencyCode === 'KES'}>
+                        <Calculator className="h-4 w-4 mr-1" />
+                        Fetch
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Dates */}
