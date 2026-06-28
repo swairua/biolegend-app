@@ -2,7 +2,7 @@ import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { AuthPerformanceTest } from '@/components/auth/AuthPerformanceTest';
-import { Button } from '@/components/ui/button';
+import { Button, buttonGroupClasses } from '@/components/ui/button';
 import { FileText, BarChart3 } from 'lucide-react';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { useQuotations, useCompanies } from '@/hooks/useDatabase';
@@ -85,14 +85,14 @@ const Index = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
             Welcome back! Here's what's happening with your business today.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className={buttonGroupClasses.stack}>
           <Button
             onClick={handleTestPDF}
             variant="outline"
