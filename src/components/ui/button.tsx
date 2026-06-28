@@ -58,11 +58,25 @@ Button.displayName = "Button"
 // Responsive button group wrapper classes
 const buttonGroupClasses = {
   // Stack on mobile, flex row on desktop
-  stack: "flex flex-col gap-2 md:flex-row md:items-center md:gap-2",
+  stack: "flex flex-col gap-2 sm:gap-3 md:flex-row md:items-center md:gap-2",
   // Always flex row, wraps naturally on mobile
-  row: "flex flex-wrap gap-2 items-center",
+  row: "flex flex-wrap gap-2 sm:gap-3 items-center",
   // Compact row with smaller gap for icon buttons
   compact: "flex flex-wrap gap-1 sm:gap-2 items-center",
+  // Full width on mobile, auto on desktop (for modal/dialog footers)
+  modal: "flex flex-col-reverse gap-2 sm:gap-3 sm:flex-row sm:justify-end sm:items-center",
+  // Header buttons - responsive spacing
+  header: "flex flex-wrap gap-1 sm:gap-2 items-center",
+  // Table action buttons - compact, responsive
+  table: "flex gap-1 sm:gap-2 items-center justify-end flex-wrap sm:flex-nowrap",
 }
 
-export { Button, buttonVariants, buttonGroupClasses }
+// Size variants for different contexts
+const buttonSizeResponsive = {
+  // Mobile-first: compact on mobile, normal on desktop
+  header: "sm:size-default xs:h-8 xs:px-2 xs:text-xs sm:h-9 sm:px-3 h-8 px-2 text-xs",
+  table: "h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm",
+  modal: "h-9 sm:h-10 px-3 sm:px-4 text-sm sm:text-base",
+}
+
+export { Button, buttonVariants, buttonGroupClasses, buttonSizeResponsive }
