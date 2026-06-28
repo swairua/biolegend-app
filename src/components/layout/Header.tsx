@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
@@ -67,6 +68,9 @@ export function Header() {
   return (
     <>
       <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 shadow-card">
+        {/* Mobile Sidebar Trigger */}
+        <SidebarTrigger className="md:hidden" />
+
         {/* Search */}
         <div className="flex items-center space-x-4 flex-1 max-w-lg">
           <div className="relative flex-1">

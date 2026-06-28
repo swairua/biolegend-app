@@ -55,4 +55,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants }
+// Responsive button group wrapper classes
+const buttonGroupClasses = {
+  // Stack on mobile, flex row on desktop
+  stack: "flex flex-col gap-2 md:flex-row md:items-center md:gap-2",
+  // Always flex row, wraps naturally on mobile
+  row: "flex flex-wrap gap-2 items-center",
+  // Compact row with smaller gap for icon buttons
+  compact: "flex flex-wrap gap-1 sm:gap-2 items-center",
+}
+
+export { Button, buttonVariants, buttonGroupClasses }
