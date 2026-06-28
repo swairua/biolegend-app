@@ -26,7 +26,6 @@ import {
 import { BiolegendLogo } from '@/components/ui/biolegend-logo';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
 
 interface ViewQuotationModalProps {
   open: boolean;
@@ -55,7 +54,7 @@ export function ViewQuotationModal({
 
   // Call currency hook unconditionally to preserve hooks order
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatQuotationAmount = (amount: number) => format(Number(amount) || 0, quotation.currency_code as any);
 
   if (!quotation) return null;
 
@@ -256,7 +255,7 @@ export function ViewQuotationModal({
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Amount:</span>
-                  <span className="font-semibold text-primary">{formatCurrency(quotation.total_amount || 0)}</span>
+                  <span className="font-semibold text-primary">{formatQuotationAmount(quotation.total_amount || 0)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -295,9 +294,9 @@ export function ViewQuotationModal({
                         </TableCell>
                         <TableCell className="text-center">{item.quantity}</TableCell>
                         <TableCell className="text-center">{item.products?.unit_of_measure || 'Each'}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
+                        <TableCell className="text-right">{formatQuotationAmount(item.unit_price)}</TableCell>
                         <TableCell className="text-center">{item.discount_percentage || 0}%</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(item.line_total)}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatQuotationAmount(item.line_total)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -314,21 +313,21 @@ export function ViewQuotationModal({
                   <div className="w-80 space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span className="font-semibold">{formatCurrency(quotation.subtotal || 0)}</span>
+                      <span className="font-semibold">{formatQuotationAmount(quotation.subtotal || 0)}</span>
                     </div>
                     {quotation.discount_amount > 0 && (
                       <div className="flex justify-between">
                         <span>Discount:</span>
-                        <span className="font-semibold text-destructive">-{formatCurrency(quotation.discount_amount)}</span>
+                        <span className="font-semibold text-destructive">-{formatQuotationAmount(quotation.discount_amount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span>VAT:</span>
-                      <span className="font-semibold">{formatCurrency(quotation.tax_amount || 0)}</span>
+                      <span className="font-semibold">{formatQuotationAmount(quotation.tax_amount || 0)}</span>
                     </div>
                     <div className="flex justify-between text-lg border-t pt-2">
                       <span className="font-bold">Total Amount:</span>
-                      <span className="font-bold text-primary">{formatCurrency(quotation.total_amount || 0)}</span>
+                      <span className="font-bold text-primary">{formatQuotationAmount(quotation.total_amount || 0)}</span>
                     </div>
                   </div>
                 </div>

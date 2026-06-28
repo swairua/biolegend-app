@@ -37,7 +37,6 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
 import { useOptimizedQuotations } from '@/hooks/useOptimizedQuotations';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CreateQuotationModal } from '@/components/quotations/CreateQuotationModal';
@@ -127,7 +126,7 @@ export default function Quotations() {
   const deleteQuotation = useDeleteQuotation();
 
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatQuotationAmount = (amount: number, quotationCurrency: string) => format(Number(amount) || 0, quotationCurrency as any);
 
   const filteredQuotations = quotations?.filter(quotation =>
     quotation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -510,7 +509,7 @@ Website: www.biolegendscientific.co.ke`;
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {formatCurrency(quotation.total_amount || 0)}
+                      {formatQuotationAmount(quotation.total_amount || 0, quotation.currency_code || 'KES')}
                     </TableCell>
                     <TableCell>
                       {quotation.valid_until 
