@@ -24,9 +24,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Search,
   Calculator,
   Receipt
@@ -36,6 +36,7 @@ import { useUpdateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceItem {
   id: string;
@@ -89,7 +90,9 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
   // Load invoice data when modal opens
   useEffect(() => {
-    if (invoice && open) {
+    if (!invoice || !open) return;
+
+    const loadInvoiceData = async () => {
       setSelectedCustomerId(invoice.customer_id || '');
       setInvoiceDate(invoice.invoice_date || '');
       setDueDate(invoice.due_date || '');
@@ -97,8 +100,41 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       setNotes(invoice.notes || '');
       setTermsAndConditions(invoice.terms_and_conditions || '');
 
+      // Try to use items from invoice object first
+      let invoiceItemsData = invoice.invoice_items || [];
+
+      // If no items in the invoice object, fetch them from the database
+      if (!invoiceItemsData || invoiceItemsData.length === 0) {
+        try {
+          const { data: fetchedItems, error } = await supabase
+            .from('invoice_items')
+            .select(`
+              id,
+              invoice_id,
+              product_id,
+              description,
+              quantity,
+              unit_price,
+              discount_before_vat,
+              tax_percentage,
+              tax_amount,
+              tax_inclusive,
+              line_total,
+              sort_order,
+              products(id, name, description, product_code, unit_of_measure)
+            `)
+            .eq('invoice_id', invoice.id);
+
+          if (!error && fetchedItems) {
+            invoiceItemsData = fetchedItems;
+          }
+        } catch (err) {
+          console.error('Failed to fetch invoice items:', err);
+        }
+      }
+
       // Convert invoice items to local format
-      const invoiceItems = (invoice.invoice_items || []).map((item: any, index: number) => ({
+      const invoiceItems = (invoiceItemsData || []).map((item: any, index: number) => ({
         id: item.id || `existing-${index}`,
         product_id: item.product_id || '',
         product_name: item.products?.name || 'Unknown Product',
@@ -112,9 +148,11 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
         tax_inclusive: item.tax_inclusive || false,
         line_total: item.line_total || 0,
       }));
-      
+
       setItems(invoiceItems);
-    }
+    };
+
+    loadInvoiceData();
   }, [invoice, open]);
 
   const filteredProducts = products?.filter(product =>
