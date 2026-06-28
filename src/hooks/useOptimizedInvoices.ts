@@ -207,7 +207,10 @@ export const useOptimizedInvoices = (
           : { data: [] };
 
       // Step 3: Fetch invoice items for all invoices on this page
-      const { data: invoiceItems } = await supabase
+      const invoiceIds = invoices.map((inv) => inv.id);
+      console.log(`📦 Fetching invoice items for ${invoiceIds.length} invoices:`, invoiceIds);
+
+      const { data: invoiceItems, error: itemsError } = await supabase
         .from('invoice_items')
         .select(
           `
@@ -222,11 +225,20 @@ export const useOptimizedInvoices = (
           tax_amount,
           tax_inclusive,
           line_total,
-          sort_order,
-          products(id, name, description, product_code, unit_of_measure)
+          sort_order
         `
         )
-        .in('invoice_id', invoices.map((inv) => inv.id));
+        .in('invoice_id', invoiceIds);
+
+      if (itemsError) {
+        console.error('❌ Invoice items query error:', itemsError);
+        console.error('Query details:', { invoiceIds, error: itemsError });
+      } else {
+        console.log(`✅ Fetched ${invoiceItems?.length || 0} invoice items`);
+        if (invoiceItems && invoiceItems.length > 0) {
+          console.log('Sample invoice item:', invoiceItems[0]);
+        }
+      }
 
       // Step 4: Create lookup maps
       const customerMap = new Map();
@@ -242,23 +254,37 @@ export const useOptimizedInvoices = (
         itemsMap.get(item.invoice_id).push(item);
       });
 
+      console.log(`📊 Items mapping created:`, {
+        totalItems: invoiceItems?.length || 0,
+        mappedInvoices: itemsMap.size,
+        invoiceIdsWithItems: Array.from(itemsMap.keys())
+      });
+
       // Step 5: Combine data
-      const enrichedInvoices = invoices.map((invoice) => ({
-        ...invoice,
-        customers: customerMap.get(invoice.customer_id) || {
-          id: invoice.customer_id,
-          name: 'Unknown Customer',
-          email: null,
-          phone: null,
-          address: null,
-          city: null,
-          country: null
-        },
-        invoice_items: itemsMap.get(invoice.id) || []
-      })) as OptimizedInvoice[];
+      const enrichedInvoices = invoices.map((invoice) => {
+        const items = itemsMap.get(invoice.id) || [];
+        console.log(`📋 Invoice ${invoice.invoice_number}: ${items.length} items mapped`);
+        return {
+          ...invoice,
+          customers: customerMap.get(invoice.customer_id) || {
+            id: invoice.customer_id,
+            name: 'Unknown Customer',
+            email: null,
+            phone: null,
+            address: null,
+            city: null,
+            country: null
+          },
+          invoice_items: items
+        };
+      }) as OptimizedInvoice[];
 
       const endTime = performance.now();
       console.log(`✅ Invoices loaded in ${(endTime - startTime).toFixed(2)}ms`);
+      console.log(`📈 Summary: ${enrichedInvoices.length} invoices with items:`, {
+        invoicesWithItems: enrichedInvoices.filter(inv => (inv.invoice_items || []).length > 0).length,
+        invoicesWithoutItems: enrichedInvoices.filter(inv => (inv.invoice_items || []).length === 0).length
+      });
 
       return {
         invoices: enrichedInvoices,

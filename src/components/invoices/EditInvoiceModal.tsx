@@ -106,6 +106,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       // If no items in the invoice object, fetch them from the database
       if (!invoiceItemsData || invoiceItemsData.length === 0) {
         try {
+          console.log(`🔍 Fallback fetch for invoice items, invoice_id:`, invoice.id);
           const { data: fetchedItems, error } = await supabase
             .from('invoice_items')
             .select(`
@@ -120,13 +121,17 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
               tax_amount,
               tax_inclusive,
               line_total,
-              sort_order,
-              products(id, name, description, product_code, unit_of_measure)
+              sort_order
             `)
             .eq('invoice_id', invoice.id);
 
-          if (!error && fetchedItems) {
-            invoiceItemsData = fetchedItems;
+          if (error) {
+            console.error('❌ Fallback fetch error:', error);
+          } else {
+            console.log(`✅ Fallback fetch returned ${fetchedItems?.length || 0} items`);
+            if (fetchedItems) {
+              invoiceItemsData = fetchedItems;
+            }
           }
         } catch (err) {
           console.error('Failed to fetch invoice items:', err);
@@ -134,21 +139,35 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       }
 
       // Convert invoice items to local format
-      const invoiceItems = (invoiceItemsData || []).map((item: any, index: number) => ({
-        id: item.id || `existing-${index}`,
-        product_id: item.product_id || '',
-        product_name: item.products?.name || 'Unknown Product',
-        description: item.description || '',
-        quantity: item.quantity || 0,
-        unit_price: item.unit_price || 0,
-        discount_percentage: item.discount_percentage || 0,
-        discount_before_vat: item.discount_before_vat || 0,
-        tax_percentage: item.tax_percentage || 16,
-        tax_amount: item.tax_amount || 0,
-        tax_inclusive: item.tax_inclusive || false,
-        line_total: item.line_total || 0,
-      }));
+      const invoiceItems = (invoiceItemsData || []).map((item: any, index: number) => {
+        // Try to get product name from products array or description
+        let productName = 'Unknown Product';
+        if (item.description) {
+          productName = item.description;
+        }
+        if (item.product_id && products) {
+          const product = products.find((p: any) => p.id === item.product_id);
+          if (product) {
+            productName = product.name;
+          }
+        }
+        return {
+          id: item.id || `existing-${index}`,
+          product_id: item.product_id || '',
+          product_name: productName,
+          description: item.description || '',
+          quantity: item.quantity || 0,
+          unit_price: item.unit_price || 0,
+          discount_percentage: item.discount_percentage || 0,
+          discount_before_vat: item.discount_before_vat || 0,
+          tax_percentage: item.tax_percentage || 16,
+          tax_amount: item.tax_amount || 0,
+          tax_inclusive: item.tax_inclusive || false,
+          line_total: item.line_total || 0,
+        };
+      });
 
+      console.log(`📊 Modal: Converted ${invoiceItems.length} items for display:`, invoiceItems);
       setItems(invoiceItems);
     };
 
