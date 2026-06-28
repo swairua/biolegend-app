@@ -308,12 +308,22 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+            className="h-9 sm:h-10 px-3 sm:px-4"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !formData.name.trim()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Creating...' : 'Create Customer'}
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !formData.name.trim()}
+            className="h-9 sm:h-10 px-3 sm:px-4 w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">{isSubmitting ? 'Creating...' : 'Create Customer'}</span>
+            <span className="sm:hidden text-xs">{isSubmitting ? 'Creating' : 'Create'}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

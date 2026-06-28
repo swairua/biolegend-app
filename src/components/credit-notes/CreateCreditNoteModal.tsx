@@ -689,9 +689,9 @@ export function CreateCreditNoteModal({
                           variant="ghost"
                           size="icon"
                           onClick={() => removeItem(item.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -725,15 +725,22 @@ export function CreateCreditNoteModal({
         </Card>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            className="h-9 sm:h-10 px-3 sm:px-4"
+          >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={isSubmitting || !selectedCustomerId || items.length === 0 || !reason.trim()}
+            className="h-9 sm:h-10 px-3 sm:px-4 w-full sm:w-auto"
           >
-            <Calculator className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Creating...' : 'Create Credit Note'}
+            <Calculator className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">{isSubmitting ? 'Creating...' : 'Create Credit Note'}</span>
+            <span className="sm:hidden text-xs">{isSubmitting ? 'Creating' : 'Create'}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

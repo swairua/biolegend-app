@@ -83,12 +83,12 @@ export function Header() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <CurrencySwitcher />
           {isAuthenticated && (
             <>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
+                <Bell className="h-4 sm:h-5 w-4 sm:w-5" />
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-xs text-destructive-foreground flex items-center justify-center">
                   3
                 </span>
@@ -97,17 +97,17 @@ export function Header() {
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-3 px-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                  <Button variant="ghost" className="flex items-center gap-2 px-2 sm:px-3 h-8 sm:h-10">
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-medium text-xs sm:text-sm">
                         {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col items-start">
+                    <div className="hidden sm:flex flex-col items-start">
                       <span className="text-sm font-medium">
                         {profile?.full_name || user?.email || 'User'}
                       </span>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
                           {profile?.role ? getRoleDisplay(profile.role) : 'User'}
                         </span>
@@ -158,14 +158,16 @@ export function Header() {
           )}
 
           {!isAuthenticated && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => setAuthModal('signin')}
+                className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
               >
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
+                <LogIn className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Sign In</span>
+                <span className="xs:hidden">In</span>
               </Button>
             </div>
           )}

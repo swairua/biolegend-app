@@ -889,9 +889,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                           variant="ghost"
                           size="icon"
                           onClick={() => removeItem(item.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -963,19 +963,30 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            className="h-9 sm:h-10 px-3 sm:px-4"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !selectedCustomerId || items.length === 0} className="min-w-32">
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !selectedCustomerId || items.length === 0}
+            className="h-9 sm:h-10 px-3 sm:px-4 w-full sm:w-auto"
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {submitProgress ? 'Processing...' : 'Creating...'}
+                <span className="hidden sm:inline">{submitProgress ? 'Processing...' : 'Creating...'}</span>
+                <span className="sm:hidden text-xs">{submitProgress ? 'Processing' : 'Creating'}</span>
               </>
             ) : (
               <>
-                <Receipt className="mr-2 h-4 w-4" />
-                Create Invoice
+                <Receipt className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Create Invoice</span>
+                <span className="sm:hidden text-xs">Create</span>
               </>
             )}
           </Button>

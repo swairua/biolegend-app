@@ -924,10 +924,11 @@ export const CreateLPOModal = ({
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={() => removeItem(item.id)}
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -983,11 +984,21 @@ export const CreateLPOModal = ({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="h-9 sm:h-10 px-3 sm:px-4"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.supplier_id || items.length === 0}>
-              {isSubmitting ? 'Creating...' : 'Create Purchase Order'}
+            <Button
+              type="submit"
+              disabled={isSubmitting || !formData.supplier_id || items.length === 0}
+              className="h-9 sm:h-10 px-3 sm:px-4 w-full sm:w-auto"
+            >
+              <span className="hidden sm:inline">{isSubmitting ? 'Creating...' : 'Create Purchase Order'}</span>
+              <span className="sm:hidden text-xs">{isSubmitting ? 'Creating' : 'Create PO'}</span>
             </Button>
           </DialogFooter>
         </form>
