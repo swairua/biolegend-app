@@ -51,8 +51,8 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     return new Intl.NumberFormat(getLocaleForCurrency(code), {
       style: 'currency',
       currency: code,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(Number.isFinite(amount) ? amount : 0);
   };
 
