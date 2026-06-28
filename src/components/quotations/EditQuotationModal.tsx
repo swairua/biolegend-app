@@ -22,12 +22,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Search,
   Calculator,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +73,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
 
   const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
   const previousRateRef = useRef<number>(1);
 
   const formatCurrency = (amount: number) => formatCurrencyUtil(Number(amount) || 0, currencyCode || 'KES');
@@ -119,6 +121,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
 
   const fetchAndSetRate = async () => {
     try {
+      setIsFetchingRate(true);
       toast.info('Fetching exchange rate...');
       const rate = await getExchangeRate('KES', currencyCode, quotationDate);
       if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
@@ -130,6 +133,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
     } catch (e: any) {
       console.error('Failed to fetch rate:', e);
       toast.error(e?.message || 'Failed to fetch exchange rate');
+    } finally {
+      setIsFetchingRate(false);
     }
   };
 
@@ -335,6 +340,9 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         total_amount: totalAmount,
         notes,
         terms_and_conditions: termsAndConditions,
+        currency_code: currencyCode,
+        exchange_rate: currencyCode === 'USD' ? exchangeRate : 1,
+        fx_date: quotationDate,
         updated_at: new Date().toISOString(),
       };
 
@@ -444,6 +452,31 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
                       )}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Currency */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency *</Label>
+                    <Select value={currencyCode} onValueChange={(v) => handleCurrencyChange(v as 'KES' | 'USD')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
+                        <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rate">Exchange Rate</Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="rate" value={`1 KES = ${exchangeRate.toFixed(6)} ${currencyCode}`} readOnly />
+                      <Button type="button" variant="outline" onClick={fetchAndSetRate} disabled={currencyCode === 'KES' || isFetchingRate} size="sm">
+                        {isFetchingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Dates */}
