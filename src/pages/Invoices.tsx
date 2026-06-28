@@ -163,8 +163,8 @@ export default function Invoices() {
   }) || [];
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', invoiceRate?: number) => {
-    const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, invoiceRate as any, currency, rate);
-    return format(normalized, currency);
+    const invoiceCurrency = (recordCurrency === 'USD' || recordCurrency === 'KES') ? recordCurrency : 'KES';
+    return format(Number(amount) || 0, invoiceCurrency);
   };
 
 
