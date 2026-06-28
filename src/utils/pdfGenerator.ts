@@ -1527,14 +1527,18 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       const { data, error } = await supabase
         .from('invoice_items')
         .select(`
-          *,
-          products (
-            id,
-            name,
-            description,
-            product_code,
-            unit_of_measure
-          )
+          id,
+          invoice_id,
+          product_id,
+          description,
+          quantity,
+          unit_price,
+          discount_before_vat,
+          tax_percentage,
+          tax_amount,
+          tax_inclusive,
+          line_total,
+          sort_order
         `)
         .eq('invoice_id', invoice.id);
 
