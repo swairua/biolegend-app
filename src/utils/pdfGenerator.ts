@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { sanitizeAndEscape } from './textSanitizer';
 import { getLocaleForCurrency } from './exchangeRates';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+import { supabase } from '@/integrations/supabase/client';
 
 // PDF Generation utility using HTML to print/PDF conversion
 // Since we don't have jsPDF installed, I'll create a simple HTML-to-print function
@@ -1519,6 +1520,32 @@ export const generatePDFDownload = async (data: DocumentData) => {
 
 // Specific function for invoice PDF generation
 export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' | 'PROFORMA' = 'INVOICE', company?: CompanyDetails) => {
+  let invoiceItems = invoice.invoice_items;
+
+  if (!invoiceItems || invoiceItems.length === 0) {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select(`
+          *,
+          products (
+            id,
+            name,
+            description,
+            product_code,
+            unit_of_measure
+          )
+        `)
+        .eq('invoice_id', invoice.id);
+
+      if (!error && data) {
+        invoiceItems = data;
+      }
+    } catch (err) {
+      console.error('Error fetching invoice items:', err);
+    }
+  }
+
   const documentData: DocumentData = {
     type: documentType === 'PROFORMA' ? 'proforma' : 'invoice',
     number: invoice.invoice_number,
@@ -1534,7 +1561,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       city: invoice.customers?.city,
       country: invoice.customers?.country,
     },
-    items: invoice.invoice_items?.map((item: any, index: number) => {
+    items: invoiceItems?.map((item: any, index: number) => {
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.unit_price || 0);
       const taxAmount = Number(item.tax_amount || 0);
