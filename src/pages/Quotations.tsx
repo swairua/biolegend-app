@@ -183,7 +183,7 @@ export default function Quotations() {
 
     try {
       // Create email content
-      const subject = `Quotation ${quotation.quotation_number} from MedPlus Africa`;
+      const subject = `Quotation ${quotation.quotation_number} from Biolegend Scientific LTD`;
       const body = `Dear ${quotation.customers.name},
 
 Please find attached your quotation ${quotation.quotation_number} dated ${new Date(quotation.quotation_date).toLocaleDateString()}.

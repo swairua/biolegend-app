@@ -228,7 +228,7 @@ export default function Invoices() {
 
     try {
       // Create email content
-      const subject = `Invoice ${invoiceData.invoice_number} from MedPlus Africa`;
+      const subject = `Invoice ${invoiceData.invoice_number} from Biolegend Scientific LTD`;
       const body = `Dear ${invoiceData.customers.name},
 
 Please find attached your invoice ${invoiceData.invoice_number} dated ${new Date(invoiceData.invoice_date).toLocaleDateString()}.
