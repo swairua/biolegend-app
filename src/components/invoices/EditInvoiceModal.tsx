@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { normalizeInvoiceAmount } from '@/utils/currency';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,10 +61,17 @@ interface EditInvoiceModalProps {
 }
 
 export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: EditInvoiceModalProps) {
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, invoice?.currency_code as any, invoice?.exchange_rate as any, currency, rate)
-  );
+  const { format } = useCurrency();
+
+  const formatInvoiceCurrency = (amount: number) => {
+    const currencyCode = invoice?.currency_code || 'KES';
+    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode as any), {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  };
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -546,7 +553,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                                 )}
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold">{formatCurrency(product.selling_price)}</div>
+                                <div className="font-semibold">{formatInvoiceCurrency(product.selling_price)}</div>
                                 <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
                               </div>
                             </div>
@@ -658,7 +665,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                         />
                       </TableCell>
                       <TableCell className="font-semibold">
-                        {formatCurrency(item.line_total)}
+                        {formatInvoiceCurrency(item.line_total)}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -683,23 +690,23 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                   <div className="w-80 space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span className="font-semibold">{formatCurrency(subtotal)}</span>
+                      <span className="font-semibold">{formatInvoiceCurrency(subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>VAT:</span>
-                      <span className="font-semibold">{formatCurrency(taxAmount)}</span>
+                      <span className="font-semibold">{formatInvoiceCurrency(taxAmount)}</span>
                     </div>
                     <div className="flex justify-between text-lg border-t pt-2">
                       <span className="font-bold">Total:</span>
-                      <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
+                      <span className="font-bold text-primary">{formatInvoiceCurrency(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>Paid:</span>
-                      <span>{formatCurrency(invoice?.paid_amount || 0)}</span>
+                      <span>{formatInvoiceCurrency(invoice?.paid_amount || 0)}</span>
                     </div>
                     <div className="flex justify-between text-lg border-t pt-2">
                       <span className="font-bold">Balance Due:</span>
-                      <span className="font-bold text-destructive">{formatCurrency(balanceDue)}</span>
+                      <span className="font-bold text-destructive">{formatInvoiceCurrency(balanceDue)}</span>
                     </div>
                   </div>
                 </div>
