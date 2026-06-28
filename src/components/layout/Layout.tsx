@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
+import { Sidebar, SidebarProvider, SidebarContent, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { EnhancedLogin } from '@/components/auth/EnhancedLogin';
@@ -88,14 +89,14 @@ export function Layout({ children }: LayoutProps) {
 
   // Show authenticated layout
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <SidebarProvider className="h-screen">
+      <AppSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden w-full">
         <Header />
         <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {children}
         </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
