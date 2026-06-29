@@ -117,20 +117,25 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     try {
       if (newCurrency === currencyCode) return;
       let newRate = 1;
-      if (newCurrency === 'USD' && items.length > 0) {
-        // Only fetch and apply exchange rate if there are items to convert
-        toast.info('Fetching KES→USD rate...');
-        newRate = await getExchangeRate('KES', 'USD', quotationDate);
-        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
-        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
-        const factor = newRate / previousRateRef.current;
-        convertItemsByFactor(factor);
+      if (newCurrency === 'USD') {
+        if (items.length > 0) {
+          // Fetch exchange rate only if there are items to convert
+          toast.info('Fetching KES→USD rate...');
+          newRate = await getExchangeRate('KES', 'USD', quotationDate);
+          if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+          toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+          const factor = newRate / previousRateRef.current;
+          convertItemsByFactor(factor);
+        }
+        // If no items, newRate stays at 1 (placeholder rate until items are added)
       } else if (newCurrency === 'KES') {
+        // Switching back to KES: always convert items back
         newRate = 1;
-        const factor = newRate / previousRateRef.current;
-        convertItemsByFactor(factor);
+        if (items.length > 0) {
+          const factor = newRate / previousRateRef.current;
+          convertItemsByFactor(factor);
+        }
       }
-      // If switching to USD with no items, keep rate at 1 (no conversion needed)
       previousRateRef.current = newRate;
       setExchangeRate(newRate);
       setCurrencyCode(newCurrency);
