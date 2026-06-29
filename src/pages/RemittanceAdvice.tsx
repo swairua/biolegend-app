@@ -111,7 +111,7 @@ const RemittanceAdvice = () => {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      downloadRemittancePDF(remittanceData, companyDetails);
+      downloadRemittancePDF(remittanceData, companyDetails, rate);
       toast.success(`PDF download started for ${remittance.advice_number}`);
     } catch (error) {
       console.error('Error downloading PDF:', error);

@@ -131,7 +131,7 @@ export default function DeliveryNotes() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      await downloadDeliveryNotePDF(deliveryNote, companyDetails);
+      await downloadDeliveryNotePDF(deliveryNote, companyDetails, rate);
       const noteNumber = deliveryNote.delivery_note_number || deliveryNote.delivery_number;
       toast.success(`Delivery note ${noteNumber} PDF downloaded successfully!`);
     } catch (error) {

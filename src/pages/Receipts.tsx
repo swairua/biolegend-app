@@ -197,7 +197,7 @@ export default function Receipts() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      downloadReceiptPDF(receipt, companyDetails);
+      downloadReceiptPDF(receipt, companyDetails, rate);
       toast.success(`PDF download started for ${receipt.invoice_number}`);
     } catch (error) {
       console.error('Error downloading PDF:', error);

@@ -211,7 +211,7 @@ export default function Invoices() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      downloadInvoicePDF(invoice, 'INVOICE', companyDetails);
+      downloadInvoicePDF(invoice, 'INVOICE', companyDetails, rate);
       toast.success(`PDF download started for ${invoice.invoice_number}`);
     } catch (error) {
       console.error('Error downloading PDF:', error);

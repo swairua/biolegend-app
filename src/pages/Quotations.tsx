@@ -175,7 +175,7 @@ export default function Quotations() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      downloadQuotationPDF(quotation, companyDetails);
+      downloadQuotationPDF(quotation, companyDetails, rate);
       toast.success(`PDF download started for ${quotation.quotation_number}`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
