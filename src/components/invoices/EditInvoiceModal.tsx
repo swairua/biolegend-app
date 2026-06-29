@@ -772,7 +772,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12 text-center">Item #</TableHead>
-                    <TableHead>Product</TableHead>
+                    <TableHead className="min-w-[150px]">Name</TableHead>
+                    <TableHead className="flex-1">Description</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Unit Price</TableHead>
                     <TableHead>Discount %</TableHead>
@@ -787,12 +788,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                   {items.map((item, index) => (
                     <TableRow key={item.id}>
                       <TableCell className="w-12 text-center">{index + 1}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{item.product_name}</div>
-                          <div className="text-sm text-muted-foreground">{item.description}</div>
-                        </div>
-                      </TableCell>
+                      <TableCell className="font-medium">{item.product_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.description || '-'}</TableCell>
                       <TableCell>
                         <Input
                           type="number"
