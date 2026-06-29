@@ -26,39 +26,45 @@ export function getLocaleForCurrency(currency: string): string {
 export async function getExchangeRate(base: string, quote: string, date?: string): Promise<number> {
   if (base === quote) return 1;
   const datePath = getDatePath(date);
+  const errors: string[] = [];
 
   // 0) apilayer exchangeratesapi.io using API key if provided
   try {
     const key = (import.meta as any)?.env?.VITE_EXCHANGE_RATES_API_KEY as string | undefined;
     if (key) {
       const path = datePath === 'latest' ? 'latest' : datePath;
-      // Use symbols for both base and quote to avoid base-change restriction on free plans
       const symbols = encodeURIComponent(`${base},${quote}`);
       const url = `https://api.exchangeratesapi.io/v1/${path}?access_key=${encodeURIComponent(key)}&symbols=${symbols}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        const apiBase = json?.base as string | undefined; // likely 'EUR' on free plan
-        const rates = json?.rates || {};
-        const rBase = rates?.[base];
-        const rQuote = rates?.[quote];
-        if (apiBase && typeof rQuote === 'number') {
-          if (apiBase === base) {
-            // API base equals requested base
-            if (rQuote > 0) return rQuote;
-          } else if (typeof rBase === 'number' && rBase > 0) {
-            // Convert via API base (e.g., EUR): quote/base
-            const computed = rQuote / rBase;
-            if (computed > 0) return computed;
+
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          const apiBase = json?.base as string | undefined;
+          const rates = json?.rates || {};
+          const rBase = rates?.[base];
+          const rQuote = rates?.[quote];
+          if (apiBase && typeof rQuote === 'number') {
+            if (apiBase === base) {
+              if (rQuote > 0) return rQuote;
+            } else if (typeof rBase === 'number' && rBase > 0) {
+              const computed = rQuote / rBase;
+              if (computed > 0) return computed;
+            }
           }
+          if (typeof json?.result === 'number' && json.result > 0) {
+            return json.result;
+          }
+        } else {
+          errors.push(`exchangeratesapi.io: HTTP ${res.status}`);
         }
-        // Also check direct "result" in case of convert endpoint behavior
-        if (typeof json?.result === 'number' && json.result > 0) {
-          return json.result;
-        }
+      } catch (err) {
+        errors.push(`exchangeratesapi.io fetch failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    errors.push(`exchangeratesapi.io setup failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // 1) exchangerate.host
   try {
@@ -68,8 +74,12 @@ export async function getExchangeRate(base: string, quote: string, date?: string
       const json = await res.json();
       const rate = json?.rates?.[quote];
       if (typeof rate === 'number' && rate > 0) return rate;
+    } else {
+      errors.push(`exchangerate.host: HTTP ${res.status}`);
     }
-  } catch (_) {}
+  } catch (err) {
+    errors.push(`exchangerate.host failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // 2) frankfurter.app
   try {
@@ -80,8 +90,12 @@ export async function getExchangeRate(base: string, quote: string, date?: string
       const json = await res.json();
       const rate = json?.rates?.[quote];
       if (typeof rate === 'number' && rate > 0) return rate;
+    } else {
+      errors.push(`frankfurter.app: HTTP ${res.status}`);
     }
-  } catch (_) {}
+  } catch (err) {
+    errors.push(`frankfurter.app failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // 3) open.er-api.com (latest only, no historical)
   try {
@@ -91,8 +105,17 @@ export async function getExchangeRate(base: string, quote: string, date?: string
       const json = await res.json();
       const rate = json?.rates?.[quote];
       if (typeof rate === 'number' && rate > 0) return rate;
+    } else {
+      errors.push(`open.er-api.com: HTTP ${res.status}`);
     }
-  } catch (_) {}
+  } catch (err) {
+    errors.push(`open.er-api.com failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Log all provider failures for debugging (console only, not to auth system)
+  if (process.env.NODE_ENV === 'development' && errors.length > 0) {
+    console.warn('Exchange rate providers failed:', errors);
+  }
 
   throw new Error(`Unable to fetch exchange rate for ${base}/${quote}`);
 }
