@@ -126,7 +126,15 @@ export default function Quotations() {
   const deleteQuotation = useDeleteQuotation();
 
   const { currency, rate, format } = useCurrency();
-  const formatQuotationAmount = (amount: number, quotationCurrency: string) => format(Number(amount) || 0, quotationCurrency as any);
+  const formatQuotationAmount = (amount: number, quotationCurrency: string, exchangeRate?: number) => {
+    // Handle currency code detection: if exchange_rate != 1, it's likely USD even if currency_code says KES
+    let effectiveCurrency = quotationCurrency;
+    if (quotationCurrency === 'KES' && exchangeRate && exchangeRate !== 1) {
+      // Quotation was created with USD but stored with wrong currency_code
+      effectiveCurrency = 'USD';
+    }
+    return format(Number(amount) || 0, effectiveCurrency as any);
+  };
 
   const filteredQuotations = quotations?.filter(quotation =>
     quotation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -509,7 +517,7 @@ Website: www.biolegendscientific.co.ke`;
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {formatQuotationAmount(quotation.total_amount || 0, quotation.currency_code || 'KES')}
+                      {formatQuotationAmount(quotation.total_amount || 0, quotation.currency_code || 'KES', quotation.exchange_rate)}
                     </TableCell>
                     <TableCell>
                       {quotation.valid_until 

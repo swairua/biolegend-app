@@ -54,7 +54,14 @@ export function ViewQuotationModal({
 
   // Call currency hook unconditionally to preserve hooks order
   const { currency, rate, format } = useCurrency();
-  const formatQuotationAmount = (amount: number) => format(Number(amount) || 0, quotation.currency_code as any);
+  const formatQuotationAmount = (amount: number) => {
+    // Handle currency code detection: if exchange_rate != 1, it's likely USD even if currency_code says KES
+    let effectiveCurrency = quotation?.currency_code || 'KES';
+    if (effectiveCurrency === 'KES' && quotation?.exchange_rate && quotation.exchange_rate !== 1) {
+      effectiveCurrency = 'USD';
+    }
+    return format(Number(amount) || 0, effectiveCurrency as any);
+  };
 
   if (!quotation) return null;
 
@@ -251,6 +258,22 @@ export function ViewQuotationModal({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Valid Until:</span>
                     <span>{formatDate(quotation.valid_until)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Currency:</span>
+                  <span className="font-semibold">
+                    {(() => {
+                      const currency = quotation.currency_code || 'KES';
+                      const effectiveCurrency = currency === 'KES' && quotation.exchange_rate && quotation.exchange_rate !== 1 ? 'USD' : currency;
+                      return effectiveCurrency === 'USD' ? 'USD (US Dollar)' : 'KES (Kenyan Shilling)';
+                    })()}
+                  </span>
+                </div>
+                {quotation.exchange_rate && quotation.exchange_rate !== 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Exchange Rate:</span>
+                    <span>{quotation.exchange_rate.toFixed(6)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
