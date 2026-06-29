@@ -217,6 +217,7 @@ export const useOptimizedInvoices = (
           id,
           invoice_id,
           product_id,
+          product_name,
           description,
           quantity,
           unit_price,
