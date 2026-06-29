@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
 import { getLocaleForCurrency, getExchangeRate } from '@/utils/exchangeRates';
@@ -30,7 +30,8 @@ import {
   Trash2,
   Search,
   Calculator,
-  Receipt
+  Receipt,
+  RefreshCw
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateInvoiceWithItems } from '@/hooks/useQuotationItems';
@@ -64,29 +65,13 @@ interface EditInvoiceModalProps {
 export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: EditInvoiceModalProps) {
   const { currency, rate } = useCurrency();
 
-  const formatInvoiceCurrency = (amount: number) => {
-    const invoiceCurrency = invoice?.currency_code || 'KES';
-    const normalized = normalizeInvoiceAmount(
-      amount,
-      invoiceCurrency as any,
-      invoice?.exchange_rate,
-      invoiceCurrency as any,
-      rate
-    );
-    return new Intl.NumberFormat(getLocaleForCurrency(invoiceCurrency as any), {
-      style: 'currency',
-      currency: invoiceCurrency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Number.isFinite(normalized) ? normalized : 0);
-  };
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
-  
+
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,6 +79,78 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recalculateWithCurrentRate, setRecalculateWithCurrentRate] = useState(false);
   const [lockedRateInfo, setLockedRateInfo] = useState<{ rate: number; date: string } | null>(null);
+
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>(invoice?.currency_code || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(invoice?.exchange_rate || 1);
+  const previousRateRef = useRef<number>(1);
+
+  const formatInvoiceCurrency = (amount: number) => {
+    const normalized = normalizeInvoiceAmount(
+      amount,
+      currencyCode as any,
+      exchangeRate,
+      currencyCode as any,
+      rate
+    );
+    return new Intl.NumberFormat(getLocaleForCurrency(currencyCode as any), {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number.isFinite(normalized) ? normalized : 0);
+  };
+
+  const convertItemsByFactor = (factor: number) => {
+    setItems(prev => prev.map(item => {
+      const newUnit = parseFloat((item.unit_price * factor).toFixed(4));
+      const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, newUnit);
+      return { ...item, unit_price: newUnit, line_total: lineTotal, tax_amount: taxAmount };
+    }));
+  };
+
+  const handleCurrencyChange = async (newCurrency: 'KES' | 'USD') => {
+    try {
+      if (newCurrency === currencyCode) return;
+      let newRate = 1;
+      if (newCurrency === 'USD') {
+        toast.info('Fetching USD/KES exchange rate...');
+        newRate = await getExchangeRate('USD', 'KES', invoiceDate);
+        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+        toast.success(`Rate locked: 1 USD = ${newRate.toFixed(2)} KES`);
+      } else {
+        newRate = 1;
+      }
+      const factor = newRate / previousRateRef.current;
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      setCurrencyCode(newCurrency);
+    } catch (e: any) {
+      console.error('Currency change failed:', e);
+      toast.error(e?.message || 'Failed to change currency');
+    }
+  };
+
+  const fetchAndSetRate = async () => {
+    try {
+      toast.info('Fetching exchange rate...');
+      const rate = currencyCode === 'USD'
+        ? await getExchangeRate('USD', 'KES', invoiceDate)
+        : 1;
+      if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
+      const factor = rate / exchangeRate;
+      convertItemsByFactor(factor);
+      previousRateRef.current = rate;
+      setExchangeRate(rate);
+      const msg = currencyCode === 'USD'
+        ? `Rate updated: 1 USD = ${rate.toFixed(2)} KES`
+        : 'Currency set to KES (no conversion needed)';
+      toast.success(msg);
+    } catch (e: any) {
+      console.error('Failed to fetch rate:', e);
+      toast.error(e?.message || 'Failed to fetch exchange rate');
+    }
+  };
 
   const { currentCompany } = useCurrentCompany();
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
@@ -116,6 +173,13 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       setLpoNumber(invoice.lpo_number || '');
       setNotes(invoice.notes || '');
       setTermsAndConditions(invoice.terms_and_conditions || '');
+
+      // Initialize currency and exchange rate from invoice
+      const invoiceCurrency = invoice.currency_code || 'KES';
+      const invoiceRate = invoice.exchange_rate || 1;
+      setCurrencyCode(invoiceCurrency);
+      setExchangeRate(invoiceRate);
+      previousRateRef.current = invoiceRate;
 
       // Capture locked rate info if invoice was created in USD
       if (invoice.currency_code === 'USD' && invoice.exchange_rate) {
@@ -422,6 +486,9 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
         balance_due: balanceDue,
         terms_and_conditions: termsAndConditions,
         notes: notes,
+        currency_code: currencyCode,
+        exchange_rate: exchangeRate,
+        fx_date: invoiceDate
       };
 
       // If invoice was in USD and recalculated, update the rate metadata
@@ -482,6 +549,39 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                 <CardTitle className="text-lg">Invoice Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Currency Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <div className="flex gap-2">
+                    <Select value={currencyCode} onValueChange={handleCurrencyChange}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KES">KES - Kenyan Shilling</SelectItem>
+                        <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {currencyCode === 'USD' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchAndSetRate}
+                        className="px-3"
+                        title="Fetch latest exchange rate"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {currencyCode === 'USD' && exchangeRate && (
+                    <p className="text-xs text-muted-foreground">
+                      Rate: 1 USD = {exchangeRate.toFixed(2)} KES
+                    </p>
+                  )}
+                </div>
+
                 {/* Locked Rate Info (for USD invoices) */}
                 {lockedRateInfo && invoice?.currency_code === 'USD' && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">

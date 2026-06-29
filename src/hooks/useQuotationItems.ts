@@ -211,7 +211,7 @@ export const useConvertQuotationToInvoice = () => {
         terms_and_conditions: quotation.terms_and_conditions,
         affects_inventory: true,
         currency_code: (quotation as any).currency_code,
-        exchange_rate: quotationRate ? (1 / quotationRate) : 1,
+        exchange_rate: quotationRate || 1,
         fx_date: (quotation as any).quotation_date || new Date().toISOString().split('T')[0]
       };
       
