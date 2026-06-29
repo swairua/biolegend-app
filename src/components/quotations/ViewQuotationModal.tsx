@@ -261,6 +261,22 @@ export function ViewQuotationModal({
                   </div>
                 )}
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Currency:</span>
+                  <span className="font-semibold">
+                    {(() => {
+                      const currency = quotation.currency_code || 'KES';
+                      const effectiveCurrency = currency === 'KES' && quotation.exchange_rate && quotation.exchange_rate !== 1 ? 'USD' : currency;
+                      return effectiveCurrency === 'USD' ? 'USD (US Dollar)' : 'KES (Kenyan Shilling)';
+                    })()}
+                  </span>
+                </div>
+                {quotation.exchange_rate && quotation.exchange_rate !== 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Exchange Rate:</span>
+                    <span>{quotation.exchange_rate.toFixed(6)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Amount:</span>
                   <span className="font-semibold text-primary">{formatQuotationAmount(quotation.total_amount || 0)}</span>
                 </div>
