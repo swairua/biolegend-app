@@ -31,6 +31,7 @@ export interface OptimizedQuotation {
     id: string;
     quotation_id: string;
     product_id?: string;
+    product_name?: string;
     description: string;
     quantity: number;
     unit_price: number;
@@ -136,7 +137,7 @@ export const useOptimizedQuotations = (
       // Fetch quotation items
       const { data: quotationItems } = await supabase
         .from('quotation_items')
-        .select('id, quotation_id, product_id, description, quantity, unit_price, tax_percentage, tax_amount, line_total')
+        .select('id, quotation_id, product_id, product_name, description, quantity, unit_price, tax_percentage, tax_amount, line_total')
         .in('quotation_id', quotations.map((q) => q.id));
 
       // Create maps
