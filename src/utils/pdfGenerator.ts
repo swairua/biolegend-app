@@ -1541,6 +1541,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
           id,
           invoice_id,
           product_id,
+          product_name,
           description,
           quantity,
           unit_price,
@@ -1549,7 +1550,8 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
           tax_amount,
           tax_inclusive,
           line_total,
-          sort_order
+          sort_order,
+          products(id, name, description, product_code, unit_of_measure)
         `)
         .eq('invoice_id', invoice.id);
 
@@ -1685,6 +1687,38 @@ export const downloadCreditNotePDF = async (creditNote: any, company?: CompanyDe
 
 // Function for quotation PDF generation
 export const downloadQuotationPDF = async (quotation: any, company?: CompanyDetails, currentRate: number = 1) => {
+  let quotationItems = quotation.quotation_items;
+
+  if (!quotationItems || quotationItems.length === 0) {
+    try {
+      const { data, error } = await supabase
+        .from('quotation_items')
+        .select(`
+          id,
+          quotation_id,
+          product_id,
+          product_name,
+          description,
+          quantity,
+          unit_price,
+          discount_percentage,
+          tax_percentage,
+          tax_amount,
+          tax_inclusive,
+          line_total,
+          sort_order,
+          products(id, name, description, product_code, unit_of_measure)
+        `)
+        .eq('quotation_id', quotation.id);
+
+      if (!error && data) {
+        quotationItems = data;
+      }
+    } catch (err) {
+      console.error('Error fetching quotation items:', err);
+    }
+  }
+
   const quotationCurrencyCode = quotation.currency_code === 'USD' || quotation.currency_code === 'KES' ? quotation.currency_code : (Number(quotation.exchange_rate) && Number(quotation.exchange_rate) !== 1 ? 'USD' : 'KES');
   const quotationRate = Number.isFinite(quotation.exchange_rate) ? quotation.exchange_rate : currentRate;
 
@@ -1703,7 +1737,7 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
       city: quotation.customers?.city,
       country: quotation.customers?.country,
     },
-    items: quotation.quotation_items?.map((item: any, index: number) => {
+    items: quotationItems?.map((item: any, index: number) => {
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.unit_price || 0);
       const taxAmount = Number(item.tax_amount || 0);

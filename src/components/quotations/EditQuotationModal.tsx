@@ -157,7 +157,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       const quotationItems = (quotation.quotation_items || []).map((item: any, index: number) => ({
         id: item.id || `existing-${index}`,
         product_id: item.product_id || '',
-        product_name: item.products?.name || item.description || 'Unknown Product',
+        product_name: item.product_name || item.products?.name || 'Unknown Product',
         description: item.description || '',
         quantity: item.quantity || 0,
         unit_price: item.unit_price || 0,
@@ -189,7 +189,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name,
-      description: product.description || product.name,
+      description: product.description || '',
       quantity: 1,
       unit_price: Number(product.selling_price || 0),
       discount_percentage: 0,
@@ -354,7 +354,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         const insertItems = items.map((item, index) => ({
           quotation_id: quotation.id,
           product_id: item.product_id || null,
-          description: item.description || item.product_name,
+          product_name: item.product_name,
+          description: item.description || '',
           quantity: Number(item.quantity || 0),
           unit_price: Number(item.unit_price || 0),
           discount_percentage: Number(item.discount_percentage || 0),

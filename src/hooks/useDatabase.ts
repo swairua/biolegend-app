@@ -613,6 +613,7 @@ export const useInvoices = (companyId?: string) => {
             id,
             invoice_id,
             product_id,
+            product_name,
             description,
             quantity,
             unit_price,
@@ -711,6 +712,7 @@ export const useCustomerInvoices = (customerId?: string, companyId?: string) => 
             id,
             invoice_id,
             product_id,
+            product_name,
             description,
             quantity,
             unit_price,
@@ -719,7 +721,8 @@ export const useCustomerInvoices = (customerId?: string, companyId?: string) => 
             tax_amount,
             tax_inclusive,
             line_total,
-            sort_order
+            sort_order,
+            products(id, name, description, product_code, unit_of_measure)
           `)
           .in('invoice_id', invoices.map(inv => inv.id));
 
@@ -1530,6 +1533,7 @@ export const useQuotations = (companyId?: string) => {
             id,
             quotation_id,
             product_id,
+            product_name,
             description,
             quantity,
             unit_price,
@@ -1564,7 +1568,7 @@ export const useQuotations = (companyId?: string) => {
 
         const { data: products, error: productsError } = productIds.length > 0 ? await supabase
           .from('products')
-          .select('id, name, unit_of_measure')
+          .select('id, name, description, unit_of_measure')
           .in('id', productIds) : { data: [] };
 
         if (productsError) {

@@ -141,6 +141,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
               id,
               invoice_id,
               product_id,
+              product_name,
               description,
               quantity,
               unit_price,
@@ -168,17 +169,13 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
       // Convert invoice items to local format
       const invoiceItems = (invoiceItemsData || []).map((item: any, index: number) => {
-        let productName = 'Unknown Product';
-        // First, try to get product name from product relationship
-        if (item.product_id && products) {
+        let productName = item.product_name || 'Unknown Product';
+        // If no product name is stored, try to get it from product relationship
+        if (!item.product_name && item.product_id && products) {
           const product = products.find((p: any) => p.id === item.product_id);
           if (product) {
             productName = product.name;
           }
-        }
-        // If no product found, use stored description as fallback
-        if (productName === 'Unknown Product' && item.description) {
-          productName = item.description;
         }
         return {
           id: item.id || `existing-${index}`,
@@ -246,7 +243,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name,
-      description: product.description || product.name,
+      description: product.description || '',
       quantity: 1,
       unit_price: product.selling_price,
       discount_percentage: 0,
@@ -435,6 +432,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
       const invoiceItems = items.map(item => ({
         product_id: item.product_id,
+        product_name: item.product_name,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
