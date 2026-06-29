@@ -147,16 +147,17 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
       // Convert invoice items to local format
       const invoiceItems = (invoiceItemsData || []).map((item: any, index: number) => {
-        // Try to get product name from products array or description
         let productName = 'Unknown Product';
-        if (item.description) {
-          productName = item.description;
-        }
+        // First, try to get product name from product relationship
         if (item.product_id && products) {
           const product = products.find((p: any) => p.id === item.product_id);
           if (product) {
             productName = product.name;
           }
+        }
+        // If no product found, use stored description as fallback
+        if (productName === 'Unknown Product' && item.description) {
+          productName = item.description;
         }
         return {
           id: item.id || `existing-${index}`,
