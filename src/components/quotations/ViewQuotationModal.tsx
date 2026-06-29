@@ -54,7 +54,14 @@ export function ViewQuotationModal({
 
   // Call currency hook unconditionally to preserve hooks order
   const { currency, rate, format } = useCurrency();
-  const formatQuotationAmount = (amount: number) => format(Number(amount) || 0, quotation.currency_code as any);
+  const formatQuotationAmount = (amount: number) => {
+    // Handle currency code detection: if exchange_rate != 1, it's likely USD even if currency_code says KES
+    let effectiveCurrency = quotation?.currency_code || 'KES';
+    if (effectiveCurrency === 'KES' && quotation?.exchange_rate && quotation.exchange_rate !== 1) {
+      effectiveCurrency = 'USD';
+    }
+    return format(Number(amount) || 0, effectiveCurrency as any);
+  };
 
   if (!quotation) return null;
 
