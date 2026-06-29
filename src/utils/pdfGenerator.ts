@@ -105,7 +105,6 @@ const resolveLineItemName = (item: any, index: number): string => {
   const candidates = [
     toTrimmedString(item?.product_name),
     toTrimmedString(item?.products?.name),
-    toTrimmedString(item?.description),
     toTrimmedString(item?.product_code ?? item?.products?.product_code),
   ];
 
@@ -129,9 +128,8 @@ const resolveLineItemDescription = (item: any, fallbackName: string): string => 
   if (productDescription) {
     return productDescription;
   }
-  // Finally, fall back to a meaningful identifier like product code, or the product name
-  const code = toTrimmedString(item?.products?.product_code ?? item?.product_code);
-  return code || toTrimmedString(fallbackName) || '';
+  // Finally, fall back to product code only (never product name)
+  return toTrimmedString(item?.products?.product_code ?? item?.product_code) || '';
 };
 
 const resolveLineItemUnit = (item: any): string => {
