@@ -469,6 +469,9 @@ const buildDocumentHTML = (data: DocumentData) => {
           <tr class="payment-info"><td class="label">Paid Amount:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold;">Balance Due:</td><td class="amount" style="font-weight: bold; color: #111827;">${formatCurrency(data.balance_due || 0)}</td></tr>
         ` : ''}
+        ${data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && (data.exchange_rate || 0) > 0 ? `
+          <tr style="border-top: 1px dashed #999; margin-top: 8px;"><td colspan="2" style="padding-top: 12px; font-size: 10px; color: #666; padding: 8px 15px 0 15px;">Exchange Rate: 1 USD = ${(data.exchange_rate || 0).toFixed(2)} KES (${data.fx_date ? new Date(data.fx_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'})</td></tr>
+        ` : ''}
       </table>
     </div>` : ''}
 
