@@ -162,7 +162,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         quantity: item.quantity || 0,
         unit_price: item.unit_price || 0,
         discount_percentage: item.discount_percentage || 0,
-        tax_percentage: item.tax_percentage || 16,
+        tax_percentage: item.tax_percentage || 0,
         tax_amount: item.tax_amount || 0,
         tax_inclusive: item.tax_inclusive || false,
         line_total: item.line_total || 0,
@@ -271,18 +271,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const updateItemVATInclusive = (itemId: string, vatInclusive: boolean) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        // When checking VAT Inclusive, auto-apply default tax rate if no VAT is set
-        let newVatPercentage = item.tax_percentage;
-        if (vatInclusive && item.tax_percentage === 0) {
-          newVatPercentage = defaultTaxRate;
-        }
-        // When unchecking VAT Inclusive, reset VAT to 0
-        if (!vatInclusive) {
-          newVatPercentage = 0;
-        }
-
-        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, newVatPercentage, vatInclusive);
-        return { ...item, tax_inclusive: vatInclusive, tax_percentage: newVatPercentage, line_total: lineTotal, tax_amount: taxAmount };
+        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, item.tax_percentage, vatInclusive);
+        return { ...item, tax_inclusive: vatInclusive, line_total: lineTotal, tax_amount: taxAmount };
       }
       return item;
     }));
