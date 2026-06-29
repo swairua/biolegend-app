@@ -114,6 +114,16 @@ const resolveLineItemName = (item: any, index: number): string => {
     }
   }
 
+  // Debug: Log if we're falling back to Item N
+  if (item?.product_id) {
+    console.warn(`[PDF] Item ${index + 1}: No product name found for product_id ${item.product_id}`, {
+      product_name: item?.product_name,
+      products_name: item?.products?.name,
+      product_code: item?.product_code,
+      products_product_code: item?.products?.product_code
+    });
+  }
+
   return `Item ${index + 1}`;
 };
 
@@ -1687,8 +1697,15 @@ export const downloadCreditNotePDF = async (creditNote: any, company?: CompanyDe
 export const downloadQuotationPDF = async (quotation: any, company?: CompanyDetails, currentRate: number = 1) => {
   let quotationItems = quotation.quotation_items;
 
+  console.log(`[PDF] downloadQuotationPDF called for quotation ${quotation.quotation_number}`, {
+    hasQuotationItems: !!quotationItems,
+    itemCount: quotationItems?.length || 0,
+    firstItem: quotationItems?.[0]
+  });
+
   if (!quotationItems || quotationItems.length === 0) {
     try {
+      console.log(`[PDF] Fetching quotation items from database for ${quotation.id}`);
       const { data, error } = await supabase
         .from('quotation_items')
         .select(`
@@ -1710,11 +1727,24 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
         .eq('quotation_id', quotation.id);
 
       if (!error && data) {
+        console.log(`[PDF] Fetched ${data.length} quotation items from database`);
         quotationItems = data;
+      } else {
+        console.error(`[PDF] Error fetching quotation items:`, error);
       }
     } catch (err) {
       console.error('Error fetching quotation items:', err);
     }
+  } else {
+    console.log(`[PDF] Using quotation_items from quotation object:`, {
+      itemCount: quotationItems.length,
+      items: quotationItems.map((item: any, idx: number) => ({
+        index: idx,
+        product_name: item.product_name,
+        has_products_relationship: !!item.products,
+        products_name: item.products?.name
+      }))
+    });
   }
 
   const quotationCurrencyCode = quotation.currency_code === 'USD' || quotation.currency_code === 'KES' ? quotation.currency_code : (Number(quotation.exchange_rate) && Number(quotation.exchange_rate) !== 1 ? 'USD' : 'KES');
