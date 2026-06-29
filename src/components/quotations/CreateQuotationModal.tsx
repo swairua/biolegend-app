@@ -213,7 +213,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name,
-      description: product.description || product.name,
+      description: product.description || '',
       quantity: 1,
       unit_price: price,
       vat_percentage: 0,

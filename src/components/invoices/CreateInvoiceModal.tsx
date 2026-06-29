@@ -274,7 +274,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name, // Store product name for historical record
-      description: product.description || `${product.name} - Product details`,
+      description: product.description || '',
       quantity: 1,
       unit_price: price,
       discount_before_vat: 0,
