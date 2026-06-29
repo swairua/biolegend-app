@@ -117,16 +117,20 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     try {
       if (newCurrency === currencyCode) return;
       let newRate = 1;
-      if (newCurrency === 'USD') {
+      if (newCurrency === 'USD' && items.length > 0) {
+        // Only fetch and apply exchange rate if there are items to convert
         toast.info('Fetching KES→USD rate...');
         newRate = await getExchangeRate('KES', 'USD', quotationDate);
         if (!newRate || newRate <= 0) throw new Error('Invalid rate');
         toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
-      } else {
+        const factor = newRate / previousRateRef.current;
+        convertItemsByFactor(factor);
+      } else if (newCurrency === 'KES') {
         newRate = 1;
+        const factor = newRate / previousRateRef.current;
+        convertItemsByFactor(factor);
       }
-      const factor = newRate / previousRateRef.current;
-      convertItemsByFactor(factor);
+      // If switching to USD with no items, keep rate at 1 (no conversion needed)
       previousRateRef.current = newRate;
       setExchangeRate(newRate);
       setCurrencyCode(newCurrency);
@@ -201,7 +205,9 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product "${product.name}" has no price set`);
     }
-    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
+    // If in USD mode and exchange rate > 1, it means we converted from KES so apply the rate
+    // If exchange rate is 1, we're creating native USD items with no conversion
+    const price = currencyCode === 'USD' && exchangeRate > 1 ? priceBase * exchangeRate : priceBase;
 
     const newItem: QuotationItem = {
       id: `temp-${Date.now()}`,
@@ -388,12 +394,14 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       }
 
       // Lock exchange rate at creation time
-      let effectiveRate = exchangeRate;
-      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
-        toast.info('Locking exchange rate for quotation date...');
-        effectiveRate = await getExchangeRate('KES', 'USD', quotationDate);
-        if (!effectiveRate || effectiveRate <= 0) {
-          throw new Error('Unable to fetch exchange rate for the selected date');
+      let effectiveRate = 1;
+      if (currencyCode === 'USD') {
+        if (exchangeRate !== 1 && Number.isFinite(exchangeRate) && exchangeRate > 0) {
+          // If items were converted from KES to USD, use that locked rate
+          effectiveRate = exchangeRate;
+        } else {
+          // If created directly in USD (no conversion from KES), use rate of 1
+          effectiveRate = 1;
         }
       }
 
