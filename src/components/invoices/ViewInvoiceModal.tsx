@@ -47,10 +47,14 @@ export function ViewInvoiceModal({
 }: ViewInvoiceModalProps) {
   if (!invoice) return null;
 
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, invoice?.currency_code as any, invoice?.exchange_rate as any, currency, rate)
-  );
+  const { rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => {
+    const invoiceCurrency = invoice?.currency_code || 'KES';
+    return format(
+      normalizeInvoiceAmount(Number(amount) || 0, invoice?.currency_code as any, invoice?.exchange_rate as any, invoiceCurrency as any, rate),
+      invoiceCurrency as any
+    );
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
