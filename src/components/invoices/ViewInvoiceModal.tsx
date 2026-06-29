@@ -301,6 +301,11 @@ export function ViewInvoiceModal({
                       {formatCurrency(invoice.balance_due || 0)}
                     </span>
                   </div>
+                  {invoice.currency_code === 'USD' && Number.isFinite(invoice.exchange_rate) && invoice.exchange_rate > 0 && (
+                    <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                      ℹ️ Created at rate: 1 USD = {invoice.exchange_rate.toFixed(2)} KES (on {new Date(invoice.fx_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
