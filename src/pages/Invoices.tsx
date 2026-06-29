@@ -163,14 +163,16 @@ export default function Invoices() {
   }) || [];
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', invoiceRate?: number) => {
+    // Display in the invoice's original currency, not the UI's current currency
+    const displayCurrency = (recordCurrency === 'USD' || recordCurrency === 'KES') ? recordCurrency : 'KES';
     const normalized = normalizeInvoiceAmount(
       Number(amount) || 0,
       recordCurrency,
       invoiceRate,
-      currency,
+      displayCurrency,
       rate
     );
-    return format(normalized, currency);
+    return format(normalized, displayCurrency);
   };
 
 
