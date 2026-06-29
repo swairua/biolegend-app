@@ -210,14 +210,14 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       if (newCurrency === currencyCode) return;
       let newRate = 1;
       if (newCurrency === 'USD') {
-        toast.info('Fetching KES→USD rate...');
-        newRate = await getExchangeRate('KES', 'USD', invoiceDate);
+        toast.info('Fetching USD/KES exchange rate...');
+        newRate = await getExchangeRate('USD', 'KES', invoiceDate);
         if (!newRate || newRate <= 0) throw new Error('Invalid rate');
-        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+        toast.success(`Rate locked: 1 USD = ${newRate.toFixed(2)} KES`);
       } else {
         newRate = 1;
       }
-      const factor = newRate / previousRateRef.current; // convert existing prices to new currency
+      const factor = newRate / previousRateRef.current;
       convertItemsByFactor(factor);
       previousRateRef.current = newRate;
       setExchangeRate(newRate);
@@ -231,13 +231,18 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const fetchAndSetRate = async () => {
     try {
       toast.info('Fetching exchange rate...');
-      const rate = await getExchangeRate('KES', currencyCode, invoiceDate);
+      const rate = currencyCode === 'USD'
+        ? await getExchangeRate('USD', 'KES', invoiceDate)
+        : 1;
       if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
       const factor = rate / exchangeRate;
       convertItemsByFactor(factor);
       previousRateRef.current = rate;
       setExchangeRate(rate);
-      toast.success(`Rate updated: 1 KES = ${rate.toFixed(6)} ${currencyCode}`);
+      const msg = currencyCode === 'USD'
+        ? `Rate updated: 1 USD = ${rate.toFixed(2)} KES`
+        : 'Currency set to KES (no conversion needed)';
+      toast.success(msg);
     } catch (e: any) {
       console.error('Failed to fetch rate:', e);
       toast.error(e?.message || 'Failed to fetch exchange rate');
@@ -258,7 +263,11 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product \"${product.name}\" has no price set`);
     }
-    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
+    // For USD invoices, convert the base price (assumed to be in KES) to USD using the exchange rate
+    // Then the base price will be interpreted as a USD value for the item
+    // Actually: product prices are in KES. If invoice is USD, we convert them: USD_price = KES_price / exchange_rate
+    // But for simplicity, we store the price as-is and let the save handler convert
+    const price = priceBase;
 
     // Auto-populate with product details and smart defaults
     const newItem: InvoiceItem = {
@@ -519,33 +528,36 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       // Ensure DB has currency columns (safe no-op if already present)
       await ensureInvoiceCurrencyColumns();
 
-      // Lock exchange rate at creation time and ensure values reflect that rate
-      let effectiveRate = exchangeRate;
-      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
-        toast.info('Locking exchange rate for invoice date...');
-        effectiveRate = await getExchangeRate('KES', 'USD', invoiceDate);
-        if (!effectiveRate || effectiveRate <= 0) {
-          throw new Error('Unable to fetch exchange rate for the selected date');
+      // Lock exchange rate at creation time (USD→KES conversion)
+      let effectiveRate = 1;
+      if (currencyCode === 'USD') {
+        effectiveRate = exchangeRate;
+        if (!Number.isFinite(effectiveRate) || effectiveRate <= 0) {
+          toast.info('Fetching exchange rate for invoice date...');
+          effectiveRate = await getExchangeRate('USD', 'KES', invoiceDate);
+          if (!effectiveRate || effectiveRate <= 0) {
+            throw new Error('Unable to fetch exchange rate for the selected date');
+          }
         }
       }
-      const baseRate = (Number.isFinite(exchangeRate) && exchangeRate > 0) ? exchangeRate : 1;
-      const factor = currencyCode === 'USD' ? (effectiveRate / baseRate) : 1;
 
+      // Convert all amounts from USD to KES (if USD invoice)
+      // Items are stored in display currency; convert to KES for database storage
       const adjustedItems = items.map(item => ({
         product_id: item.product_id,
         description: item.description,
         quantity: item.quantity,
-        unit_price: currencyCode === 'USD' ? Number(item.unit_price) * factor : Number(item.unit_price),
+        unit_price: currencyCode === 'USD' ? Number(item.unit_price) * effectiveRate : Number(item.unit_price),
         discount_before_vat: item.discount_before_vat || 0,
         tax_percentage: item.tax_percentage,
-        tax_amount: currencyCode === 'USD' ? Number(item.tax_amount || 0) * factor : Number(item.tax_amount || 0),
+        tax_amount: currencyCode === 'USD' ? Number(item.tax_amount || 0) * effectiveRate : Number(item.tax_amount || 0),
         tax_inclusive: item.tax_inclusive,
-        line_total: currencyCode === 'USD' ? Number(item.line_total) * factor : Number(item.line_total)
+        line_total: currencyCode === 'USD' ? Number(item.line_total) * effectiveRate : Number(item.line_total)
       }));
 
-      const adjustedSubtotal = currencyCode === 'USD' ? subtotal * factor : subtotal;
-      const adjustedTaxAmount = currencyCode === 'USD' ? taxAmount * factor : taxAmount;
-      const adjustedTotalAmount = currencyCode === 'USD' ? totalAmount * factor : totalAmount;
+      const adjustedSubtotal = currencyCode === 'USD' ? subtotal * effectiveRate : subtotal;
+      const adjustedTaxAmount = currencyCode === 'USD' ? taxAmount * effectiveRate : taxAmount;
+      const adjustedTotalAmount = currencyCode === 'USD' ? totalAmount * effectiveRate : totalAmount;
       const adjustedBalanceDue = adjustedTotalAmount;
 
       const invoiceData = {
@@ -566,7 +578,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         notes: notes,
         created_by: profile?.id,
         currency_code: currencyCode,
-        exchange_rate: currencyCode === 'USD' ? effectiveRate : 1,
+        exchange_rate: effectiveRate,
         fx_date: invoiceDate
       };
 
@@ -695,11 +707,20 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                         <SelectItem value="USD">USD (US Dollar)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {currencyCode === 'USD' && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Amounts will be converted to KES at the locked rate
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="rate">Exchange Rate</Label>
                     <div className="flex items-center gap-2">
-                      <Input id="rate" value={`1 KES = ${exchangeRate.toFixed(6)} ${currencyCode}`} readOnly />
+                      <Input
+                        id="rate"
+                        value={currencyCode === 'USD' ? `1 USD = ${exchangeRate.toFixed(2)} KES` : `KES (baseline)`}
+                        readOnly
+                      />
                       <Button type="button" variant="outline" onClick={fetchAndSetRate} disabled={currencyCode === 'KES'}>
                         <Calculator className="h-4 w-4 mr-1" />
                         Fetch

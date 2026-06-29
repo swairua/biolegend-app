@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { getLocaleForCurrency } from '@/utils/exchangeRates';
+import { getLocaleForCurrency, getExchangeRate } from '@/utils/exchangeRates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +84,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InvoiceItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [recalculateWithCurrentRate, setRecalculateWithCurrentRate] = useState(false);
+  const [lockedRateInfo, setLockedRateInfo] = useState<{ rate: number; date: string } | null>(null);
 
   const { currentCompany } = useCurrentCompany();
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
@@ -106,6 +108,17 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       setLpoNumber(invoice.lpo_number || '');
       setNotes(invoice.notes || '');
       setTermsAndConditions(invoice.terms_and_conditions || '');
+
+      // Capture locked rate info if invoice was created in USD
+      if (invoice.currency_code === 'USD' && invoice.exchange_rate) {
+        setLockedRateInfo({
+          rate: invoice.exchange_rate,
+          date: invoice.fx_date || invoice.invoice_date || new Date().toISOString().split('T')[0]
+        });
+      } else {
+        setLockedRateInfo(null);
+      }
+      setRecalculateWithCurrentRate(false);
 
       // Try to use items from invoice object first
       let invoiceItemsData = invoice.invoice_items || [];
@@ -344,6 +357,49 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   };
 
 
+  const recalculateItemsWithNewRate = async () => {
+    if (!lockedRateInfo || invoice?.currency_code !== 'USD') {
+      toast.error('Cannot recalculate: invoice was not created in USD');
+      return;
+    }
+
+    try {
+      toast.info('Fetching current exchange rate...');
+      const currentRate = await getExchangeRate('USD', 'KES', invoiceDate);
+      if (!currentRate || currentRate <= 0) {
+        throw new Error('Unable to fetch current exchange rate');
+      }
+
+      const factor = currentRate / lockedRateInfo.rate;
+
+      // Convert all item amounts from the old rate to the new rate
+      const recalculatedItems = items.map(item => {
+        const newUnitPrice = parseFloat((item.unit_price * factor).toFixed(4));
+        const { lineTotal, taxAmount } = calculateLineTotal(
+          { ...item, unit_price: newUnitPrice },
+          item.quantity
+        );
+        return {
+          ...item,
+          unit_price: newUnitPrice,
+          line_total: lineTotal,
+          tax_amount: taxAmount
+        };
+      });
+
+      setItems(recalculatedItems);
+      setLockedRateInfo({
+        rate: currentRate,
+        date: invoiceDate
+      });
+      setRecalculateWithCurrentRate(false);
+      toast.success(`Rate updated: 1 USD = ${currentRate.toFixed(2)} KES`);
+    } catch (e: any) {
+      console.error('Recalculation failed:', e);
+      toast.error(e?.message || 'Failed to recalculate with current rate');
+    }
+  };
+
   const subtotal = items.reduce((sum, item) => {
     // Always use base amount for subtotal (unit price × quantity × discount)
     // VAT is calculated separately and added for exclusive, or extracted for inclusive
@@ -367,7 +423,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
     setIsSubmitting(true);
     try {
-      const invoiceData = {
+      const invoiceData: any = {
         customer_id: selectedCustomerId,
         invoice_date: invoiceDate,
         due_date: dueDate,
@@ -379,6 +435,12 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
         terms_and_conditions: termsAndConditions,
         notes: notes,
       };
+
+      // If invoice was in USD and recalculated, update the rate metadata
+      if (invoice?.currency_code === 'USD' && lockedRateInfo && recalculateWithCurrentRate) {
+        invoiceData.exchange_rate = lockedRateInfo.rate;
+        invoiceData.fx_date = lockedRateInfo.date;
+      }
 
       const invoiceItems = items.map(item => ({
         product_id: item.product_id,
@@ -431,6 +493,40 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                 <CardTitle className="text-lg">Invoice Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Locked Rate Info (for USD invoices) */}
+                {lockedRateInfo && invoice?.currency_code === 'USD' && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700 font-medium mb-2">
+                      Exchange Rate Locked
+                    </p>
+                    <p className="text-sm text-blue-600 mb-3">
+                      Created at 1 USD = {lockedRateInfo.rate.toFixed(2)} KES on {lockedRateInfo.date}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="recalculate"
+                        checked={recalculateWithCurrentRate}
+                        onCheckedChange={(checked) => setRecalculateWithCurrentRate(!!checked)}
+                      />
+                      <Label htmlFor="recalculate" className="text-sm font-normal cursor-pointer">
+                        Recalculate with current rate
+                      </Label>
+                    </div>
+                    {recalculateWithCurrentRate && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={recalculateItemsWithNewRate}
+                        className="mt-2 w-full"
+                      >
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Fetch Current Rate & Recalculate
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 {/* Customer Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="customer">Customer *</Label>
