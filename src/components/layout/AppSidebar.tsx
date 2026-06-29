@@ -95,7 +95,8 @@ const sidebarItems: SidebarItem[] = [
     children: [
       { title: 'Company Settings', icon: Building2, href: '/settings/company' },
       { title: 'User Management', icon: Users, href: '/settings/users' },
-      { title: 'Database Setup', icon: Package, href: '/database-setup' }
+      { title: 'Database Setup', icon: Package, href: '/database-setup' },
+      { title: 'USD Data Migration', icon: Package, href: '/migrate/legacy-usd' }
     ]
   }
 ];
