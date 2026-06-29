@@ -162,17 +162,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleAuthStateChange = useCallback(async (event: string, newSession: Session | null) => {
     if (!mountedRef.current || initializingRef.current) return;
 
-    
+
     try {
       // Batch state updates to prevent multiple renders
       if (newSession?.user) {
         const userProfile = await fetchProfile(newSession.user.id);
-        
+
         if (mountedRef.current) {
           setSession(newSession);
           setUser(newSession.user);
           setProfile(userProfile);
-          
+
           // Update last login for sign-in events, but don't await to prevent blocking
           if (event === 'SIGNED_IN' && userProfile) {
             updateLastLogin(newSession.user.id).catch(err =>
@@ -197,13 +197,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         context: 'handleAuthStateChange'
       });
 
-      // If we get invalid token errors, clear tokens
+      // Only clear tokens for genuine Supabase auth errors, not external API errors
       if (isErrorType(error, 'auth')) {
         const errorMessage = getUserFriendlyErrorMessage(error);
+        // Check for explicit Supabase auth token errors
         if (errorMessage.includes('Invalid Refresh Token') ||
-            errorMessage.includes('Refresh Token Not Found')) {
+            errorMessage.includes('Refresh Token Not Found') ||
+            errorMessage.includes('invalid_token') ||
+            errorMessage.includes('invalid_grant')) {
           clearAuthTokens();
         }
+        // Don't clear tokens on generic network/fetch errors - these are external API failures
       }
     } finally {
       if (mountedRef.current) {
