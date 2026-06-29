@@ -81,7 +81,7 @@ export function ViewRemittanceModal({
         items: remittance.items || [] // Fallback for legacy format
       };
 
-      downloadRemittancePDF(remittanceData);
+      downloadRemittancePDF(remittanceData, undefined, rate);
       toast.success(`PDF download started for ${remittance.advice_number || remittance.adviceNumber}`);
       onDownload?.();
     } catch (error) {

@@ -2,9 +2,11 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { downloadCreditNotePDF, type CompanyDetails } from '@/utils/pdfGenerator';
 import { useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 export function useCreditNotePDFDownload() {
   const { data: companies } = useCompanies();
+  const { rate } = useCurrency();
   const currentCompany = companies?.[0];
 
   return useMutation({
@@ -21,7 +23,7 @@ export function useCreditNotePDFDownload() {
       };
 
       // Generate and download PDF using shared generator
-      await downloadCreditNotePDF(creditNote, companyData);
+      await downloadCreditNotePDF(creditNote, companyData, rate);
 
       return { success: true };
     },

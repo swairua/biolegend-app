@@ -137,7 +137,7 @@ export default function LPOs() {
         country: currentCompany.country,
         tax_number: currentCompany.tax_number,
         logo_url: currentCompany.logo_url
-      });
+      }, rate);
 
       toast.success(`LPO ${lpo.lpo_number} PDF generated successfully!`);
     } catch (error) {

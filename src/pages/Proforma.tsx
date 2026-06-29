@@ -177,7 +177,7 @@ export default function Proforma() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      await downloadInvoicePDF(invoiceData, 'PROFORMA', companyDetails);
+      await downloadInvoicePDF(invoiceData, 'PROFORMA', companyDetails, rate);
       toast.success('Proforma PDF downloaded successfully!');
     } catch (error) {
       console.error('Error downloading PDF:', error);
