@@ -110,9 +110,13 @@ export default function Quotations() {
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
-  const { data: companies } = useCompanies();
+  // CRITICAL: Only query data after auth has finished initializing to prevent race condition on page refresh
+  const { data: companies, isLoading: companiesLoading } = authLoading
+    ? { data: undefined, isLoading: true }
+    : useCompanies();
   const currentCompany = companies?.[0];
-  const { data: quotationData, isLoading, error, refetch } = useOptimizedQuotations(currentCompany?.id, {
+  // CRITICAL: Only query quotations after auth is ready. Pass undefined for companyId while loading to prevent query
+  const { data: quotationData, isLoading, error, refetch } = useOptimizedQuotations(authLoading ? undefined : currentCompany?.id, {
     page: currentPage,
     pageSize: PAGE_SIZE,
     searchTerm,
@@ -364,6 +368,18 @@ Website: www.biolegendscientific.co.ke`;
     toast.info('Advanced filter functionality coming soon!');
   };
 
+  // Show loading state while auth is initializing (prevents race condition on page refresh)
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Initializing session...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="space-y-6">
@@ -377,8 +393,8 @@ Website: www.biolegendscientific.co.ke`;
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <p className="text-destructive">Error loading quotations: {error.message}</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => window.location.reload()}
                 className="mt-4"
               >

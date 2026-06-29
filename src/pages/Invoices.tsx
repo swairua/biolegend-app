@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useOptimizedInvoices } from '@/hooks/useOptimizedInvoices';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
@@ -99,6 +100,8 @@ function getStatusColor(status: string) {
 }
 
 export default function Invoices() {
+  const { loading: authLoading } = useAuth();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -124,16 +127,19 @@ export default function Invoices() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const { data: companies } = useCompanies();
+  // CRITICAL: Only query data after auth has finished initializing to prevent race condition on page refresh
+  const { data: companies, isLoading: companiesLoading } = authLoading
+    ? { data: undefined, isLoading: true }
+    : useCompanies();
   const currentCompany = companies?.[0];
 
-  // Use the optimized invoices hook with pagination
+  // CRITICAL: Only query invoices after auth is ready. Pass undefined for companyId while loading to prevent query
   const {
     data: invoiceData,
     isLoading,
     error,
     refetch
-  } = useOptimizedInvoices(currentCompany?.id, {
+  } = useOptimizedInvoices(authLoading ? undefined : currentCompany?.id, {
     page: currentPage,
     pageSize: PAGE_SIZE,
     searchTerm,
@@ -468,6 +474,18 @@ Website: www.biolegendscientific.co.ke`;
     toast.success('Filters cleared');
   };
 
+  // Show loading state while auth is initializing (prevents race condition on page refresh)
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Initializing session...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="space-y-6">
@@ -481,8 +499,8 @@ Website: www.biolegendscientific.co.ke`;
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <p className="text-destructive">Error loading invoices: {parseErrorMessage(error)}</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => refetch()}
                 className="mt-4"
               >
