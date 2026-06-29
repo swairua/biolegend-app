@@ -244,7 +244,8 @@ export function ViewInvoiceModal({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12 text-center">Item #</TableHead>
-                    <TableHead>Product</TableHead>
+                    <TableHead className="min-w-[150px]">Name</TableHead>
+                    <TableHead className="flex-1">Description</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Unit Price</TableHead>
                     <TableHead>Discount %</TableHead>
@@ -256,15 +257,11 @@ export function ViewInvoiceModal({
                   {invoice.invoice_items.map((item: any, index: number) => (
                     <TableRow key={item.id || index}>
                       <TableCell className="w-12 text-center">{index + 1}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {item.products?.name || item.description || 'Unknown Product'}
-                          </div>
-                          {item.description && item.description !== item.products?.name && (
-                            <div className="text-sm text-muted-foreground">{item.description}</div>
-                          )}
-                        </div>
+                      <TableCell className="font-medium">
+                        {item.product_name || item.products?.name || 'Unknown Product'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.description || '-'}
                       </TableCell>
                       <TableCell>{item.quantity}</TableCell>
                       <TableCell>{formatCurrency(item.unit_price)}</TableCell>
