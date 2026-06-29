@@ -325,7 +325,7 @@ Website: www.biolegendscientific.co.ke`;
       const items = (quotation.quotation_items || []).map((qi: any, idx: number) => ({
         id: `q-${idx}`,
         product_id: qi.product_id || undefined,
-        product_name: qi.products?.name || qi.description || 'Item',
+        product_name: qi.product_name || qi.products?.name || 'Item',
         description: qi.description || qi.products?.name || 'Item',
         quantity: Number(qi.quantity || 0),
         unit_price: Number(qi.unit_price || 0),
