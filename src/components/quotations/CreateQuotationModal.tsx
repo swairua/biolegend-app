@@ -445,6 +445,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         const taxAmountBase = calculateTaxAmount(item);
         return {
           product_id: item.product_id,
+          product_name: item.product_name,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,

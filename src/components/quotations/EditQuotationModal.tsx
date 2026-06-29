@@ -354,6 +354,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         const insertItems = items.map((item, index) => ({
           quotation_id: quotation.id,
           product_id: item.product_id || null,
+          product_name: item.product_name,
           description: item.description || item.product_name,
           quantity: Number(item.quantity || 0),
           unit_price: Number(item.unit_price || 0),

@@ -545,6 +545,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       // Items are stored in display currency; convert to KES for database storage
       const adjustedItems = items.map(item => ({
         product_id: item.product_id,
+        product_name: item.product_name,
         description: item.description,
         quantity: item.quantity,
         unit_price: currencyCode === 'USD' ? Number(item.unit_price) * effectiveRate : Number(item.unit_price),
