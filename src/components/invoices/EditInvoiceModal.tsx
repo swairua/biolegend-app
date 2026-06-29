@@ -322,27 +322,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const updateItemTaxInclusive = (itemId: string, taxInclusive: boolean) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        // When checking VAT Inclusive, auto-apply default tax rate if no VAT is set
-        let newTaxPercentage = item.tax_percentage;
-        if (taxInclusive && item.tax_percentage === 0) {
-          newTaxPercentage = defaultTaxRate;
-        }
-        // When unchecking VAT Inclusive, reset VAT to 0
-        if (!taxInclusive) {
-          newTaxPercentage = 0;
-        }
-
-        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, newTaxPercentage, taxInclusive);
-        console.log(`VAT Inclusive changed for item ${itemId}:`, {
-          taxInclusive,
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          oldTaxPercentage: item.tax_percentage,
-          newTaxPercentage,
-          oldLineTotal: item.line_total,
-          newLineTotal: lineTotal
-        });
-        return { ...item, tax_inclusive: taxInclusive, tax_percentage: newTaxPercentage, line_total: lineTotal, tax_amount: taxAmount };
+        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, item.tax_percentage, taxInclusive);
+        return { ...item, tax_inclusive: taxInclusive, line_total: lineTotal, tax_amount: taxAmount };
       }
       return item;
     }));

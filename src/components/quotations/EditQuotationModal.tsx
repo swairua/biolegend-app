@@ -271,18 +271,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const updateItemVATInclusive = (itemId: string, vatInclusive: boolean) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        // When checking VAT Inclusive, auto-apply default tax rate if no VAT is set
-        let newVatPercentage = item.tax_percentage;
-        if (vatInclusive && item.tax_percentage === 0) {
-          newVatPercentage = defaultTaxRate;
-        }
-        // When unchecking VAT Inclusive, reset VAT to 0
-        if (!vatInclusive) {
-          newVatPercentage = 0;
-        }
-
-        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, newVatPercentage, vatInclusive);
-        return { ...item, tax_inclusive: vatInclusive, tax_percentage: newVatPercentage, line_total: lineTotal, tax_amount: taxAmount };
+        const { lineTotal, taxAmount } = calculateLineTotal(item, undefined, undefined, undefined, item.tax_percentage, vatInclusive);
+        return { ...item, tax_inclusive: vatInclusive, line_total: lineTotal, tax_amount: taxAmount };
       }
       return item;
     }));
