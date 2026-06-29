@@ -189,7 +189,7 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
           unit_price: item.unit_price || 0,
           discount_percentage: item.discount_percentage || 0,
           discount_before_vat: item.discount_before_vat || 0,
-          tax_percentage: item.tax_percentage || 16,
+          tax_percentage: item.tax_percentage || 0,
           tax_amount: item.tax_amount || 0,
           tax_inclusive: item.tax_inclusive || false,
           line_total: item.line_total || 0,
