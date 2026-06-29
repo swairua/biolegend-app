@@ -56,6 +56,8 @@ export interface DocumentData {
   valid_until?: string; // For proforma invoices
   due_date?: string; // For invoices
   currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
   // Delivery note specific fields
   delivery_date?: string;
   delivery_address?: string;
@@ -1254,6 +1256,11 @@ export const generatePDF = (data: DocumentData) => {
             </tr>
             ` : ''}
           </table>
+          ${data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && data.exchange_rate > 0 ? `
+          <div style="margin-top: 12px; padding: 8px; background: #dbeafe; border: 1px solid #60a5fa; border-radius: 4px; font-size: 11px; color: #1e40af;">
+            ℹ️ Created at rate: 1 USD = ${data.exchange_rate.toFixed(2)} KES (on ${data.fx_date ? new Date(data.fx_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'})
+          </div>
+          ` : ''}
         </div>
         ` : ''}
 
@@ -1597,6 +1604,8 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
     balance_due: invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)),
     notes: invoice.notes,
     currency_code: (invoice.currency_code === 'USD' || invoice.currency_code === 'KES' ? invoice.currency_code : (Number(invoice.exchange_rate) && Number(invoice.exchange_rate) !== 1 ? 'USD' : 'KES')),
+    exchange_rate: invoice.exchange_rate,
+    fx_date: invoice.fx_date,
     terms_and_conditions: (documentType === 'INVOICE' || documentType === 'PROFORMA') ? `Terms
 1. PAYMENT.
 Payment terms are cash on delivery, unless credit terms are established at the Seller��s sole discretion. Buyer agrees to pay Seller cost of collection of overdue invoices, including reasonable attorney���s fees. Net 30 days on all credit invoices or “Month Following invoice”. In addition, Buyer shall pay all sales, use, customs, excise or other taxes presently or hereafter payable in regards to this transaction, and Buyer shall reimburse Seller for any such taxes or charges paid by BIOLEGEND SCIENTIFIC LTD (hereafter "Seller."). Including all withholding taxes which should be remitted immediately upon payments.

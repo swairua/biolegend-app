@@ -931,6 +931,11 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                       <span>Items: {items.length}</span>
                       <span>Balance Due: {formatCurrency(balanceDue)}</span>
                     </div>
+                    {currencyCode === 'USD' && Number.isFinite(exchangeRate) && exchangeRate > 0 && (
+                      <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                        ℹ️ Amounts converted at locked rate: 1 USD = {exchangeRate.toFixed(2)} KES (on {invoiceDate})
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
