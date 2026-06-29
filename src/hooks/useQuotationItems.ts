@@ -195,6 +195,7 @@ export const useConvertQuotationToInvoice = () => {
       });
       
       // Create invoice from quotation
+      const quotationRate = (quotation as any).exchange_rate || 1;
       const invoiceData = {
         company_id: quotation.company_id,
         customer_id: quotation.customer_id,
@@ -210,7 +211,7 @@ export const useConvertQuotationToInvoice = () => {
         terms_and_conditions: quotation.terms_and_conditions,
         affects_inventory: true,
         currency_code: (quotation as any).currency_code,
-        exchange_rate: (quotation as any).exchange_rate || 1,
+        exchange_rate: quotationRate ? (1 / quotationRate) : 1,
         fx_date: (quotation as any).quotation_date || new Date().toISOString().split('T')[0]
       };
       

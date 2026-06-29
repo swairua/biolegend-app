@@ -347,7 +347,7 @@ Website: www.biolegendscientific.co.ke`;
         invoiceDate: new Date().toISOString().split('T')[0],
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         currencyCode: quotation.currency_code || 'KES',
-        exchangeRate: quotation.exchange_rate || 1
+        exchangeRate: quotation.exchange_rate ? (1 / quotation.exchange_rate) : 1
       };
 
       console.log('💾 Setting invoice prefill:', invoicePrefillData);
