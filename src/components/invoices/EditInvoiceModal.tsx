@@ -372,18 +372,20 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
 
       const factor = currentRate / lockedRateInfo.rate;
 
-      // Convert all item amounts from the old rate to the new rate
+      // Amounts in the form are stored in KES. To recalculate:
+      // 1. Convert KES back to USD using the old rate: USD = KES / oldRate
+      // 2. Convert USD to KES using the new rate: newKES = USD * newRate
+      // This is equivalent to: newKES = KES * (newRate / oldRate) = KES * factor
       const recalculatedItems = items.map(item => {
         const newUnitPrice = parseFloat((item.unit_price * factor).toFixed(4));
-        const { lineTotal, taxAmount } = calculateLineTotal(
-          { ...item, unit_price: newUnitPrice },
-          item.quantity
-        );
+        const newTaxAmount = parseFloat(((item.tax_amount || 0) * factor).toFixed(4));
+        const newLineTotal = parseFloat((item.line_total * factor).toFixed(4));
+
         return {
           ...item,
           unit_price: newUnitPrice,
-          line_total: lineTotal,
-          tax_amount: taxAmount
+          tax_amount: newTaxAmount,
+          line_total: newLineTotal
         };
       });
 
