@@ -197,18 +197,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         context: 'handleAuthStateChange'
       });
 
-      // Only clear tokens for genuine Supabase auth errors, not external API errors
-      if (isErrorType(error, 'auth')) {
-        const errorMessage = getUserFriendlyErrorMessage(error);
-        // Check for explicit Supabase auth token errors
-        if (errorMessage.includes('Invalid Refresh Token') ||
-            errorMessage.includes('Refresh Token Not Found') ||
-            errorMessage.includes('invalid_token') ||
-            errorMessage.includes('invalid_grant')) {
-          clearAuthTokens();
-        }
-        // Don't clear tokens on generic network/fetch errors - these are external API failures
+      // CRITICAL: Only clear tokens for genuine Supabase refresh token errors, NOT RLS/query errors
+      if (isErrorType(error, 'refreshTokenError')) {
+        console.warn('🧹 Clearing auth tokens due to invalid/expired refresh token');
+        clearAuthTokens();
       }
+      // Do NOT clear tokens on RLS errors, permission errors, or network errors from data queries
     } finally {
       if (mountedRef.current) {
         setLoading(false);
@@ -359,13 +353,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.warn('⚠️ Quick auth check failed:', error);
 
-        // Handle specific error types silently
-        if (error instanceof Error) {
-          if (error.message.includes('Invalid Refresh Token') ||
-              error.message.includes('invalid_token')) {
-            console.warn('🧹 Clearing invalid tokens (silent)');
-            clearAuthTokens();
-          }
+        // CRITICAL: Only clear tokens for refresh token errors, not network/permission errors
+        if (isErrorType(error, 'refreshTokenError')) {
+          console.warn('🧹 Clearing invalid tokens due to refresh token error (silent)');
+          clearAuthTokens();
         }
 
         // Don't show errors - app will start anyway

@@ -70,36 +70,55 @@ export const getUserFriendlyErrorMessage = (error: unknown): string => {
 
 /**
  * Checks if an error is a specific type (e.g., auth, network, permission)
+ * CRITICAL: auth type is specifically for Supabase auth token errors (refresh token failures),
+ * NOT for RLS/query permission errors. RLS errors should be classified as 'permission'.
  */
-export const isErrorType = (error: unknown, type: 'auth' | 'network' | 'permission' | 'validation'): boolean => {
+export const isErrorType = (error: unknown, type: 'auth' | 'network' | 'permission' | 'validation' | 'refreshTokenError'): boolean => {
   const message = getUserFriendlyErrorMessage(error).toLowerCase();
-  
+  const errorObj = error && typeof error === 'object' ? (error as any) : null;
+  const errorCode = errorObj?.code || '';
+
   switch (type) {
+    case 'refreshTokenError':
+      // CRITICAL: Only match explicit refresh token errors from Supabase auth operations
+      return message.includes('invalid refresh token') ||
+             message.includes('refresh token not found') ||
+             message.includes('invalid_token') ||
+             message.includes('invalid_grant') ||
+             errorCode === 'invalid_token' ||
+             errorCode === 'invalid_grant';
+
     case 'auth':
-      return message.includes('jwt') || 
-             message.includes('token') || 
-             message.includes('unauthorized') ||
-             message.includes('authentication') ||
-             message.includes('invalid_token');
-             
+      // CRITICAL: JWT/auth header errors ONLY - NOT RLS errors
+      // Do NOT match 'unauthorized' or generic 'token' (too broad, catches RLS)
+      return message.includes('jwt') ||
+             message.includes('invalid jwt') ||
+             message.includes('malformed jwt') ||
+             message.includes('authentication required') ||
+             (message.includes('invalid') && message.includes('jwt'));
+
     case 'network':
-      return message.includes('fetch') || 
-             message.includes('network') || 
+      return message.includes('fetch') ||
+             message.includes('network') ||
              message.includes('connection') ||
              message.includes('timeout');
-             
+
     case 'permission':
-      return message.includes('permission') || 
-             message.includes('unauthorized') || 
+      // RLS and data-layer permission errors - do NOT clear auth tokens
+      return message.includes('permission') ||
              message.includes('row level security') ||
-             message.includes('access denied');
-             
+             message.includes('rls') ||
+             message.includes('access denied') ||
+             message.includes('new row violates row-level security') ||
+             errorCode === 'PGRST301' || // RLS policy violation
+             errorCode === 'PGRST201';   // Not authenticated (data, not auth token)
+
     case 'validation':
-      return message.includes('validation') || 
-             message.includes('required') || 
+      return message.includes('validation') ||
+             message.includes('required') ||
              message.includes('invalid') ||
              message.includes('constraint');
-             
+
     default:
       return false;
   }
