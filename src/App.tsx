@@ -33,6 +33,7 @@ import CustomerPerformanceOptimizerPage from "./pages/CustomerPerformanceOptimiz
 import SetupAndTest from "./components/SetupAndTest";
 import AuthTest from "./components/AuthTest";
 import RLSDebug from "./pages/RLSDebug";
+import LegacyUsdMigrationPage from "./pages/LegacyUsdMigrationPage";
 
 const App = () => {
 
@@ -311,6 +312,16 @@ const App = () => {
 
           {/* RLS Debug Tool - Diagnose and fix Row Level Security issues */}
           <Route path="/rls-debug" element={<RLSDebug />} />
+
+          {/* Legacy USD Migration - Backfill currency metadata for legacy USD records */}
+          <Route
+            path="/migrate/legacy-usd"
+            element={
+              <ProtectedRoute>
+                <LegacyUsdMigrationPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* 404 Page */}
           <Route path="*" element={<NotFound />} />
