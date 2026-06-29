@@ -217,7 +217,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     const newItem: QuotationItem = {
       id: `temp-${Date.now()}`,
       product_id: product.id,
-      product_name: product.name,
+      product_name: product.name?.substring(0, 255) || '',
       description: product.description || '',
       quantity: 1,
       unit_price: price,
