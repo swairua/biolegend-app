@@ -432,9 +432,6 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
 
       const quotationItems = itemsToSubmit.map(item => {
         // Validate item data
-        if (!item.description || item.description.trim() === '') {
-          throw new Error(`Item "${item.product_name}" is missing a description`);
-        }
         if (item.quantity <= 0) {
           throw new Error(`Item "${item.product_name}" must have a quantity greater than 0`);
         }
