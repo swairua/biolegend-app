@@ -164,8 +164,8 @@ export default function Receipts() {
   );
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', receiptRate?: number) => {
-    const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, receiptRate as any, currency, rate);
-    return format(normalized, currency);
+    const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, receiptRate as any, recordCurrency as any, 1);
+    return format(normalized, recordCurrency || currency);
   };
 
   const handleCreateSuccess = () => {

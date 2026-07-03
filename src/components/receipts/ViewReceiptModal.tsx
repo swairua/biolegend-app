@@ -40,7 +40,8 @@ export function ViewReceiptModal({
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, receipt?.currency_code as any, receipt?.exchange_rate as any, currency, rate)
+    normalizeInvoiceAmount(Number(amount) || 0, receipt?.currency_code as any, receipt?.exchange_rate as any, receipt?.currency_code as any, 1),
+    receipt?.currency_code
   );
 
   const formatDate = (dateString: string) => {
