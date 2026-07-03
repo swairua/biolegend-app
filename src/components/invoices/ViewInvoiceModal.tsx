@@ -12,7 +12,7 @@ import { normalizeInvoiceAmount } from '@/utils/currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
+import {
   Receipt,
   Calendar,
   User,
@@ -23,7 +23,8 @@ import {
   Download,
   Send,
   DollarSign,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 
 interface ViewInvoiceModalProps {
@@ -34,16 +35,18 @@ interface ViewInvoiceModalProps {
   onDownload: () => void;
   onSend: () => void;
   onRecordPayment: () => void;
+  isSending?: boolean;
 }
 
-export function ViewInvoiceModal({ 
-  open, 
-  onOpenChange, 
-  invoice, 
-  onEdit, 
-  onDownload, 
-  onSend, 
-  onRecordPayment 
+export function ViewInvoiceModal({
+  open,
+  onOpenChange,
+  invoice,
+  onEdit,
+  onDownload,
+  onSend,
+  onRecordPayment,
+  isSending
 }: ViewInvoiceModalProps) {
   if (!invoice) return null;
 
@@ -113,8 +116,12 @@ export function ViewInvoiceModal({
                 Download
               </Button>
               {invoice.customers?.email && invoice.status === 'draft' && (
-                <Button variant="outline" size="sm" onClick={onSend}>
-                  <Send className="h-4 w-4 mr-2" />
+                <Button variant="outline" size="sm" onClick={onSend} disabled={isSending}>
+                  {isSending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
                   Send
                 </Button>
               )}

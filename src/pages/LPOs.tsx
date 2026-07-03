@@ -38,12 +38,14 @@ import {
   FileText,
   User,
   Database,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUpdateLPO, useCompanies, useDeleteLPO } from '@/hooks/useDatabase';
 import { useOptimizedLPOs } from '@/hooks/useOptimizedLPOs';
 import { downloadLPOPDF } from '@/utils/pdfGenerator';
+import { sendLPOEmail } from '@/utils/emailService';
 import { CreateLPOModal } from '@/components/lpo/CreateLPOModal';
 import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
 import { EditLPOModal } from '@/components/lpo/EditLPOModal';
@@ -65,6 +67,7 @@ export default function LPOs() {
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
   const [lpoToDelete, setLpoToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sendingLPOId, setSendingLPOId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -146,13 +149,31 @@ export default function LPOs() {
     }
   };
 
-  const handleSendEmail = (lpo: any) => {
-    const subject = `Purchase Order ${lpo.lpo_number}`;
-    const body = `Please find attached Purchase Order ${lpo.lpo_number} for your review.`;
-    const emailUrl = `mailto:${lpo.suppliers?.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    window.open(emailUrl);
-    toast.success(`Email client opened with LPO ${lpo.lpo_number}`);
+  const handleSendEmail = async (lpo: any) => {
+    if (!lpo.suppliers?.email) {
+      toast.error('Supplier email not available');
+      return;
+    }
+
+    setSendingLPOId(lpo.id);
+
+    try {
+      await sendLPOEmail(
+        lpo.lpo_number,
+        lpo.suppliers.email,
+        lpo.suppliers.name,
+        lpo.id
+      );
+
+      toast.success(`Email sent to ${lpo.suppliers.email}`);
+      refetch();
+    } catch (error) {
+      console.error('Error sending LPO:', error);
+      const message = error instanceof Error ? error.message : 'Failed to send email. Please try again.';
+      toast.error(message);
+    } finally {
+      setSendingLPOId(null);
+    }
   };
 
   const handleUpdateStatus = async (lpo: any, newStatus: string) => {
@@ -512,9 +533,13 @@ export default function LPOs() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleSendEmail(lpo)}
-                          disabled={!lpo.suppliers?.email}
+                          disabled={!lpo.suppliers?.email || sendingLPOId === lpo.id}
                         >
-                          <Send className="h-4 w-4" />
+                          {sendingLPOId === lpo.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                         </Button>
                         {lpo.status === 'approved' && (
                           <Button
@@ -634,6 +659,7 @@ export default function LPOs() {
         onDownloadPDF={handleDownloadPDF}
         onSendEmail={handleSendEmail}
         onUpdateStatus={handleUpdateStatus}
+        isSending={!!selectedLPO && sendingLPOId === selectedLPO.id}
       />
 
       <EditLPOModal

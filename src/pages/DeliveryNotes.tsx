@@ -36,16 +36,19 @@ import {
   Clock,
   AlertTriangle,
   MapPin,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { downloadDeliveryNotePDF } from '@/utils/pdfGenerator';
+import { sendDeliveryNoteEmail } from '@/utils/emailService';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
 import { ViewDeliveryNoteModal } from '@/components/delivery/ViewDeliveryNoteModal';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useUpdateDeliveryNote, useCompanies } from '@/hooks/useDatabase';
 import { useOptimizedDeliveryNotes } from '@/hooks/useOptimizedDeliveryNotes';
 import { mapDeliveryNoteForDisplay } from '@/utils/deliveryNoteMapper';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 
 
@@ -57,6 +60,7 @@ export default function DeliveryNotes() {
   const [deliveryNoteToDelete, setDeliveryNoteToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sendingDeliveryNoteId, setSendingDeliveryNoteId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +69,7 @@ export default function DeliveryNotes() {
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
+  const { rate } = useCurrency();
 
   // Use optimized delivery notes hook with server-side pagination
   const { data: deliveryNoteData, isLoading, error, refetch } = useOptimizedDeliveryNotes(currentCompany?.id, {
@@ -140,14 +145,32 @@ export default function DeliveryNotes() {
     }
   };
 
-  const handleSendEmail = (deliveryNote: any) => {
+  const handleSendEmail = async (deliveryNote: any) => {
+    if (!deliveryNote.customers?.email) {
+      toast.error('Customer email not available');
+      return;
+    }
+
     const noteNumber = deliveryNote.delivery_note_number || deliveryNote.delivery_number;
-    const subject = `Delivery Note ${noteNumber}`;
-    const body = `Please find attached delivery note ${noteNumber} for your shipment.`;
-    const emailUrl = `mailto:${deliveryNote.customers?.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    window.open(emailUrl);
-    toast.success(`Email client opened with delivery note ${noteNumber}`);
+    setSendingDeliveryNoteId(deliveryNote.id);
+
+    try {
+      await sendDeliveryNoteEmail(
+        noteNumber,
+        deliveryNote.customers.email,
+        deliveryNote.customers.name,
+        deliveryNote.id
+      );
+
+      toast.success(`Email sent to ${deliveryNote.customers.email}`);
+      refetch();
+    } catch (error) {
+      console.error('Error sending delivery note:', error);
+      const message = error instanceof Error ? error.message : 'Failed to send email. Please try again.';
+      toast.error(message);
+    } finally {
+      setSendingDeliveryNoteId(null);
+    }
   };
 
   const handleMarkDelivered = async (deliveryNote: any) => {
@@ -449,9 +472,13 @@ export default function DeliveryNotes() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleSendEmail(note)}
-                          disabled={!note.customers?.email}
+                          disabled={!note.customers?.email || sendingDeliveryNoteId === note.id}
                         >
-                          <Send className="h-4 w-4" />
+                          {sendingDeliveryNoteId === note.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                         </Button>
                         {note.status !== 'delivered' && (
                           <Button
@@ -567,6 +594,7 @@ export default function DeliveryNotes() {
         onDownloadPDF={handleDownloadPDF}
         onSendEmail={handleSendEmail}
         onMarkDelivered={handleMarkDelivered}
+        isSending={!!selectedDeliveryNote && sendingDeliveryNoteId === selectedDeliveryNote.id}
       />
 
       {/* Delete Confirmation Modal */}

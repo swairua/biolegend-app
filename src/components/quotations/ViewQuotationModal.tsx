@@ -21,7 +21,8 @@ import {
   Edit,
   Send,
   CheckCircle,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { BiolegendLogo } from '@/components/ui/biolegend-logo';
 import { useCompanies } from '@/hooks/useDatabase';
@@ -36,6 +37,7 @@ interface ViewQuotationModalProps {
   onSend: () => void;
   onAccept?: () => void;
   onReject?: () => void;
+  isSending?: boolean;
 }
 
 export function ViewQuotationModal({
@@ -46,7 +48,8 @@ export function ViewQuotationModal({
   onDownload,
   onSend,
   onAccept,
-  onReject
+  onReject,
+  isSending
 }: ViewQuotationModalProps) {
   // Get company data for logo (hooks must be called unconditionally)
   const { data: companies } = useCompanies();
@@ -115,8 +118,12 @@ export function ViewQuotationModal({
                   <Download className="h-4 w-4" />
                 </Button>
                 {quotation.status === 'draft' && (
-                  <Button variant="outline" size="sm" onClick={onSend}>
-                    <Send className="h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={onSend} disabled={isSending}>
+                    {isSending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 )}
                 {quotation.status === 'sent' && onAccept && (

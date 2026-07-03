@@ -46,7 +46,8 @@ import {
   Calendar,
   Receipt,
   Truck,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
 import { useOptimizedInvoices } from '@/hooks/useOptimizedInvoices';
@@ -60,6 +61,7 @@ import { ViewInvoiceModal } from '@/components/invoices/ViewInvoiceModal';
 import { RecordPaymentModal } from '@/components/payments/RecordPaymentModal';
 import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNoteModal';
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
+import { sendInvoiceEmail } from '@/utils/emailService';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
 import { supabase } from '@/integrations/supabase/client';
@@ -114,6 +116,7 @@ export default function Invoices() {
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [invoicesToBulkDelete, setInvoicesToBulkDelete] = useState<Invoice[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -240,42 +243,33 @@ export default function Invoices() {
       return;
     }
 
+    setSendingInvoiceId(invoiceData.id);
+
     try {
-      // Create email content
-      const subject = `Invoice ${invoiceData.invoice_number} from Biolegend Scientific LTD`;
-      const body = `Dear ${invoiceData.customers.name},
+      await sendInvoiceEmail(
+        invoiceData.invoice_number,
+        invoiceData.customers.email,
+        invoiceData.customers.name,
+        invoiceData.id
+      );
 
-Please find attached your invoice ${invoiceData.invoice_number} dated ${new Date(invoiceData.invoice_date).toLocaleDateString()}.
+      const updateResult = await supabase
+        .from('invoices')
+        .update({ status: 'sent' })
+        .eq('id', invoiceData.id);
 
-Invoice Summary:
-- Invoice Amount: ${displayAmount(invoiceData.total_amount || 0, invoiceData.currency_code as any, invoiceData.exchange_rate as any)}
-- Due Date: ${new Date(invoiceData.due_date).toLocaleDateString()}
-- Balance Due: ${displayAmount(invoiceData.balance_due || 0, invoiceData.currency_code as any, invoiceData.exchange_rate as any)}
+      if (updateResult.error) {
+        console.error('Error updating invoice status:', updateResult.error);
+      }
 
-Payment can be made via:
-- Bank Transfer
-- Mobile Money (M-Pesa)
-- Cheque
-
-If you have any questions about this invoice, please don't hesitate to contact us.
-
-Best regards,
-Biolegend Scientific Ltd Team
-Tel: 0741 207 690/0780 165 490
-Email: biolegend@biolegendscientific.co.ke/info@biolegendscientific.co.ke
-Website: www.biolegendscientific.co.ke`;
-
-      // Open email client with pre-filled content
-      const emailUrl = `mailto:${invoiceData.customers.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(emailUrl, '_blank');
-
-      toast.success(`Email client opened with invoice ${invoiceData.invoice_number} for ${invoiceData.customers.email}`);
-
-      // TODO: In a real app, update invoice status to 'sent'
-
+      toast.success(`Email sent to ${invoiceData.customers.email}`);
+      refetch();
     } catch (error) {
       console.error('Error sending invoice:', error);
-      toast.error('Failed to send invoice email. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to send email. Please try again.';
+      toast.error(message);
+    } finally {
+      setSendingInvoiceId(null);
     }
   };
 
@@ -835,9 +829,14 @@ Website: www.biolegendscientific.co.ke`;
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleSendInvoice(invoice.id)}
+                                disabled={sendingInvoiceId === invoice.id}
                                 className="bg-primary-light text-primary border-primary/20 hover:bg-primary hover:text-primary-foreground"
                               >
-                                <Send className="h-4 w-4 mr-1" />
+                                {sendingInvoiceId === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4 mr-1" />
+                                )}
                                 Send
                               </Button>
                             )}
@@ -964,6 +963,7 @@ Website: www.biolegendscientific.co.ke`;
           onDownload={() => handleDownloadInvoice(selectedInvoice)}
           onSend={() => handleSendInvoice(selectedInvoice.id)}
           onRecordPayment={() => handleRecordPayment(selectedInvoice.id)}
+          isSending={!!selectedInvoice && sendingInvoiceId === selectedInvoice.id}
         />
       )}
 
