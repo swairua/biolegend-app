@@ -830,9 +830,9 @@ Website: www.biolegendscientific.co.ke`;
                         )}
                         {invoice.status !== 'paid' && (
                           <>
-                            {invoice.status === 'draft' && (
-                              <Button 
-                                variant="outline" 
+                            {invoice.status === 'draft' && invoice.customers?.email && (
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleSendInvoice(invoice.id)}
                                 className="bg-primary-light text-primary border-primary/20 hover:bg-primary hover:text-primary-foreground"
