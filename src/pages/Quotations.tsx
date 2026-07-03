@@ -31,7 +31,8 @@ import {
   Download,
   Calendar,
   Send,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies, useUpdateQuotationStatus, useDeleteQuotation } from '@/hooks/useDatabase';
@@ -43,6 +44,7 @@ import { CreateQuotationModal } from '@/components/quotations/CreateQuotationMod
 import { ViewQuotationModal } from '@/components/quotations/ViewQuotationModal';
 import { EditQuotationModal } from '@/components/quotations/EditQuotationModal';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
+import { sendQuotationEmail } from '@/utils/emailService';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, X } from 'lucide-react';
@@ -106,6 +108,7 @@ export default function Quotations() {
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sendingQuotationId, setSendingQuotationId] = useState<string | null>(null);
   const PAGE_SIZE = 20;
 
   // Get current user and company from context
@@ -193,58 +196,29 @@ export default function Quotations() {
       return;
     }
 
+    setSendingQuotationId(quotation.id);
+
     try {
-      // Create email content
-      const subject = `Quotation ${quotation.quotation_number} from Biolegend Scientific LTD`;
-      const body = `Dear ${quotation.customers.name},
+      await sendQuotationEmail(
+        quotation.quotation_number,
+        quotation.customers.email,
+        quotation.customers.name,
+        quotation.id
+      );
 
-Please find attached your quotation ${quotation.quotation_number} dated ${new Date(quotation.quotation_date).toLocaleDateString()}.
-
-Quotation Summary:
-- Total Amount: KES ${quotation.total_amount?.toLocaleString() || '0'}
-- Valid Until: ${quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString() : 'No expiry'}
-
-If you have any questions about this quotation, please don't hesitate to contact us.
-
-Best regards,
-Biolegend Scientific Ltd Team
-Tel: 0741 207 690/0780 165 490
-Email: biolegend@biolegendscientific.co.ke/info@biolegendscientific.co.ke
-Website: www.biolegendscientific.co.ke`;
-
-      // Open email client with pre-filled content
-      const emailUrl = `mailto:${quotation.customers.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(emailUrl, '_blank');
-
-      // Update quotation status to 'sent'
       await updateQuotationStatus.mutateAsync({
         quotationId: quotation.id,
         status: 'sent',
       });
 
-      toast.success(`Quotation ${quotation.quotation_number} sent and status updated to "Sent"`);
+      toast.success(`Email sent to ${quotation.customers.email}`);
       refetch();
     } catch (error) {
       console.error('Error sending quotation:', error);
-
-      let errorMessage = 'Please try again.';
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (error && typeof error === 'object') {
-        const supabaseError = error as any;
-        if (supabaseError.message) {
-          errorMessage = supabaseError.message;
-        } else if (supabaseError.details) {
-          errorMessage = supabaseError.details;
-        } else if (supabaseError.hint) {
-          errorMessage = supabaseError.hint;
-        } else {
-          errorMessage = JSON.stringify(error);
-        }
-      }
-
-      toast.error(`Failed to send quotation: ${errorMessage}`);
+      const message = error instanceof Error ? error.message : 'Failed to send email. Please try again.';
+      toast.error(message);
+    } finally {
+      setSendingQuotationId(null);
     }
   };
 
@@ -594,9 +568,14 @@ Website: www.biolegendscientific.co.ke`;
                               variant="outline"
                               size="sm"
                               onClick={() => handleSendQuotation(quotation)}
+                              disabled={sendingQuotationId === quotation.id}
                               className="bg-primary-light text-primary border-primary/20 hover:bg-primary hover:text-primary-foreground"
                             >
-                              <Send className="h-4 w-4 mr-1" />
+                              {sendingQuotationId === quotation.id ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4 mr-1" />
+                              )}
                               <span className="hidden sm:inline">Send</span>
                             </Button>
                           )}
@@ -736,6 +715,7 @@ Website: www.biolegendscientific.co.ke`;
         onSend={() => selectedQuotation && handleSendQuotation(selectedQuotation)}
         onAccept={() => selectedQuotation && handleAcceptQuotation(selectedQuotation)}
         onReject={() => selectedQuotation && handleRejectQuotation(selectedQuotation)}
+        isSending={!!selectedQuotation && sendingQuotationId === selectedQuotation.id}
       />
 
       <EditQuotationModal

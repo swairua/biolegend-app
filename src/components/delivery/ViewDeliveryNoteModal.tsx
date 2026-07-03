@@ -22,7 +22,8 @@ import {
   MapPin,
   CheckCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 
 interface DeliveryItem {
@@ -62,6 +63,7 @@ interface ViewDeliveryNoteModalProps {
   onDownloadPDF?: (deliveryNote: DeliveryNote) => void;
   onSendEmail?: (deliveryNote: DeliveryNote) => void;
   onMarkDelivered?: (deliveryNote: DeliveryNote) => void;
+  isSending?: boolean;
 }
 
 export const ViewDeliveryNoteModal = ({
@@ -70,7 +72,8 @@ export const ViewDeliveryNoteModal = ({
   deliveryNote,
   onDownloadPDF,
   onSendEmail,
-  onMarkDelivered
+  onMarkDelivered,
+  isSending
 }: ViewDeliveryNoteModalProps) => {
   if (!deliveryNote) return null;
 
@@ -354,8 +357,12 @@ export const ViewDeliveryNoteModal = ({
               <Download className="h-4 w-4 mr-2" />
               Download PDF
             </Button>
-            <Button variant="outline" onClick={handleSendEmail}>
-              <Send className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={handleSendEmail} disabled={isSending}>
+              {isSending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
               Send Email
             </Button>
             {mappedDeliveryNote.status !== 'delivered' && (
