@@ -165,6 +165,15 @@ export default function LPOs() {
         lpo.id
       );
 
+      const updateResult = await supabase
+        .from('lpos')
+        .update({ status: 'sent' })
+        .eq('id', lpo.id);
+
+      if (updateResult.error) {
+        console.error('Error updating LPO status:', updateResult.error);
+      }
+
       toast.success(`Email sent to ${lpo.suppliers.email}`);
       refetch();
     } catch (error) {
