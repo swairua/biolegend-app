@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import {
   generateInvoiceEmail,
   generateQuotationEmail,
@@ -13,23 +12,39 @@ interface SendEmailParams {
   documentId: string;
 }
 
-async function sendEmailViaEdgeFunction(params: SendEmailParams) {
+async function sendEmailViaResend(params: SendEmailParams) {
   try {
-    const response = await supabase.functions.invoke('send-email', {
-      body: {
-        to: params.to,
-        subject: params.subject,
-        body: params.body,
-        documentType: params.documentType,
-        documentId: params.documentId,
-      },
-    });
+    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
 
-    if (response.error) {
-      throw new Error(response.error.message || 'Failed to send email');
+    if (!apiKey) {
+      throw new Error('VITE_RESEND_API_KEY environment variable is not set');
     }
 
-    return response.data;
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from: 'noreply@biolegendscientific.com',
+        to: params.to,
+        subject: params.subject,
+        html: params.body.replace(/\n/g, '<br>'),
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send email via Resend');
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      messageId: data.id,
+      to: params.to,
+    };
   } catch (error) {
     console.error('Email service error:', error);
     throw error;
@@ -44,7 +59,7 @@ export async function sendInvoiceEmail(
 ) {
   const emailTemplate = generateInvoiceEmail(invoiceNumber, customerName);
 
-  return sendEmailViaEdgeFunction({
+  return sendEmailViaResend({
     to: customerEmail,
     subject: emailTemplate.subject,
     body: emailTemplate.body,
@@ -61,7 +76,7 @@ export async function sendQuotationEmail(
 ) {
   const emailTemplate = generateQuotationEmail(quotationNumber, customerName);
 
-  return sendEmailViaEdgeFunction({
+  return sendEmailViaResend({
     to: customerEmail,
     subject: emailTemplate.subject,
     body: emailTemplate.body,
@@ -83,7 +98,7 @@ Please find attached delivery note ${deliveryNoteNumber} for your shipment.
 
 ${generateBiolegendEmailSignature()}`;
 
-  return sendEmailViaEdgeFunction({
+  return sendEmailViaResend({
     to: customerEmail,
     subject,
     body,
@@ -105,7 +120,7 @@ Please find attached Purchase Order ${lpoNumber} for your review and processing.
 
 ${generateBiolegendEmailSignature()}`;
 
-  return sendEmailViaEdgeFunction({
+  return sendEmailViaResend({
     to: supplierEmail,
     subject,
     body,
