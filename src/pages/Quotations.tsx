@@ -589,7 +589,7 @@ Website: www.biolegendscientific.co.ke`;
 
                         {/* Conditional Action Buttons */}
                         <div className="flex space-x-2 ml-2">
-                          {quotation.status === 'draft' && quotation.customers?.email && (
+                          {(quotation.status === 'draft' || quotation.status === 'sent') && quotation.customers?.email && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -624,7 +624,7 @@ Website: www.biolegendscientific.co.ke`;
                               </Button>
                             </>
                           )}
-                          {(quotation.status === 'accepted' || quotation.status === 'draft') && (
+                          {quotation.status !== 'converted' && (quotation.status === 'accepted' || quotation.status === 'draft') && (
                             <Button
                               variant="outline"
                               size="sm"
