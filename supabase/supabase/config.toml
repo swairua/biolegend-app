@@ -312,11 +312,11 @@ inspector_port = 8083
 deno_version = 1
 
 [edge_runtime.secrets]
-SMTP_HOST = "localhost"
-SMTP_PORT = "54325"
-SMTP_USERNAME = "test"
-SMTP_PASSWORD = "test"
-SMTP_FROM_EMAIL = "noreply@biolegendscientific.com"
+SMTP_HOST = "mail.biolegendscientific.co.ke"
+SMTP_PORT = "465"
+SMTP_USERNAME = "webmaster@biolegendscientific.co.ke"
+SMTP_PASSWORD = "Sirgeorge.12"
+SMTP_FROM_EMAIL = "webmaster@biolegendscientific.co.ke"
 SMTP_FROM_NAME = "Biolegend Scientific"
 
 [analytics]
