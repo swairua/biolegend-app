@@ -75,6 +75,9 @@ serve(async (req) => {
         user: smtpUsername,
         pass: smtpPassword,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
 
     // Send email
