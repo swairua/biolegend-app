@@ -23,7 +23,8 @@ import {
   DollarSign,
   AlertTriangle
 } from 'lucide-react';
-import { formatCurrency } from '@/utils/taxCalculation';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 interface ProformaItem {
   id: string;
@@ -54,6 +55,9 @@ interface Proforma {
     address?: string;
   };
   proforma_items?: ProformaItem[];
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
 }
 
 interface ViewProformaModalProps {
@@ -73,7 +77,12 @@ export const ViewProformaModal = ({
   onSendEmail,
   onCreateInvoice
 }: ViewProformaModalProps) => {
+  const { rate, format } = useCurrency();
   if (!proforma) return null;
+  const formatCurrency = (amount: number) => {
+    const documentCurrency = proforma.currency_code || 'KES';
+    return format(normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, proforma.exchange_rate, documentCurrency, rate), documentCurrency);
+  };
 
   // 🔍 Deduplicate items for display
   const { deduplicatedItems, hasDuplicates, duplicateCount } = useMemo(() => {

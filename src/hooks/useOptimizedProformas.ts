@@ -20,6 +20,7 @@ export interface OptimizedProforma {
   updated_at?: string;
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
+  fx_date?: string;
   customers?: {
     id: string;
     name: string;
@@ -82,6 +83,7 @@ export const useOptimizedProformas = (
           terms_and_conditions,
           currency_code,
           exchange_rate,
+          fx_date,
           created_by,
           created_at,
           updated_at

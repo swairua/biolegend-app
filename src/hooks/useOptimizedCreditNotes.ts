@@ -18,6 +18,9 @@ export interface OptimizedCreditNote {
   reason?: string;
   notes?: string;
   terms_and_conditions?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -80,6 +83,9 @@ export const useOptimizedCreditNotes = (
           reason,
           notes,
           terms_and_conditions,
+          currency_code,
+          exchange_rate,
+          fx_date,
           created_by,
           created_at,
           updated_at

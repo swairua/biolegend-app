@@ -1651,6 +1651,8 @@ export const downloadCreditNotePDF = async (creditNote: any, company?: CompanyDe
     date: creditNote.credit_note_date,
     company: company, // Pass company details
     currency_code: creditNoteCurrencyCode,
+    exchange_rate: creditNote.exchange_rate,
+    fx_date: creditNote.fx_date,
     customer: {
       name: creditNote.customers?.name || 'Unknown Customer',
       email: creditNote.customers?.email,
@@ -2153,6 +2155,9 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails, current
 
 // Function for receipt PDF generation (like invoice but no terms page, just thank you note)
 export const downloadReceiptPDF = async (receipt: any, company?: CompanyDetails, currentRate: number = 1) => {
+  const receiptCurrencyCode = receipt.currency_code === 'USD' || receipt.currency_code === 'KES' ? receipt.currency_code : (Number(receipt.exchange_rate) && Number(receipt.exchange_rate) !== 1 ? 'USD' : 'KES');
+  const receiptRate = Number.isFinite(receipt.exchange_rate) ? receipt.exchange_rate : currentRate;
+  const normalizeReceiptAmount = (amount: number) => normalizeInvoiceAmount(Number(amount) || 0, receiptCurrencyCode, receiptRate, receiptCurrencyCode, currentRate);
   const documentData: DocumentData = {
     type: 'receipt',
     number: receipt.invoice_number,
@@ -2221,7 +2226,9 @@ export const downloadReceiptPDF = async (receipt: any, company?: CompanyDetails,
       return receipt.balance_due !== undefined ? normalizeInvoiceAmount(receipt.balance_due, receiptCurrencyCode, receiptRate, receiptCurrencyCode, currentRate) : 0;
     })(),
     notes: receipt.notes,
-    currency_code: (receipt.currency_code === 'USD' || receipt.currency_code === 'KES' ? receipt.currency_code : (Number(receipt.exchange_rate) && Number(receipt.exchange_rate) !== 1 ? 'USD' : 'KES')),
+    currency_code: receiptCurrencyCode,
+    exchange_rate: receipt.exchange_rate,
+    fx_date: receipt.fx_date,
     terms_and_conditions: 'Thank you for your purchase. This is a sales receipt confirming payment has been received.',
   };
 

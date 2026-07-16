@@ -70,9 +70,10 @@ interface CreateInvoiceModalProps {
   sourceQuotationId?: string;
   initialCurrencyCode?: 'KES' | 'USD';
   initialExchangeRate?: number;
+  initialFxDate?: string;
 }
 
-export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, sourceQuotationId, initialCurrencyCode, initialExchangeRate }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, sourceQuotationId, initialCurrencyCode, initialExchangeRate, initialFxDate }: CreateInvoiceModalProps) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(preSelectedCustomer?.id || '');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(
@@ -160,6 +161,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       if (typeof initialInvoiceDate === 'string') {
         console.log('✅ Setting invoice date:', initialInvoiceDate);
         setInvoiceDate(initialInvoiceDate);
+      } else if (typeof initialFxDate === 'string') {
+        setInvoiceDate(initialFxDate);
       }
       if (typeof initialDueDate === 'string') {
         console.log('✅ Setting due date:', initialDueDate);
@@ -171,7 +174,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         previousRateRef.current = initialExchangeRate;
       }
     }
-  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, initialExchangeRate]);
+  }, [open, preSelectedCustomer, initialItems, initialNotes, initialTerms, initialLpoNumber, initialInvoiceDate, initialDueDate, initialExchangeRate, initialFxDate]);
 
   // Inherit global currency selection when opening the modal (unless initial currency was specified)
   useEffect(() => {

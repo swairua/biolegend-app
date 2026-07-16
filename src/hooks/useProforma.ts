@@ -40,6 +40,7 @@ export interface ProformaInvoice {
   updated_at?: string;
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
+  fx_date?: string;
 }
 
 export interface ProformaWithItems extends ProformaInvoice {
