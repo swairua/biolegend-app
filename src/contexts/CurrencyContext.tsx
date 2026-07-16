@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
+import { toast } from '@/hooks/use-toast';
 
 export type CurrencyCode = 'KES' | 'USD';
 
@@ -34,12 +35,24 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrency = async (c: CurrencyCode) => {
     if (c === currency) return;
+
     if (c === 'USD') {
       try {
         // Fetch latest KES->USD to use for UI conversions
         const fetched = await getExchangeRate('KES', 'USD');
-        if (fetched && fetched > 0) setRate(fetched);
-      } catch (_) {}
+        if (fetched && fetched > 0) {
+          setRate(fetched);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch exchange rate';
+        console.error('Exchange rate fetch failed:', error);
+        toast({
+          title: 'Exchange Rate Error',
+          description: message,
+          variant: 'destructive',
+        });
+        // Still update currency even if rate fetch fails, using existing rate as fallback
+      }
     } else {
       // KES baseline
       setRate(1);
