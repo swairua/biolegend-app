@@ -39,7 +39,6 @@ import { CreateRemittanceModal } from '@/components/remittance/CreateRemittanceM
 import { ViewRemittanceModal } from '@/components/remittance/ViewRemittanceModal';
 import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
 
 // Remittance advice page - uses real database data via useRemittanceAdvice hook
 
@@ -67,8 +66,8 @@ const RemittanceAdvice = () => {
   // Get the current company (assuming first company for now)
   const currentCompany = companies[0];
 
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const { format } = useCurrency();
+  const formatCurrency = (amount: number, docCurrency?: string) => format(Number(amount) || 0, (docCurrency === 'USD' || docCurrency === 'KES') ? docCurrency : 'KES');
 
   const handleViewRemittance = (remittance: any) => {
     setSelectedRemittance(remittance);
@@ -414,7 +413,7 @@ const RemittanceAdvice = () => {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {formatCurrency(remittance.total_payment || remittance.totalPayment || 0)}
+                      {formatCurrency(remittance.total_payment || remittance.totalPayment || 0, remittance.currency_code)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -618,20 +617,20 @@ const RemittanceAdvice = () => {
                         {item.invoiceNumber || item.creditNote}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.invoiceAmount ? formatCurrency(item.invoiceAmount || 0) : ''}
+                        {item.invoiceAmount ? formatCurrency(item.invoiceAmount || 0, filteredRemittances[0]?.currency_code) : ''}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.creditAmount ? formatCurrency(item.creditAmount || 0) : ''}
+                        {item.creditAmount ? formatCurrency(item.creditAmount || 0, filteredRemittances[0]?.currency_code) : ''}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(item.payment || 0)}
+                        {formatCurrency(item.payment || 0, filteredRemittances[0]?.currency_code)}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t-2">
                     <TableCell colSpan={4} className="font-semibold">Total Payment</TableCell>
                     <TableCell className="text-right font-bold text-lg">
-                      {formatCurrency(filteredRemittances[0].totalPayment || 0) }
+                      {formatCurrency(filteredRemittances[0].totalPayment || 0, filteredRemittances[0]?.currency_code) }
                     </TableCell>
                   </TableRow>
                 </TableBody>

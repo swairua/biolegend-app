@@ -29,6 +29,7 @@ import {
   Edit
 } from 'lucide-react';
 import { useUpdateLPOWithItems, useAllSuppliersAndCustomers, useProducts, useCompanies } from '@/hooks/useDatabase';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { validateLPOEdit } from '@/utils/lpoValidation';
 
@@ -80,6 +81,7 @@ export const EditLPOModal = ({
   const { data: supplierData } = useAllSuppliersAndCustomers(currentCompany?.id);
   const suppliers = supplierData?.all || [];
   const { data: products } = useProducts(currentCompany?.id);
+  const { currency, rate, format } = useCurrency();
   const updateLPOWithItems = useUpdateLPOWithItems();
 
   useEffect(() => {
@@ -206,6 +208,9 @@ export const EditLPOModal = ({
         contact_phone: formData.contact_phone,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency_code: lpo?.currency_code || currency,
+        exchange_rate: (lpo?.currency_code === 'USD' || currency === 'USD') ? (lpo?.exchange_rate || rate || 1) : 1,
+        fx_date: formData.lpo_date,
       };
 
       // Update LPO with items using the new comprehensive hook
@@ -492,7 +497,7 @@ export const EditLPOModal = ({
                             />
                           </TableCell>
                           <TableCell className="font-medium">
-                            KES {item.line_total.toFixed(2)}
+                            {format(item.line_total || 0, currency)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -514,15 +519,15 @@ export const EditLPOModal = ({
                     <div className="w-64 space-y-2">
                       <div className="flex justify-between">
                         <span>Subtotal:</span>
-                        <span>KES {subtotal.toFixed(2)}</span>
+                        <span>{format(subtotal || 0, currency)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>VAT:</span>
-                        <span>KES {totalTax.toFixed(2)}</span>
+                        <span>{format(totalTax || 0, currency)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
                         <span>Total:</span>
-                        <span>KES {totalAmount.toFixed(2)}</span>
+                        <span>{format(totalAmount || 0, currency)}</span>
                       </div>
                     </div>
                   </div>

@@ -819,6 +819,9 @@ export const usePayments = (companyId?: string) => {
             payment_method,
             reference_number,
             notes,
+            currency_code,
+            exchange_rate,
+            fx_date,
             created_at,
             updated_at
           `)

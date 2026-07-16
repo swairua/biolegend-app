@@ -181,6 +181,9 @@ export function EditRemittanceModal({ open, onOpenChange, remittance, onSuccess 
         total_payment: calculateTotalPayment(),
         status: formData.status,
         notes: formData.notes || null,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: formData.date,
       };
 
       // Update the remittance advice

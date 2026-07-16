@@ -200,7 +200,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       product_name: product.name,
       description: product.description || '',
       quantity: 1,
-      unit_price: Number(product.selling_price || 0),
+      unit_price: currencyCode === 'USD' && exchangeRate > 1 ? Number(product.selling_price || 0) / exchangeRate : Number(product.selling_price || 0),
       discount_percentage: 0,
       tax_percentage: 0,
       tax_amount: 0,

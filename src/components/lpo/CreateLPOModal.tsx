@@ -110,7 +110,7 @@ export const CreateLPOModal = ({
   const { data: supplierData } = useAllSuppliersAndCustomers(currentCompany?.id);
   const suppliers = supplierData?.all || [];
   const { data: products } = useProducts(currentCompany?.id);
-  const { currency, rate } = useCurrency();
+  const { currency, rate, format } = useCurrency();
   const createLPO = useCreateLPO();
   const generateLPONumber = useGenerateLPONumber();
   const createCustomer = useCreateCustomer();
@@ -918,7 +918,7 @@ export const CreateLPOModal = ({
                             />
                           </TableCell>
                           <TableCell className="font-medium">
-                            KES {item.line_total.toFixed(2)}
+                            {format(item.line_total || 0, currency)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -942,15 +942,15 @@ export const CreateLPOModal = ({
                     <div className="w-64 space-y-2">
                       <div className="flex justify-between">
                         <span>Subtotal:</span>
-                        <span>KES {subtotal.toFixed(2)}</span>
+                        <span>{format(subtotal || 0, currency)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>VAT:</span>
-                        <span>KES {totalTax.toFixed(2)}</span>
+                        <span>{format(totalTax || 0, currency)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
                         <span>Total:</span>
-                        <span>KES {totalAmount.toFixed(2)}</span>
+                        <span>{format(totalAmount || 0, currency)}</span>
                       </div>
                     </div>
                   </div>

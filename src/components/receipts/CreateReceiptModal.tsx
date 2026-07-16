@@ -384,7 +384,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
           throw new Error('Unable to fetch exchange rate for the selected date');
         }
       }
-      const factor = 1;
+      const factor = effectiveRate || 1;
 
       const adjustedItems = items.map(item => ({
         product_id: item.product_id,
@@ -663,7 +663,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
                               <div className="text-sm text-muted-foreground">{product.product_code}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold">{formatCurrency(currencyCode === 'USD' ? (Number(product.unit_price) || 0) * exchangeRate : (Number(product.unit_price) || 0))}</div>
+                              <div className="font-semibold">{formatCurrency(currencyCode === 'USD' ? (Number(product.unit_price) || 0) / exchangeRate : (Number(product.unit_price) || 0))}</div>
                               <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
                               {product.category_name && (
                                 <div className="text-xs text-muted-foreground">{product.category_name}</div>

@@ -39,7 +39,6 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
 
 interface Payment {
   id: string;
@@ -50,6 +49,9 @@ interface Payment {
   payment_method: 'cash' | 'mpesa' | 'bank_transfer' | 'cheque';
   reference_number?: string;
   notes?: string;
+  currency_code?: string;
+  exchange_rate?: number;
+  fx_date?: string;
   customers?: {
     name: string;
     email?: string;
@@ -82,8 +84,8 @@ function getMethodColor(method: string) {
 }
 
 function useFormatCurrency() {
-  const { currency, rate, format } = useCurrency();
-  return (amount: number) => format(convertAmount(Number(amount)||0, 'KES', currency, rate));
+  const { format } = useCurrency();
+  return (amount: number, docCurrency?: string) => format(Number(amount) || 0, (docCurrency === 'USD' || docCurrency === 'KES') ? docCurrency : 'KES');
 }
 
 export default function Payments() {
@@ -506,7 +508,7 @@ export default function Payments() {
                       {payment.payment_allocations?.[0]?.invoice_number || 'N/A'}
                     </TableCell>
                     <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-semibold text-success">{formatCurrency(payment.amount)}</TableCell>
+                    <TableCell className="font-semibold text-success">{formatCurrency(payment.amount, payment.currency_code)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getMethodColor(payment.payment_method)}>
                         {payment.payment_method.replace('_', ' ')}

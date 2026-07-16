@@ -177,7 +177,7 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product "${product.name}" has no price set`);
     }
-    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
+    const price = currencyCode === 'USD' ? priceBase / exchangeRate : priceBase;
 
     const newItem: ReceiptItem = {
       id: `temp-${Date.now()}`,
@@ -573,7 +573,7 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
                               <div className="text-sm text-muted-foreground">{product.product_code}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold">{formatCurrency(Number(product.unit_price) || 0)}</div>
+                              <div className="font-semibold">{formatCurrency(currencyCode === 'USD' ? (Number(product.unit_price) || 0) / exchangeRate : (Number(product.unit_price) || 0))}</div>
                               <div className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</div>
                             </div>
                           </div>

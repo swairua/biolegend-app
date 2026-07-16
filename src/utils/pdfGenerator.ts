@@ -1759,6 +1759,8 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
     valid_until: quotation.valid_until,
     company: company, // Pass company details
     currency_code: quotationCurrencyCode,
+    exchange_rate: quotation.exchange_rate,
+    fx_date: quotation.fx_date,
     customer: {
       name: quotation.customers?.name || 'Unknown Customer',
       email: quotation.customers?.email,
@@ -2000,13 +2002,12 @@ export const generatePaymentReceiptPDF = async (payment: any, company?: CompanyD
 // Function for generating remittance advice PDF
 export const downloadRemittancePDF = async (remittance: any, company?: CompanyDetails, currentRate: number = 1) => {
   const remittanceCurrencyCode = remittance.currency_code === 'USD' || remittance.currency_code === 'KES' ? remittance.currency_code : (Number(remittance.exchange_rate) && Number(remittance.exchange_rate) !== 1 ? 'USD' : 'KES');
-  const remittanceRate = Number.isFinite(remittance.exchange_rate) ? remittance.exchange_rate : currentRate;
 
   const documentData: DocumentData = {
     type: 'remittance',
     number: remittance.adviceNumber || remittance.advice_number || `REM-${Date.now()}`,
     date: remittance.adviceDate || remittance.advice_date || new Date().toISOString().split('T')[0],
-    company: company, // Pass company details
+    company: company,
     currency_code: remittanceCurrencyCode,
     customer: {
       name: remittance.customerName || remittance.customers?.name || 'Unknown Customer',
@@ -2022,19 +2023,18 @@ export const downloadRemittancePDF = async (remittance: any, company?: CompanyDe
         : item.description
         || `Payment for ${item.invoiceNumber || item.creditNote || 'Document'}`,
       quantity: 1,
-      unit_price: normalizeInvoiceAmount(item.payment_amount || item.payment || 0, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
+      unit_price: item.payment_amount || item.payment || 0,
       tax_percentage: item.tax_percentage || 0,
-      tax_amount: normalizeInvoiceAmount(item.tax_amount || 0, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
+      tax_amount: item.tax_amount || 0,
       tax_inclusive: item.tax_inclusive || false,
-      line_total: normalizeInvoiceAmount(item.payment_amount || item.payment || 0, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
-      // Additional details for remittance-specific display
+      line_total: item.payment_amount || item.payment || 0,
       document_date: item.document_date || item.date,
-      invoice_amount: normalizeInvoiceAmount(item.invoice_amount || item.invoiceAmount, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
-      credit_amount: normalizeInvoiceAmount(item.credit_amount || item.creditAmount, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
+      invoice_amount: item.invoice_amount || item.invoiceAmount || 0,
+      credit_amount: item.credit_amount || item.creditAmount || 0,
     })),
-    subtotal: normalizeInvoiceAmount(remittance.totalPayment || remittance.total_payment || 0, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
+    subtotal: remittance.totalPayment || remittance.total_payment || 0,
     tax_amount: 0,
-    total_amount: normalizeInvoiceAmount(remittance.totalPayment || remittance.total_payment || 0, remittanceCurrencyCode, remittanceRate, remittanceCurrencyCode, currentRate),
+    total_amount: remittance.totalPayment || remittance.total_payment || 0,
     notes: remittance.notes || 'Remittance advice for payments made',
     terms_and_conditions: 'This remittance advice details payments made to your account.',
   };
@@ -2100,15 +2100,16 @@ export const downloadDeliveryNotePDF = async (deliveryNote: any, company?: Compa
 
 // Function for LPO PDF generation
 export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails, currentRate: number = 1) => {
+  const lpoCurrencyCode = lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES');
   const documentData: DocumentData = {
-    type: 'lpo', // Use LPO document type
+    type: 'lpo',
     number: lpo.lpo_number,
     date: lpo.lpo_date,
     due_date: lpo.delivery_date,
     delivery_date: lpo.delivery_date,
     delivery_address: lpo.delivery_address,
-    company: company, // Pass company details
-    currency_code: (lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES')),
+    company: company,
+    currency_code: lpoCurrencyCode,
     customer: {
       name: lpo.suppliers?.name || 'Unknown Supplier',
       email: lpo.suppliers?.email,
@@ -2118,8 +2119,6 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails, current
       country: lpo.suppliers?.country,
     },
     items: lpo.lpo_items?.map((item: any) => {
-      const lpoCurrencyCode = lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES');
-      const lpoRate = Number.isFinite(lpo.exchange_rate) ? lpo.exchange_rate : currentRate;
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.unit_price || 0);
       const taxAmount = Number(item.tax_amount || 0);
@@ -2128,31 +2127,19 @@ export const downloadLPOPDF = async (lpo: any, company?: CompanyDetails, current
       return {
         description: item.description || item.products?.name || 'Unknown Item',
         quantity: quantity,
-        unit_price: normalizeInvoiceAmount(unitPrice, lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate),
+        unit_price: unitPrice,
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: Number(item.tax_rate || 0),
-        tax_amount: normalizeInvoiceAmount(taxAmount, lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate),
+        tax_amount: taxAmount,
         tax_inclusive: false,
-        line_total: normalizeInvoiceAmount(Number(item.line_total ?? computedLineTotal), lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate),
+        line_total: Number(item.line_total ?? computedLineTotal),
         unit_of_measure: item.products?.unit_of_measure || 'pcs',
       };
     }) || [],
-    subtotal: ((): number => {
-      const lpoCurrencyCode = lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES');
-      const lpoRate = Number.isFinite(lpo.exchange_rate) ? lpo.exchange_rate : currentRate;
-      return normalizeInvoiceAmount(lpo.subtotal, lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate);
-    })(),
-    tax_amount: ((): number => {
-      const lpoCurrencyCode = lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES');
-      const lpoRate = Number.isFinite(lpo.exchange_rate) ? lpo.exchange_rate : currentRate;
-      return normalizeInvoiceAmount(lpo.tax_amount, lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate);
-    })(),
-    total_amount: ((): number => {
-      const lpoCurrencyCode = lpo.currency_code === 'USD' || lpo.currency_code === 'KES' ? lpo.currency_code : (Number(lpo.exchange_rate) && Number(lpo.exchange_rate) !== 1 ? 'USD' : 'KES');
-      const lpoRate = Number.isFinite(lpo.exchange_rate) ? lpo.exchange_rate : currentRate;
-      return normalizeInvoiceAmount(lpo.total_amount, lpoCurrencyCode, lpoRate, lpoCurrencyCode, currentRate);
-    })(),
+    subtotal: lpo.subtotal || 0,
+    tax_amount: lpo.tax_amount || 0,
+    total_amount: lpo.total_amount || 0,
     notes: `${lpo.notes || ''}${lpo.contact_person ? `\n\nContact Person: ${lpo.contact_person}` : ''}${lpo.contact_phone ? `\nContact Phone: ${lpo.contact_phone}` : ''}`.trim(),
     terms_and_conditions: lpo.terms_and_conditions,
   };

@@ -210,9 +210,9 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product "${product.name}" has no price set`);
     }
-    // If in USD mode and exchange rate > 1, it means we converted from KES so apply the rate
+    // Divide KES base price by exchange rate to get USD unit price
     // If exchange rate is 1, we're creating native USD items with no conversion
-    const price = currencyCode === 'USD' && exchangeRate > 1 ? priceBase * exchangeRate : priceBase;
+    const price = currencyCode === 'USD' && exchangeRate > 1 ? priceBase / exchangeRate : priceBase;
 
     const newItem: QuotationItem = {
       id: `temp-${Date.now()}`,

@@ -24,6 +24,8 @@ import { toast } from 'sonner';
 import { useCreateRemittanceAdvice, useCustomers, useGenerateDocumentNumber } from '@/hooks/useDatabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { convertAmount } from '@/utils/currency';
 import type { RemittanceAdviceItemFormData } from '@/types/remittance';
 
 interface CreateRemittanceModalProps {
@@ -45,6 +47,8 @@ interface RemittanceItem {
 export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateRemittanceModalProps) {
   const { profile } = useAuth();
   const { currentCompany } = useCurrentCompany();
+  const { currency, rate, format } = useCurrency();
+  const formatCurrency = (amt: number) => format(convertAmount(Number(amt) || 0, 'KES', currency, rate));
   const createRemittanceMutation = useCreateRemittanceAdvice();
   const { data: customers = [] } = useCustomers(currentCompany?.id);
   const generateNumberMutation = useGenerateDocumentNumber();
@@ -178,6 +182,9 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
         status: 'draft' as const,
         notes: formData.notes || null,
         created_by: profile.id,
+        currency_code: currency,
+        exchange_rate: currency === 'USD' ? rate : 1,
+        fx_date: formData.date,
       };
 
       // Create the remittance advice
@@ -416,7 +423,7 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
               <div className="mt-4 flex justify-end">
                 <div className="bg-muted p-4 rounded-lg">
                   <div className="text-lg font-semibold">
-                    Total Payment: ${calculateTotalPayment().toFixed(2)}
+                    Total Payment: {formatCurrency(calculateTotalPayment())}
                   </div>
                 </div>
               </div>

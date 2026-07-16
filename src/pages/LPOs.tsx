@@ -53,7 +53,6 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { DatabaseAuditPanel } from '@/components/DatabaseAuditPanel';
 import { DirectForceMigration } from '@/components/DirectForceMigration';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
 import { LPOCustomerSupplierAudit } from '@/components/LPOCustomerSupplierAudit';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -112,7 +111,7 @@ export default function LPOs() {
   };
 
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatCurrency = (amount: number, docCurrency?: string) => format(Number(amount) || 0, (docCurrency === 'USD' || docCurrency === 'KES') ? docCurrency : 'KES');
 
   const handleView = (lpo: any) => {
     setSelectedLPO(lpo);
@@ -510,7 +509,7 @@ export default function LPOs() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(lpo.total_amount)}
+                      {formatCurrency(lpo.total_amount, lpo.currency_code)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(lpo.status)}
