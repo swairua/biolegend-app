@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,8 @@ import {
   Plus,
   Trash2,
   Calculator,
-  Receipt
+  Receipt,
+  Loader2
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateProforma } from '@/hooks/useProforma';
@@ -81,12 +82,15 @@ export const CreateProformaModalOptimized = ({
   const [proformaNumber, setProformaNumber] = useState('');
   const [itemToDelete, setItemToDelete] = useState<ProformaItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState<'KES' | 'USD'>('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const previousRateRef = useRef<number>(1);
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
   const createProforma = useCreateProforma();
-  const { currency, rate } = useCurrency();
+  const { currency: globalCurrency, rate } = useCurrency();
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
@@ -95,7 +99,7 @@ export const CreateProformaModalOptimized = ({
   useEffect(() => {
     if (open && !proformaNumber) {
       generateProformaNumber();
-      
+
       // Set default valid until date (30 days from today)
       const validUntil = new Date();
       validUntil.setDate(validUntil.getDate() + 30);
@@ -105,6 +109,66 @@ export const CreateProformaModalOptimized = ({
       }));
     }
   }, [open, proformaNumber]);
+
+  // Inherit global currency selection when opening the modal
+  useEffect(() => {
+    if (!open) return;
+    if (globalCurrency && globalCurrency !== currencyCode) {
+      handleCurrencyChange(globalCurrency);
+    }
+  }, [open, globalCurrency]);
+
+  const convertItemsByFactor = (factor: number) => {
+    setItems(prev => prev.map(item => {
+      const newUnit = parseFloat((item.unit_price * factor).toFixed(4));
+      const calculated = calculateItemTax({ ...item, unit_price: newUnit });
+      return { ...item, unit_price: newUnit, line_total: calculated.line_total, tax_amount: calculated.tax_amount };
+    }));
+  };
+
+  const handleCurrencyChange = async (newCurrency: 'KES' | 'USD') => {
+    try {
+      if (newCurrency === currencyCode) return;
+      let newRate = 1;
+      if (newCurrency === 'USD') {
+        toast.info('Fetching USD/KES exchange rate...');
+        newRate = await getExchangeRate('USD', 'KES', formData.proforma_date);
+        if (!newRate || newRate <= 0) throw new Error('Invalid rate');
+        toast.success(`Rate locked: 1 USD = ${newRate.toFixed(2)} KES`);
+      } else {
+        newRate = 1;
+      }
+      const factor = newRate / previousRateRef.current;
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      setCurrencyCode(newCurrency);
+    } catch (e: any) {
+      console.error('Currency change failed:', e);
+      toast.error(e?.message || 'Failed to change currency');
+    }
+  };
+
+  const fetchAndSetRate = async () => {
+    try {
+      toast.info('Fetching exchange rate...');
+      const newRate = currencyCode === 'USD'
+        ? await getExchangeRate('USD', 'KES', formData.proforma_date)
+        : 1;
+      if (!newRate || newRate <= 0) throw new Error('Invalid exchange rate');
+      const factor = newRate / exchangeRate;
+      convertItemsByFactor(factor);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      const msg = currencyCode === 'USD'
+        ? `Rate updated: 1 USD = ${newRate.toFixed(2)} KES`
+        : 'Currency set to KES (no conversion needed)';
+      toast.success(msg);
+    } catch (e: any) {
+      console.error('Failed to fetch rate:', e);
+      toast.error(e?.message || 'Failed to fetch exchange rate');
+    }
+  };
 
   const generateProformaNumber = async () => {
     try {
@@ -372,13 +436,13 @@ export const CreateProformaModalOptimized = ({
 
     try {
       // Lock FX if USD
-      let effectiveRate = currency === 'USD' ? rate : 1;
-      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+      let effectiveRate = currencyCode === 'USD' ? exchangeRate : 1;
+      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
         try {
-          const fetched = await getExchangeRate('KES', 'USD', formData.proforma_date);
+          const fetched = await getExchangeRate('USD', 'KES', formData.proforma_date);
           if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
           effectiveRate = fetched;
-          toast.success(`Locked exchange rate for ${formData.proforma_date}: ${fetched.toFixed(4)}`);
+          toast.success(`Locked exchange rate for ${formData.proforma_date}: 1 USD = ${fetched.toFixed(2)} KES`);
         } catch (e: any) {
           toast.error(e?.message || 'Failed to fetch exchange rate');
           throw e;
@@ -396,6 +460,21 @@ export const CreateProformaModalOptimized = ({
       }));
       const totals = calculateDocumentTotals(taxableItems);
 
+      // Store amounts in KES (convert USD to KES for storage) like invoices do
+      const adjustedItems = itemsToSubmit.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: currencyCode === 'USD' ? Number(item.unit_price) * effectiveRate : Number(item.unit_price),
+        discount_percentage: item.discount_percentage || 0,
+        discount_amount: item.discount_amount || 0,
+        tax_percentage: item.tax_percentage,
+        tax_amount: currencyCode === 'USD' ? Number(item.tax_amount || 0) * effectiveRate : Number(item.tax_amount || 0),
+        tax_inclusive: item.tax_inclusive,
+        line_total: currencyCode === 'USD' ? Number(item.line_total) * effectiveRate : Number(item.line_total)
+      }));
+
       // Create proforma invoice using the correct table
       const proformaData = {
         company_id: companyId,
@@ -404,18 +483,18 @@ export const CreateProformaModalOptimized = ({
         proforma_date: formData.proforma_date,
         valid_until: formData.valid_until,
         status: 'draft',
-        subtotal: currency === 'USD' ? convertAmount(totals.subtotal, 'KES', 'USD', effectiveRate) : totals.subtotal,
-        tax_amount: currency === 'USD' ? convertAmount(totals.tax_total, 'KES', 'USD', effectiveRate) : totals.tax_total,
-        total_amount: currency === 'USD' ? convertAmount(totals.total_amount, 'KES', 'USD', effectiveRate) : totals.total_amount,
+        subtotal: currencyCode === 'USD' ? totals.subtotal * effectiveRate : totals.subtotal,
+        tax_amount: currencyCode === 'USD' ? totals.tax_total * effectiveRate : totals.tax_total,
+        total_amount: currencyCode === 'USD' ? totals.total_amount * effectiveRate : totals.total_amount,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
-        currency_code: currency,
-        exchange_rate: currency === 'USD' ? effectiveRate : 1,
+        currency_code: currencyCode,
+        exchange_rate: effectiveRate,
         fx_date: formData.proforma_date
       };
 
       // Create proforma in database with retry logic for duplicate numbers
-      await createProformaWithRetry(proformaData, itemsToSubmit);
+      await createProformaWithRetry(proformaData, adjustedItems);
 
       toast.success('Proforma invoice created successfully!');
       onSuccess?.();
@@ -528,7 +607,7 @@ export const CreateProformaModalOptimized = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="valid_until">Valid Until</Label>
               <Input
@@ -538,6 +617,41 @@ export const CreateProformaModalOptimized = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, valid_until: e.target.value }))}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select value={currencyCode} onValueChange={(v) => handleCurrencyChange(v as 'KES' | 'USD')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
+                  <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {currencyCode === 'USD' && (
+              <div className="space-y-2">
+                <Label>Exchange Rate</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={exchangeRate}
+                    disabled
+                    className="bg-muted flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={fetchAndSetRate}
+                    size="sm"
+                    className="px-3"
+                  >
+                    <Loader2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">1 USD = {exchangeRate.toFixed(2)} KES</p>
+              </div>
+            )}
           </div>
 
           {/* Items Section */}
