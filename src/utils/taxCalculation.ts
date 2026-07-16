@@ -202,7 +202,12 @@ export function convertToTaxInclusive(exclusivePrice: number, taxPercentage: num
  */
 export function formatCurrency(amount: number, locale: string = 'en-KE', currency: string = 'KES'): string {
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   } catch {
     return `KSh ${amount.toFixed(2)}`;
   }
