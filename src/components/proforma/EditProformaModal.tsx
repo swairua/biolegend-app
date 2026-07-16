@@ -38,6 +38,7 @@ import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQ
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 interface ProformaItem extends BaseProformaItem {
   // Extends the base ProformaItem with any additional UI-specific fields if needed
@@ -60,6 +61,9 @@ interface Proforma {
     email?: string;
   };
   proforma_items?: ProformaItem[];
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
 }
 
 interface EditProformaModalProps {
@@ -119,6 +123,9 @@ export const EditProformaModal = ({
         status: proforma.status,
       });
 
+      const documentCurrency = proforma.currency_code || 'KES';
+      const documentRate = proforma.exchange_rate || 1;
+
       if (proforma.proforma_items && proforma.proforma_items.length > 0) {
         console.log('📥 Loading items from proforma:', {
           count: proforma.proforma_items.length,
@@ -165,13 +172,13 @@ export const EditProformaModal = ({
               product_name: item.product_name || '',
               description: item.description || '',
               quantity: Number(item.quantity) || 0,  // Ensure it's a number
-              unit_price: Number(item.unit_price) || 0,
+              unit_price: normalizeInvoiceAmount(Number(item.unit_price) || 0, documentCurrency, documentRate, documentCurrency, documentRate),
               discount_percentage: Number(item.discount_percentage) || 0,
               discount_amount: Number(item.discount_amount) || 0,
               tax_percentage: Number(item.tax_percentage) || 0,
-              tax_amount: Number(item.tax_amount) || 0,
+              tax_amount: normalizeInvoiceAmount(Number(item.tax_amount) || 0, documentCurrency, documentRate, documentCurrency, documentRate),
               tax_inclusive: item.tax_inclusive || false,
-              line_total: Number(item.line_total) || 0,
+              line_total: normalizeInvoiceAmount(Number(item.line_total) || 0, documentCurrency, documentRate, documentCurrency, documentRate),
             };
 
             // Recalculate tax to ensure consistency
@@ -430,16 +437,22 @@ export const EditProformaModal = ({
       const totals = calculateTotals();
 
       // Update proforma using the hook
+      const documentCurrency = proforma.currency_code || 'KES';
+      const documentRate = proforma.exchange_rate || 1;
+      const storageMultiplier = documentCurrency === 'USD' ? documentRate : 1;
       const updatedProformaData = {
         customer_id: formData.customer_id,
         proforma_date: formData.proforma_date,
         valid_until: formData.valid_until,
         status: formData.status,
-        subtotal: totals.subtotal,
-        tax_amount: totals.tax_total,
-        total_amount: totals.total_amount,
+        subtotal: totals.subtotal * storageMultiplier,
+        tax_amount: totals.tax_total * storageMultiplier,
+        total_amount: totals.total_amount * storageMultiplier,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency_code: documentCurrency,
+        exchange_rate: documentRate,
+        fx_date: proforma.fx_date || proforma.proforma_date,
       };
 
       console.log('🔄 SUBMITTING PROFORMA UPDATE', {
@@ -482,6 +495,13 @@ export const EditProformaModal = ({
         qty: i.quantity
       })));
 
+      const persistedItems = validatedItems.map(item => ({
+        ...item,
+        unit_price: item.unit_price * storageMultiplier,
+        tax_amount: item.tax_amount * storageMultiplier,
+        line_total: item.line_total * storageMultiplier,
+      }));
+
       try {
         console.log('🎯 ========================================');
         console.log('🚀 Starting mutation...');
@@ -497,7 +517,7 @@ export const EditProformaModal = ({
         const result = await updateProforma.mutateAsync({
           proformaId: proforma.id,
           proforma: updatedProformaData,
-          items: validatedItems
+          items: persistedItems
         });
 
         console.log('✅ ========================================');
