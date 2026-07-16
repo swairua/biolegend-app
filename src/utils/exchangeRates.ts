@@ -23,6 +23,25 @@ export function getLocaleForCurrency(currency: string): string {
   }
 }
 
+async function fetchWithRetry(url: string, maxAttempts = 2): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout per request
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return res;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1))); // exponential backoff
+      }
+    }
+  }
+  throw lastError || new Error('Fetch failed after retries');
+}
+
 export async function getExchangeRate(base: string, quote: string, date?: string): Promise<number> {
   if (base === quote) return 1;
   const datePath = getDatePath(date);
@@ -37,7 +56,7 @@ export async function getExchangeRate(base: string, quote: string, date?: string
       const url = `https://api.exchangeratesapi.io/v1/${path}?access_key=${encodeURIComponent(key)}&symbols=${symbols}`;
 
       try {
-        const res = await fetch(url);
+        const res = await fetchWithRetry(url);
         if (res.ok) {
           const json = await res.json();
           const apiBase = json?.base as string | undefined;
@@ -69,7 +88,7 @@ export async function getExchangeRate(base: string, quote: string, date?: string
   // 1) exchangerate.host
   try {
     const url = `https://api.exchangerate.host/${datePath}?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(quote)}`;
-    const res = await fetch(url);
+    const res = await fetchWithRetry(url);
     if (res.ok) {
       const json = await res.json();
       const rate = json?.rates?.[quote];
@@ -85,7 +104,7 @@ export async function getExchangeRate(base: string, quote: string, date?: string
   try {
     const path = datePath === 'latest' ? 'latest' : datePath;
     const url = `https://api.frankfurter.app/${path}?from=${encodeURIComponent(base)}&to=${encodeURIComponent(quote)}`;
-    const res = await fetch(url);
+    const res = await fetchWithRetry(url);
     if (res.ok) {
       const json = await res.json();
       const rate = json?.rates?.[quote];
@@ -100,7 +119,7 @@ export async function getExchangeRate(base: string, quote: string, date?: string
   // 3) open.er-api.com (latest only, no historical)
   try {
     const url = `https://open.er-api.com/v6/latest/${encodeURIComponent(base)}`;
-    const res = await fetch(url);
+    const res = await fetchWithRetry(url);
     if (res.ok) {
       const json = await res.json();
       const rate = json?.rates?.[quote];
