@@ -131,7 +131,7 @@ export function CreateCreditNoteModal({
       product_name: product.name,
       description: product.description || product.name,
       quantity: 1,
-      unit_price: product.selling_price,
+      unit_price: currency === 'USD' ? convertAmount(product.selling_price, 'KES', 'USD', rate) : product.selling_price,
       tax_percentage: 0,
       tax_amount: 0,
       tax_inclusive: false,
@@ -247,7 +247,7 @@ export function CreateCreditNoteModal({
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatCurrency = (amount: number) => format(Number(amount) || 0, currency);
 
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const taxAmount = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0);
@@ -302,20 +302,19 @@ export function CreateCreditNoteModal({
       let effectiveRate = currency === 'USD' ? rate : 1;
       if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
         try {
-          const fetched = await getExchangeRate('KES', 'USD', creditNoteDate);
+          const fetched = await getExchangeRate('USD', 'KES', creditNoteDate);
           if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
           effectiveRate = fetched;
-          toast.success(`Locked exchange rate for ${creditNoteDate}: ${fetched.toFixed(4)}`);
+          toast.success(`Locked exchange rate for ${creditNoteDate}: 1 USD = ${fetched.toFixed(2)} KES`);
         } catch (e: any) {
           toast.error(e?.message || 'Failed to fetch exchange rate');
           throw e;
         }
       }
 
-      // Convert amounts if USD
-      const subtotalFinal = currency === 'USD' ? convertAmount(subtotal, 'KES', 'USD', effectiveRate) : subtotal;
-      const taxAmountFinal = currency === 'USD' ? convertAmount(taxAmount, 'KES', 'USD', effectiveRate) : taxAmount;
-      const totalAmountFinal = currency === 'USD' ? convertAmount(totalAmount, 'KES', 'USD', effectiveRate) : totalAmount;
+      const subtotalFinal = currency === 'USD' ? subtotal * effectiveRate : subtotal;
+      const taxAmountFinal = currency === 'USD' ? taxAmount * effectiveRate : taxAmount;
+      const totalAmountFinal = currency === 'USD' ? totalAmount * effectiveRate : totalAmount;
 
       // Create credit note with items
       const creditNoteData = {
@@ -341,9 +340,9 @@ export function CreateCreditNoteModal({
       };
 
       const creditNoteItems = items.map((item, index) => {
-        const unitPriceFinal = currency === 'USD' ? convertAmount(item.unit_price, 'KES', 'USD', effectiveRate) : item.unit_price;
-        const taxAmountFinalItem = currency === 'USD' ? convertAmount(item.tax_amount || 0, 'KES', 'USD', effectiveRate) : (item.tax_amount || 0);
-        const lineTotalFinal = currency === 'USD' ? convertAmount(item.line_total, 'KES', 'USD', effectiveRate) : item.line_total;
+        const unitPriceFinal = currency === 'USD' ? item.unit_price * effectiveRate : item.unit_price;
+        const taxAmountFinalItem = currency === 'USD' ? (item.tax_amount || 0) * effectiveRate : (item.tax_amount || 0);
+        const lineTotalFinal = currency === 'USD' ? item.line_total * effectiveRate : item.line_total;
         return {
           product_id: item.product_id || null,
           description: item.description,

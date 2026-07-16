@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatCurrency';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface ReceiptItem {
@@ -105,10 +106,12 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
       setSelectedCustomerId(receipt.customer_id || '');
       setReceiptDate(receipt.invoice_date || '');
       setNotes(receipt.notes || '');
-      setAmountTendered(receipt.paid_amount || 0);
-      setCurrencyCode(receipt.currency_code || 'KES');
-      setExchangeRate(receipt.exchange_rate || 1);
-      previousRateRef.current = receipt.exchange_rate || 1;
+      const documentCurrency = receipt.currency_code || 'KES';
+      const documentRate = receipt.exchange_rate || 1;
+      setAmountTendered(normalizeInvoiceAmount(receipt.paid_amount || 0, documentCurrency, documentRate, documentCurrency, documentRate));
+      setCurrencyCode(documentCurrency);
+      setExchangeRate(documentRate);
+      previousRateRef.current = documentRate;
 
       const receiptItems = (receipt.invoice_items || []).map((item: any, index: number) => ({
         id: item.id || `existing-${index}`,
@@ -116,12 +119,12 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
         product_name: item.products?.name || item.product_name || 'Unknown Product',
         description: item.description || '',
         quantity: item.quantity || 0,
-        unit_price: item.unit_price || 0,
+        unit_price: normalizeInvoiceAmount(item.unit_price || 0, documentCurrency, documentRate, documentCurrency, documentRate),
         discount_before_vat: item.discount_before_vat || 0,
         tax_percentage: item.tax_percentage || 16,
-        tax_amount: item.tax_amount || 0,
+        tax_amount: normalizeInvoiceAmount(item.tax_amount || 0, documentCurrency, documentRate, documentCurrency, documentRate),
         tax_inclusive: item.tax_inclusive || false,
-        line_total: item.line_total || 0,
+        line_total: normalizeInvoiceAmount(item.line_total || 0, documentCurrency, documentRate, documentCurrency, documentRate),
       }));
       
       setItems(receiptItems);
@@ -135,14 +138,14 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
       if (newCurrency === currencyCode) return;
       let newRate = 1;
       if (newCurrency === 'USD') {
-        toast.info('Fetching KES→USD rate...');
-        newRate = await getExchangeRate('KES', 'USD', receiptDate);
+        toast.info('Fetching USD/KES rate...');
+        newRate = await getExchangeRate('USD', 'KES', receiptDate);
         if (!newRate || newRate <= 0) throw new Error('Invalid rate');
-        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+        toast.success(`Rate locked: 1 USD = ${newRate.toFixed(2)} KES`);
       } else {
         newRate = 1;
       }
-      const factor = newRate / previousRateRef.current;
+      const factor = previousRateRef.current / newRate;
       convertItemsByFactor(factor);
       previousRateRef.current = newRate;
       setExchangeRate(newRate);
@@ -375,7 +378,7 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
         notes: notes,
         currency_code: currencyCode,
         exchange_rate: currencyCode === 'USD' ? exchangeRate : 1,
-        fx_date: receiptDate,
+        fx_date: currencyCode === receipt.currency_code ? receipt.fx_date || receiptDate : receiptDate,
         terms_and_conditions: ''
       };
 
@@ -423,7 +426,7 @@ export function EditReceiptModal({ open, onOpenChange, onSuccess, receipt }: Edi
           created_by: profile?.id,
           currency_code: currencyCode,
           exchange_rate: currencyCode === 'USD' ? exchangeRate : 1,
-          fx_date: receiptDate,
+          fx_date: currencyCode === receipt.currency_code ? receipt.fx_date || receiptDate : receiptDate,
           terms_and_conditions: ''
         };
 

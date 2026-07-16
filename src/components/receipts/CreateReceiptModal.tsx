@@ -139,14 +139,14 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       if (newCurrency === currencyCode) return;
       let newRate = 1;
       if (newCurrency === 'USD') {
-        toast.info('Fetching KES→USD rate...');
-        newRate = await getExchangeRate('KES', 'USD', receiptDate);
+        toast.info('Fetching USD/KES rate...');
+        newRate = await getExchangeRate('USD', 'KES', receiptDate);
         if (!newRate || newRate <= 0) throw new Error('Invalid rate');
-        toast.success(`Rate locked: 1 KES = ${newRate.toFixed(6)} USD`);
+        toast.success(`Rate locked: 1 USD = ${newRate.toFixed(2)} KES`);
       } else {
         newRate = 1;
       }
-      const factor = newRate / previousRateRef.current;
+      const factor = previousRateRef.current / newRate;
       convertItemsByFactor(factor);
       previousRateRef.current = newRate;
       setExchangeRate(newRate);
@@ -160,13 +160,13 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
   const fetchAndSetRate = async () => {
     try {
       toast.info('Fetching exchange rate...');
-      const rate = await getExchangeRate('KES', currencyCode, receiptDate);
-      if (!rate || rate <= 0) throw new Error('Invalid exchange rate');
-      const factor = rate / exchangeRate;
+      const newRate = currencyCode === 'USD' ? await getExchangeRate('USD', 'KES', receiptDate) : 1;
+      if (!newRate || newRate <= 0) throw new Error('Invalid exchange rate');
+      const factor = exchangeRate / newRate;
       convertItemsByFactor(factor);
-      previousRateRef.current = rate;
-      setExchangeRate(rate);
-      toast.success(`Rate updated: 1 KES = ${rate.toFixed(6)} ${currencyCode}`);
+      previousRateRef.current = newRate;
+      setExchangeRate(newRate);
+      toast.success(currencyCode === 'USD' ? `Rate updated: 1 USD = ${newRate.toFixed(2)} KES` : 'Currency set to KES');
     } catch (e: any) {
       console.error('Failed to fetch rate:', e);
       toast.error(e?.message || 'Failed to fetch exchange rate');
@@ -186,7 +186,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product "${product.name}" has no price set`);
     }
-    const price = currencyCode === 'USD' ? priceBase * exchangeRate : priceBase;
+    const price = currencyCode === 'USD' ? priceBase / exchangeRate : priceBase;
 
     const newItem: ReceiptItem = {
       id: `temp-${Date.now()}`,
@@ -379,13 +379,12 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       let effectiveRate = exchangeRate;
       if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
         toast.info('Locking exchange rate for receipt date...');
-        effectiveRate = await getExchangeRate('KES', 'USD', receiptDate);
+        effectiveRate = await getExchangeRate('USD', 'KES', receiptDate);
         if (!effectiveRate || effectiveRate <= 0) {
           throw new Error('Unable to fetch exchange rate for the selected date');
         }
       }
-      const baseRate = (Number.isFinite(exchangeRate) && exchangeRate > 0) ? exchangeRate : 1;
-      const factor = currencyCode === 'USD' ? (effectiveRate / baseRate) : 1;
+      const factor = 1;
 
       const adjustedItems = items.map(item => ({
         product_id: item.product_id,
