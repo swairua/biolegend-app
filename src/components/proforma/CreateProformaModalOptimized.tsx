@@ -39,7 +39,7 @@ import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { generateNextProformaNumber } from '@/utils/improvedProformaFix';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
-import { convertAmount } from '@/utils/currency';
+import { round } from '@/utils/currency';
 
 interface ProformaItem {
   id: string;
@@ -122,9 +122,14 @@ export const CreateProformaModalOptimized = ({
 
   const convertItemsByFactor = (factor: number) => {
     setItems(prev => prev.map(item => {
-      const newUnit = parseFloat((item.unit_price * factor).toFixed(4));
+      const newUnit = round(item.unit_price * factor);
       const calculated = calculateItemTax({ ...item, unit_price: newUnit });
-      return { ...item, unit_price: newUnit, line_total: calculated.line_total, tax_amount: calculated.tax_amount };
+      return {
+        ...item,
+        unit_price: newUnit,
+        line_total: round(calculated.line_total),
+        tax_amount: round(calculated.tax_amount),
+      };
     }));
   };
 
@@ -217,7 +222,9 @@ export const CreateProformaModalOptimized = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: currencyCode === 'USD' && exchangeRate > 1 ? (product.selling_price || 0) / exchangeRate : (product.selling_price || 0),
+        unit_price: round(currencyCode === 'USD' && exchangeRate > 1
+          ? (product.selling_price || 0) / exchangeRate
+          : (product.selling_price || 0)),
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -262,7 +269,8 @@ export const CreateProformaModalOptimized = ({
   const updateItem = (id: string, field: keyof ProformaItem, value: any) => {
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        let updatedItem = { ...item, [field]: value };
+        const normalizedValue = field === 'unit_price' ? round(Number(value)) : value;
+        const updatedItem = { ...item, [field]: normalizedValue };
 
         // Special handling for tax_inclusive checkbox
         if (field === 'tax_inclusive') {
@@ -449,7 +457,7 @@ export const CreateProformaModalOptimized = ({
       // Calculate totals using the items that will be submitted
       const taxableItems: TaxableItem[] = itemsToSubmit.map(item => ({
         quantity: item.quantity,
-        unit_price: item.unit_price,
+        unit_price: round(item.unit_price),
         tax_percentage: item.tax_percentage,
         tax_inclusive: item.tax_inclusive,
         discount_percentage: item.discount_percentage,
@@ -463,13 +471,13 @@ export const CreateProformaModalOptimized = ({
         product_name: item.product_name,
         description: item.description,
         quantity: item.quantity,
-        unit_price: currencyCode === 'USD' ? Number(item.unit_price) * effectiveRate : Number(item.unit_price),
+        unit_price: round(currencyCode === 'USD' ? Number(item.unit_price) * effectiveRate : Number(item.unit_price)),
         discount_percentage: item.discount_percentage || 0,
-        discount_amount: item.discount_amount || 0,
+        discount_amount: round(item.discount_amount || 0),
         tax_percentage: item.tax_percentage,
-        tax_amount: currencyCode === 'USD' ? Number(item.tax_amount || 0) * effectiveRate : Number(item.tax_amount || 0),
+        tax_amount: round(currencyCode === 'USD' ? Number(item.tax_amount || 0) * effectiveRate : Number(item.tax_amount || 0)),
         tax_inclusive: item.tax_inclusive,
-        line_total: currencyCode === 'USD' ? Number(item.line_total) * effectiveRate : Number(item.line_total)
+        line_total: round(currencyCode === 'USD' ? Number(item.line_total) * effectiveRate : Number(item.line_total))
       }));
 
       // Create proforma invoice using the correct table
@@ -480,9 +488,9 @@ export const CreateProformaModalOptimized = ({
         proforma_date: formData.proforma_date,
         valid_until: formData.valid_until,
         status: 'draft',
-        subtotal: currencyCode === 'USD' ? totals.subtotal * effectiveRate : totals.subtotal,
-        tax_amount: currencyCode === 'USD' ? totals.tax_total * effectiveRate : totals.tax_total,
-        total_amount: currencyCode === 'USD' ? totals.total_amount * effectiveRate : totals.total_amount,
+        subtotal: round(currencyCode === 'USD' ? totals.subtotal * effectiveRate : totals.subtotal),
+        tax_amount: round(currencyCode === 'USD' ? totals.tax_total * effectiveRate : totals.tax_total),
+        total_amount: round(currencyCode === 'USD' ? totals.total_amount * effectiveRate : totals.total_amount),
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
         currency_code: currencyCode,
