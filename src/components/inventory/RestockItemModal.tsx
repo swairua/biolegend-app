@@ -21,6 +21,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/taxCalculation';
 import { useRestockProduct } from '@/hooks/useQuotationItems';
 import { useCompanies } from '@/hooks/useDatabase';
 
@@ -280,7 +281,7 @@ export function RestockItemModal({ open, onOpenChange, onSuccess, item }: Restoc
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <div className="text-sm text-muted-foreground">Total Cost</div>
                 <div className="text-2xl font-bold text-primary">
-                  KES {totalCost.toLocaleString()}
+                  {formatCurrency(totalCost)}
                 </div>
               </div>
             </div>

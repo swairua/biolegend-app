@@ -38,6 +38,7 @@ import {
 import { useCustomers, usePayments, useCompanies, useDeliveryNotes } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/taxCalculation';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { exportCustomerStatementsToCSV, exportCustomerStatementSummaryToCSV } from '@/utils/csvExporter';
 import CustomerStatementPreviewModal from '@/components/statements/CustomerStatementPreviewModal';
@@ -356,7 +357,7 @@ export default function CustomerStatements() {
               <DollarSign className="h-8 w-8 text-warning" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Outstanding</p>
-                <p className="text-lg font-bold text-warning">${totalOutstanding.toFixed(2)}</p>
+                <p className="text-lg font-bold text-warning">{formatCurrency(totalOutstanding)}</p>
                 <p className="text-xs text-muted-foreground">{filteredStatements.length} customers</p>
               </div>
             </div>
@@ -369,7 +370,7 @@ export default function CustomerStatements() {
               <AlertCircle className="h-8 w-8 text-destructive" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Overdue Amount</p>
-                <p className="text-lg font-bold text-destructive">${totalOverdue.toFixed(2)}</p>
+                <p className="text-lg font-bold text-destructive">{formatCurrency(totalOverdue)}</p>
                 <p className="text-xs text-destructive">{overdueCustomers} customers overdue</p>
               </div>
             </div>
@@ -382,7 +383,7 @@ export default function CustomerStatements() {
               <CheckCircle className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Current Due</p>
-                <p className="text-lg font-bold text-success">${totalCurrent.toFixed(2)}</p>
+                <p className="text-lg font-bold text-success">{formatCurrency(totalCurrent)}</p>
                 <p className="text-xs text-success">Within terms</p>
               </div>
             </div>
@@ -528,7 +529,7 @@ export default function CustomerStatements() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        ${statement.total_outstanding.toFixed(2)}
+                        {formatCurrency(statement.total_outstanding)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {statement.invoice_count} invoices
@@ -536,12 +537,12 @@ export default function CustomerStatements() {
                     </TableCell>
                     <TableCell>
                       <span className={statement.current_due > 0 ? 'text-warning' : 'text-muted-foreground'}>
-                        ${statement.current_due.toFixed(2)}
+                        {formatCurrency(statement.current_due)}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className={statement.overdue_amount > 0 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
-                        ${statement.overdue_amount.toFixed(2)}
+                        {formatCurrency(statement.overdue_amount)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -560,7 +561,7 @@ export default function CustomerStatements() {
                             {new Date(statement.last_payment_date).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            ${statement.last_payment_amount?.toFixed(2)}
+                            {formatCurrency(statement.last_payment_amount || 0)}
                           </div>
                         </div>
                       ) : (
@@ -597,10 +598,9 @@ export default function CustomerStatements() {
                   {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Total outstanding: ${filteredStatements
+                  Total outstanding: {formatCurrency(filteredStatements
                     .filter(s => selectedCustomers.includes(s.customer_id))
-                    .reduce((sum, s) => sum + s.total_outstanding, 0)
-                    .toFixed(2)}
+                    .reduce((sum, s) => sum + s.total_outstanding, 0))}
                 </p>
               </div>
               <div className="flex space-x-2">

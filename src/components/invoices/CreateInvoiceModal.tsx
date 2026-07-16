@@ -266,11 +266,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       console.warn('Product price missing or invalid for product:', product);
       toast.warning(`Product \"${product.name}\" has no price set`);
     }
-    // For USD invoices, convert the base price (assumed to be in KES) to USD using the exchange rate
-    // Then the base price will be interpreted as a USD value for the item
-    // Actually: product prices are in KES. If invoice is USD, we convert them: USD_price = KES_price / exchange_rate
-    // But for simplicity, we store the price as-is and let the save handler convert
-    const price = priceBase;
+    // Convert KES product price to USD if invoice is in USD
+    const price = currencyCode === 'USD' && exchangeRate > 1 ? priceBase / exchangeRate : priceBase;
 
     // Auto-populate with product details and smart defaults
     const newItem: InvoiceItem = {
@@ -808,6 +805,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                   placeholder="Search products by name or code..."
                   allowNew={true}
                   showPrices={true}
+                  currencyCode={currencyCode}
                 />
                 {newItems.length > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">

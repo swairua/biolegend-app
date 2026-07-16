@@ -32,6 +32,7 @@ import {
   Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/taxCalculation';
 import { CreateCategoryModalBasic } from '@/components/categories/CreateCategoryModalBasic';
 
 interface AddInventoryItemModalProps {
@@ -351,7 +352,7 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
                     <div className="flex justify-between">
                       <span>Margin:</span>
                       <span className="font-medium">
-                        KES {(formData.selling_price - formData.cost_price).toFixed(2)}
+                        {formatCurrency(formData.selling_price - formData.cost_price)}
                       </span>
                     </div>
                     <div className="flex justify-between">

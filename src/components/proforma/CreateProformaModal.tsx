@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateProforma } from '@/hooks/useProforma';
-import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { calculateItemTax, calculateDocumentTotals, formatCurrency as taxFormatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
@@ -88,6 +89,7 @@ export const CreateProformaModal = ({
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
+  const formatCurrency = (amount: number) => taxFormatCurrency(Number(amount) || 0, getLocaleForCurrency(currency), currency);
 
   useEffect(() => {
     if (open) {
@@ -150,7 +152,7 @@ export const CreateProformaModal = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: product.selling_price || 0,
+        unit_price: currency === 'USD' && rate > 1 ? (product.selling_price || 0) / rate : (product.selling_price || 0),
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -497,6 +499,7 @@ export const CreateProformaModal = ({
                         placeholder="Search products..."
                         allowNew={true}
                         showPrices={true}
+                        currencyCode={currency}
                       />
                       <Button
                         type="button"

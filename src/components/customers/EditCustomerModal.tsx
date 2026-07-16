@@ -29,6 +29,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/taxCalculation';
 import { useUpdateCustomer } from '@/hooks/useDatabase';
 
 interface Customer {
@@ -288,7 +289,7 @@ export function EditCustomerModal({ open, onOpenChange, onSuccess, customer }: E
                 <h4 className="font-medium mb-2">Customer Summary</h4>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Code: {customer?.customer_code}</p>
-                  <p>Credit Limit: KES {formData.credit_limit.toLocaleString()}</p>
+                  <p>Credit Limit: {formatCurrency(formData.credit_limit)}</p>
                   <p>Payment Terms: {formData.payment_terms} days</p>
                   <p>Status: {formData.is_active ? 'Active' : 'Inactive'}</p>
                 </div>

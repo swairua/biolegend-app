@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useUpdateProforma, type ProformaItem as BaseProformaItem } from '@/hooks/useProforma';
-import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { calculateItemTax, calculateDocumentTotals, formatCurrency as taxFormatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import { ProformaUpdateErrorHandler } from './ProformaUpdateErrorHandler';
 import { cleanupProformaDuplicatesSQL } from '@/utils/proformaDuplicateCleanupSQL';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,6 +105,9 @@ export const EditProformaModal = ({
   const updateProforma = useUpdateProforma();
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
+
+  const documentCurrency = proforma?.currency_code || 'KES';
+  const formatCurrency = (amount: number) => taxFormatCurrency(Number(amount) || 0, getLocaleForCurrency(documentCurrency), documentCurrency);
 
   // Populate form when proforma changes
   useEffect(() => {
@@ -240,7 +244,7 @@ export const EditProformaModal = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: product.selling_price,
+        unit_price: documentCurrency === 'USD' && proforma.exchange_rate > 1 ? (product.selling_price || 0) / proforma.exchange_rate : (product.selling_price || 0),
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -762,7 +766,7 @@ export const EditProformaModal = ({
                             <div>
                               <p className="font-medium">{product.name}</p>
                               <p className="text-sm text-muted-foreground">
-                                {product.product_code} • ${product.selling_price}
+                                {product.product_code} • {formatCurrency(product.selling_price)}
                               </p>
                             </div>
                             <Button size="sm" variant="ghost">

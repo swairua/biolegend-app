@@ -31,14 +31,14 @@ import {
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateProforma } from '@/hooks/useProforma';
-import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
+import { calculateItemTax, calculateDocumentTotals, formatCurrency as taxFormatCurrency, type TaxableItem } from '@/utils/taxCalculation';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 import { ItemAutocomplete, type AutocompleteItem, type NewItemData } from '@/components/ui/item-autocomplete';
 import { useNewItemsAutoSave } from '@/hooks/useNewItemsAutoSave';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { generateNextProformaNumber } from '@/utils/improvedProformaFix';
-import { getExchangeRate } from '@/utils/exchangeRates';
+import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
 import { convertAmount } from '@/utils/currency';
 
 interface ProformaItem {
@@ -92,6 +92,8 @@ export const CreateProformaModalOptimized = ({
   const createProforma = useCreateProforma();
   const { currency: globalCurrency, rate } = useCurrency();
   const { newItems, tempIdToActualIdMap, addNewItem, saveAllNewItems, clearNewItems } = useNewItemsAutoSave();
+
+  const formatCurrency = (amount: number) => taxFormatCurrency(Number(amount) || 0, getLocaleForCurrency(currencyCode), currencyCode);
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
@@ -215,7 +217,7 @@ export const CreateProformaModalOptimized = ({
         product_name: product.name,
         description: product.description || '',
         quantity: 1,
-        unit_price: product.selling_price || 0,
+        unit_price: currencyCode === 'USD' && exchangeRate > 1 ? (product.selling_price || 0) / exchangeRate : (product.selling_price || 0),
         discount_percentage: 0,
         discount_amount: 0,
         tax_percentage: defaultTaxRate,
@@ -689,6 +691,7 @@ export const CreateProformaModalOptimized = ({
                         placeholder="Search products..."
                         allowNew={true}
                         showPrices={true}
+                        currencyCode={currencyCode}
                       />
                       <Button
                         type="button"

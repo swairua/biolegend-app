@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Plus, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/utils/taxCalculation';
+import { getLocaleForCurrency } from '@/utils/exchangeRates';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +43,7 @@ interface ItemAutocompleteProps {
   placeholder?: string;
   allowNew?: boolean;
   showPrices?: boolean;
+  currencyCode?: 'KES' | 'USD';
 }
 
 export function ItemAutocomplete({
@@ -51,6 +54,7 @@ export function ItemAutocomplete({
   placeholder = 'Search products...',
   allowNew = true,
   showPrices = true,
+  currencyCode = 'KES',
 }: ItemAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -184,7 +188,7 @@ export function ItemAutocomplete({
                       {showPrices && (
                         <div className="text-right">
                           {item.selling_price !== undefined && (
-                            <div className="text-sm font-semibold">KES {item.selling_price.toFixed(2)}</div>
+                            <div className="text-sm font-semibold">{formatCurrency(item.selling_price, getLocaleForCurrency(currencyCode), currencyCode)}</div>
                           )}
                           {item.stock_quantity !== undefined && (
                             <div className="text-xs text-muted-foreground">Stock: {item.stock_quantity}</div>

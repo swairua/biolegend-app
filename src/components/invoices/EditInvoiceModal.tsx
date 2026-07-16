@@ -303,19 +303,20 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       return;
     }
 
+    const unitPrice = currencyCode === 'USD' && exchangeRate > 1 ? (product.selling_price || 0) / exchangeRate : (product.selling_price || 0);
     const newItem: InvoiceItem = {
       id: `temp-${Date.now()}`,
       product_id: product.id,
       product_name: product.name,
       description: product.description || '',
       quantity: 1,
-      unit_price: product.selling_price,
+      unit_price: unitPrice,
       discount_percentage: 0,
       discount_before_vat: 0,
       tax_percentage: 0,
       tax_amount: 0,
       tax_inclusive: false,
-      line_total: product.selling_price
+      line_total: unitPrice
     };
 
     const { lineTotal, taxAmount } = calculateLineTotal(newItem);

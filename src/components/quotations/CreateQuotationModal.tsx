@@ -658,6 +658,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                   placeholder="Search products by name or code..."
                   allowNew={true}
                   showPrices={true}
+                  currencyCode={currencyCode}
                 />
                 {newItems.length > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">

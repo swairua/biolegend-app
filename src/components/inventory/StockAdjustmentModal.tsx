@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown, RotateCcw, Calculator } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency } from '@/utils/taxCalculation';
 
 interface InventoryItem {
   id?: string;
@@ -310,7 +311,7 @@ export function StockAdjustmentModal({ open, onOpenChange, onSuccess, item }: St
                   <div className="mt-4 text-center">
                     <Label className="text-sm text-muted-foreground">Cost Impact</Label>
                     <p className="text-lg font-medium">
-                      {adjustmentType === 'increase' ? '+' : '-'}${(quantity * item.cost_price).toFixed(2)}
+                      {adjustmentType === 'increase' ? '+' : '-'}{formatCurrency(quantity * item.cost_price)}
                     </p>
                   </div>
                 )}

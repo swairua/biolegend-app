@@ -135,7 +135,7 @@ export function CreateCreditNoteModal({
       tax_percentage: 0,
       tax_amount: 0,
       tax_inclusive: false,
-      line_total: product.selling_price
+      line_total: currency === 'USD' ? convertAmount(product.selling_price, 'KES', 'USD', rate) : product.selling_price
     };
 
     const { lineTotal, taxAmount } = calculateLineTotal(newItem);
