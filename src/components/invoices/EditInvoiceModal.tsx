@@ -95,8 +95,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
     return new Intl.NumberFormat(getLocaleForCurrency(currencyCode as any), {
       style: 'currency',
       currency: currencyCode,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(Number.isFinite(normalized) ? normalized : 0);
   };
 

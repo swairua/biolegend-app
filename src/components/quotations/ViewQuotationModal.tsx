@@ -280,7 +280,7 @@ export function ViewQuotationModal({
                 {quotation.exchange_rate && quotation.exchange_rate !== 1 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Exchange Rate:</span>
-                    <span>{quotation.exchange_rate.toFixed(6)}</span>
+                    <span>{quotation.exchange_rate.toFixed(4)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
