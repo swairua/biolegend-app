@@ -82,6 +82,7 @@ interface Invoice {
   invoice_items?: any[];
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
+  fx_date?: string;
 }
 
 function getStatusColor(status: string) {

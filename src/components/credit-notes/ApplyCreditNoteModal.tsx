@@ -54,7 +54,7 @@ export function ApplyCreditNoteModal({
   const applyCreditNoteMutation = useApplyCreditNoteToInvoice();
   const { user } = useAuth();
 
-  const { currency, rate, format } = useCurrency();
+  const { rate, format } = useCurrency();
 
   // Filter invoices for the same customer with outstanding balance
   const availableInvoices = invoices.filter(inv => 
@@ -89,12 +89,20 @@ export function ApplyCreditNoteModal({
 
   if (!creditNote) return null;
 
-  const fmtCredit = (amount: number) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, (creditNote as any)?.currency_code as any, (creditNote as any)?.exchange_rate as any, currency, rate)
-  );
-  const fmtInvoice = (amount: number, inv?: any) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, (inv as any)?.currency_code as any, (inv as any)?.exchange_rate as any, currency, rate)
-  );
+  const fmtCredit = (amount: number) => {
+    const documentCurrency = creditNote?.currency_code || 'KES';
+    return format(
+      normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, creditNote?.exchange_rate, documentCurrency, rate),
+      documentCurrency
+    );
+  };
+  const fmtInvoice = (amount: number, invoice?: any) => {
+    const documentCurrency = invoice?.currency_code || 'KES';
+    return format(
+      normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, invoice?.exchange_rate, documentCurrency, rate),
+      documentCurrency
+    );
+  };
 
   const handleAmountChange = (value: string) => {
     const numValue = parseFloat(value) || 0;

@@ -163,7 +163,7 @@ export default function Payments() {
         logo_url: currentCompany.logo_url
       } : undefined;
 
-      generatePaymentReceiptPDF({ ...payment, currency_code: 'KES' }, companyDetails);
+      generatePaymentReceiptPDF(payment, companyDetails);
       toast.success(`Receipt downloaded for payment ${payment.payment_number}`);
     } catch (error) {
       console.error('Error downloading receipt:', error);

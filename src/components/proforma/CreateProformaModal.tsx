@@ -308,7 +308,15 @@ export const CreateProformaModal = ({
       }));
       const totals = calculateDocumentTotals(taxableItems);
 
-      // Create proforma invoice using the correct table
+      const storageMultiplier = currency === 'USD' ? rate : 1;
+      const storedItems = itemsToSubmit.map(item => ({
+        ...item,
+        unit_price: Number(item.unit_price) * storageMultiplier,
+        discount_amount: Number(item.discount_amount || 0) * storageMultiplier,
+        tax_amount: Number(item.tax_amount || 0) * storageMultiplier,
+        line_total: Number(item.line_total) * storageMultiplier,
+      }));
+
       const proformaData = {
         company_id: companyId,
         customer_id: formData.customer_id,
@@ -316,20 +324,19 @@ export const CreateProformaModal = ({
         proforma_date: formData.proforma_date,
         valid_until: formData.valid_until,
         status: 'draft',
-        subtotal: totals.subtotal,
-        tax_amount: totals.tax_total,
-        total_amount: totals.total_amount,
+        subtotal: totals.subtotal * storageMultiplier,
+        tax_amount: totals.tax_total * storageMultiplier,
+        total_amount: totals.total_amount * storageMultiplier,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
         currency_code: currency,
-        exchange_rate: currency === 'USD' ? rate : 1,
+        exchange_rate: storageMultiplier,
         fx_date: formData.proforma_date
       };
 
-      // Create proforma in database
       await createProforma.mutateAsync({
         proforma: proformaData,
-        items: itemsToSubmit
+        items: storedItems
       });
 
       toast.success('Proforma invoice created successfully!');

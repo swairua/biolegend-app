@@ -19,6 +19,7 @@ export interface OptimizedInvoice {
   terms_and_conditions?: string;
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
+  fx_date?: string;
   lpo_number?: string;
   created_at?: string;
   updated_at?: string;
@@ -125,6 +126,7 @@ export const useOptimizedInvoices = (
           terms_and_conditions,
           currency_code,
           exchange_rate,
+          fx_date,
           lpo_number,
           created_at,
           updated_at
