@@ -300,15 +300,10 @@ export function CreateCreditNoteModal({
 
       // Lock FX rate if creating in USD
       let effectiveRate = currency === 'USD' ? rate : 1;
-      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
-        try {
-          const fetched = await getExchangeRate('USD', 'KES', creditNoteDate);
-          if (!fetched || fetched <= 0) throw new Error('Unable to fetch exchange rate for the selected date');
-          effectiveRate = fetched;
-          toast.success(`Locked exchange rate for ${creditNoteDate}: 1 USD = ${fetched.toFixed(2)} KES`);
-        } catch (e: any) {
-          toast.error(e?.message || 'Failed to fetch exchange rate');
-          throw e;
+      if (currency === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0)) {
+        effectiveRate = await getExchangeRate('USD', 'KES', creditNoteDate);
+        if (!effectiveRate || effectiveRate <= 0) {
+          throw new Error('Unable to fetch exchange rate for the selected date');
         }
       }
 

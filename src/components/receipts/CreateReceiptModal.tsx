@@ -377,7 +377,7 @@ export function CreateReceiptModal({ open, onOpenChange, onSuccess, preSelectedC
       await ensureInvoiceCurrencyColumns();
 
       let effectiveRate = exchangeRate;
-      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0 || effectiveRate === 1)) {
+      if (currencyCode === 'USD' && (!Number.isFinite(effectiveRate) || effectiveRate <= 0)) {
         toast.info('Locking exchange rate for receipt date...');
         effectiveRate = await getExchangeRate('USD', 'KES', receiptDate);
         if (!effectiveRate || effectiveRate <= 0) {
