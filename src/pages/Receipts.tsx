@@ -74,6 +74,7 @@ interface Receipt {
   invoice_items?: any[];
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
+  fx_date?: string;
 }
 
 function getStatusColor(status: string) {
@@ -164,8 +165,9 @@ export default function Receipts() {
   );
 
   const displayAmount = (amount: number, recordCurrency?: 'KES' | 'USD', receiptRate?: number) => {
-    const normalized = normalizeInvoiceAmount(Number(amount) || 0, recordCurrency as any, receiptRate as any, recordCurrency as any, 1);
-    return format(normalized, recordCurrency || currency);
+    const documentCurrency = recordCurrency || 'KES';
+    const normalized = normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, receiptRate, documentCurrency, rate);
+    return format(normalized, documentCurrency);
   };
 
   const handleCreateSuccess = () => {

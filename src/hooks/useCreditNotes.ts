@@ -19,6 +19,9 @@ export interface CreditNote {
   affects_inventory: boolean;
   notes?: string;
   terms_and_conditions?: string;
+  currency_code?: 'KES' | 'USD';
+  exchange_rate?: number;
+  fx_date?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;

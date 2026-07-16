@@ -63,7 +63,7 @@ import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
 import { fixAllProformaDuplicates } from '@/utils/proformaDeduplication';
 import { recalculateAllProformaTotals } from '@/utils/proformaRecalculation';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 
 export default function Proforma() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -72,7 +72,7 @@ export default function Proforma() {
   const [selectedProforma, setSelectedProforma] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
-  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string } | null>(null);
+  const [invoicePrefill, setInvoicePrefill] = useState<{ customer: any | null; items: any[]; notes?: string; terms?: string; invoiceDate?: string; dueDate?: string; currencyCode?: 'KES' | 'USD'; exchangeRate?: number; fxDate?: string } | null>(null);
   const [proformaToDelete, setProformaToDelete] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRepairPanel, setShowRepairPanel] = useState(false);
@@ -106,7 +106,12 @@ export default function Proforma() {
   const filteredProformas = proformas;
 
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const displayDocumentAmount = (amount: number, recordCurrency?: 'KES' | 'USD', recordRate?: number) => {
+    const documentCurrency = recordCurrency || 'KES';
+    return format(normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, recordRate, documentCurrency, rate), documentCurrency);
+  };
+  const displaySummaryAmount = (amount: number, recordCurrency?: 'KES' | 'USD', recordRate?: number) =>
+    normalizeInvoiceAmount(Number(amount) || 0, recordCurrency, recordRate, currency, rate);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,6 +168,7 @@ export default function Proforma() {
         terms_and_conditions: proforma.terms_and_conditions || 'Payment required before goods are delivered.',
         currency_code: (proforma as any).currency_code,
         exchange_rate: (proforma as any).exchange_rate,
+        fx_date: (proforma as any).fx_date,
       };
 
       // Get current company details for PDF
@@ -238,7 +244,8 @@ export default function Proforma() {
         invoiceDate: new Date().toISOString().split('T')[0],
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         currencyCode: proforma.currency_code || 'KES',
-        exchangeRate: proforma.exchange_rate || 1
+        exchangeRate: proforma.exchange_rate || 1,
+        fxDate: proforma.fx_date
       };
 
       console.log('💾 Setting invoice prefill from proforma:', invoicePrefillData);
@@ -467,7 +474,7 @@ export default function Proforma() {
               <DollarSign className="h-8 w-8 text-success" />
               <div>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(proformas.reduce((sum, p) => sum + (p.total_amount || 0), 0))}
+                  {format(proformas.reduce((sum, p) => sum + displaySummaryAmount(p.total_amount, p.currency_code, p.exchange_rate), 0))}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Value</p>
               </div>
@@ -684,7 +691,7 @@ export default function Proforma() {
                     <TableCell>
                       <div className="flex items-center font-medium">
                         <DollarSign className="h-4 w-4 mr-1" />
-                        {formatCurrency(proforma.total_amount)}
+                        {displayDocumentAmount(proforma.total_amount, proforma.currency_code, proforma.exchange_rate)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -892,6 +899,9 @@ export default function Proforma() {
           initialTerms={invoicePrefill.terms}
           initialInvoiceDate={invoicePrefill.invoiceDate}
           initialDueDate={invoicePrefill.dueDate}
+          initialCurrencyCode={invoicePrefill.currencyCode}
+          initialExchangeRate={invoicePrefill.exchangeRate}
+          initialFxDate={invoicePrefill.fxDate}
         />
       )}
 

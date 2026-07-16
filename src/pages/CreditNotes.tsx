@@ -52,7 +52,7 @@ import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useCompanies } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
-import { convertAmount } from '@/utils/currency';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 import { useOptimizedCreditNotes } from '@/hooks/useOptimizedCreditNotes';
 import { toast } from 'sonner';
 import { CreateCreditNoteModal } from '@/components/credit-notes/CreateCreditNoteModal';
@@ -133,7 +133,10 @@ export default function CreditNotes() {
   const filteredCreditNotes = creditNotes;
 
   const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const formatCurrency = (amount: number, recordCurrency?: 'KES' | 'USD', recordRate?: number) => {
+    const documentCurrency = recordCurrency || 'KES';
+    return format(normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, recordRate, documentCurrency, rate), documentCurrency);
+  };
 
   const handleCreateSuccess = () => {
     refetch();
@@ -544,13 +547,13 @@ export default function CreditNotes() {
                       <span className="text-sm">{creditNote.reason || 'Not specified'}</span>
                     </TableCell>
                     <TableCell className="font-semibold text-success">
-                      {formatCurrency(creditNote.total_amount || 0)}
+                      {formatCurrency(creditNote.total_amount || 0, creditNote.currency_code, creditNote.exchange_rate)}
                     </TableCell>
                     <TableCell className="text-warning">
-                      {formatCurrency(creditNote.applied_amount || 0)}
+                      {formatCurrency(creditNote.applied_amount || 0, creditNote.currency_code, creditNote.exchange_rate)}
                     </TableCell>
                     <TableCell className={`font-medium ${(creditNote.balance || 0) > 0 ? 'text-success' : 'text-muted-foreground'}`}>
-                      {formatCurrency(creditNote.balance || 0)}
+                      {formatCurrency(creditNote.balance || 0, creditNote.currency_code, creditNote.exchange_rate)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getStatusColor(creditNote.status)}>

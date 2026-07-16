@@ -38,11 +38,14 @@ export function ViewReceiptModal({
 }: ViewReceiptModalProps) {
   if (!receipt) return null;
 
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(
-    normalizeInvoiceAmount(Number(amount) || 0, receipt?.currency_code as any, receipt?.exchange_rate as any, receipt?.currency_code as any, 1),
-    receipt?.currency_code
-  );
+  const { rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => {
+    const documentCurrency = receipt?.currency_code || 'KES';
+    return format(
+      normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, receipt?.exchange_rate, documentCurrency, rate),
+      documentCurrency
+    );
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -168,6 +171,12 @@ export function ViewReceiptModal({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Currency:</span>
                   <span className="font-semibold">{receipt.currency_code}</span>
+                </div>
+              )}
+              {receipt.currency_code === 'USD' && receipt.exchange_rate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Exchange Rate:</span>
+                  <span className="font-semibold">1 USD = {Number(receipt.exchange_rate).toFixed(2)} KES</span>
                 </div>
               )}
             </CardContent>

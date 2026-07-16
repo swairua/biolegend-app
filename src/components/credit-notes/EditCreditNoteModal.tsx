@@ -27,7 +27,7 @@ import {
 import { useUpdateCreditNote } from '@/hooks/useCreditNotes';
 import { toast } from 'sonner';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { convertAmount } from '@/utils/currency';
+import { normalizeInvoiceAmount } from '@/utils/currency';
 import type { CreditNote } from '@/hooks/useCreditNotes';
 
 interface EditCreditNoteModalProps {
@@ -63,8 +63,11 @@ export function EditCreditNoteModal({
     }
   }, [creditNote, open]);
 
-  const { currency, rate, format } = useCurrency();
-  const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const { rate, format } = useCurrency();
+  const formatCurrency = (amount: number) => {
+    const documentCurrency = creditNote?.currency_code || 'KES';
+    return format(normalizeInvoiceAmount(Number(amount) || 0, documentCurrency, creditNote?.exchange_rate, documentCurrency, rate), documentCurrency);
+  };
 
   if (!creditNote) return null;
 
