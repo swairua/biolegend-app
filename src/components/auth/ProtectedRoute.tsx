@@ -46,6 +46,14 @@ export function ProtectedRoute({
     return () => clearTimeout(t);
   }, [hasSupabaseToken]);
 
+  const shouldRedirect = requireAuth && !loading && !isAuthenticated && !grace;
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate, shouldRedirect]);
+
   // Show loading while initializing or during grace period to allow session restore
   if (loading || (requireAuth && !isAuthenticated && grace)) {
     return (
@@ -59,12 +67,7 @@ export function ProtectedRoute({
   }
 
   // Check authentication - redirect to login if not authenticated
-  if (requireAuth && !isAuthenticated) {
-    // Redirect to login page
-    useEffect(() => {
-      navigate('/login', { replace: true });
-    }, [navigate]);
-
+  if (shouldRedirect) {
     return fallback || (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
