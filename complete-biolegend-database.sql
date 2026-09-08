@@ -983,4 +983,66 @@ CREATE POLICY "Users can view own company data" ON companies FOR SELECT USING (
 -- - 20+ Triggers
 -- - RLS enabled on all tables
 
+-- Collision-safe invoice numbering migration
+CREATE TABLE IF NOT EXISTS public.invoice_number_counters (
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    invoice_year INTEGER NOT NULL,
+    last_number INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (company_id, invoice_year),
+    CHECK (invoice_year BETWEEN 2000 AND 2100),
+    CHECK (last_number >= 0)
+);
+
+INSERT INTO public.invoice_number_counters (company_id, invoice_year, last_number)
+SELECT
+    i.company_id,
+    SUBSTRING(i.invoice_number FROM '^INV-([0-9]{4})-')::INTEGER,
+    MAX(SUBSTRING(i.invoice_number FROM '^INV-[0-9]{4}-([0-9]+)$')::INTEGER)
+FROM public.invoices i
+WHERE i.invoice_number ~ '^INV-[0-9]{4}-[0-9]+$'
+GROUP BY i.company_id, SUBSTRING(i.invoice_number FROM '^INV-([0-9]{4})-')::INTEGER
+ON CONFLICT (company_id, invoice_year) DO UPDATE
+SET last_number = GREATEST(public.invoice_number_counters.last_number, EXCLUDED.last_number);
+
+CREATE OR REPLACE FUNCTION public.next_invoice_number(p_company_id UUID)
+RETURNS VARCHAR
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_year INTEGER := EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
+    v_number INTEGER;
+BEGIN
+    INSERT INTO public.invoice_number_counters (company_id, invoice_year, last_number)
+    VALUES (p_company_id, v_year, 1)
+    ON CONFLICT (company_id, invoice_year) DO UPDATE
+        SET last_number = public.invoice_number_counters.last_number + 1
+    RETURNING last_number INTO v_number;
+
+    RETURN FORMAT('INV-%s-%s', v_year, LPAD(v_number::TEXT, 4, '0'));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assign_invoice_number()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    NEW.invoice_number := public.next_invoice_number(NEW.company_id);
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS invoices_assign_invoice_number ON public.invoices;
+CREATE TRIGGER invoices_assign_invoice_number
+BEFORE INSERT ON public.invoices
+FOR EACH ROW EXECUTE FUNCTION public.assign_invoice_number();
+
+ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_invoice_number_key;
+ALTER TABLE public.invoices ADD CONSTRAINT invoices_company_invoice_number_key
+    UNIQUE (company_id, invoice_number);
+
 -- END OF BIOLEGEND DATABASE SCHEMA
