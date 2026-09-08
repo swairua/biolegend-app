@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS quotations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
     customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-    quotation_number VARCHAR(100) UNIQUE NOT NULL,
+    quotation_number VARCHAR(100) NOT NULL,
     quotation_date DATE DEFAULT CURRENT_DATE,
     valid_until DATE,
     status document_status DEFAULT 'draft',
@@ -288,7 +288,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
     customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-    quotation_id UUID REFERENCES quotations(id),
+    quotation_id UUID REFERENCES quotations(id) ON DELETE SET NULL,
     proforma_id UUID REFERENCES proforma_invoices(id),
     invoice_number VARCHAR(100) UNIQUE NOT NULL,
     invoice_date DATE NOT NULL,
@@ -1044,5 +1044,105 @@ FOR EACH ROW EXECUTE FUNCTION public.assign_invoice_number();
 ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_invoice_number_key;
 ALTER TABLE public.invoices ADD CONSTRAINT invoices_company_invoice_number_key
     UNIQUE (company_id, invoice_number);
+
+-- Collision-safe quotation numbering and invoice relationship validation
+CREATE TABLE IF NOT EXISTS public.quotation_number_counters (
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    quotation_year INTEGER NOT NULL,
+    last_number INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (company_id, quotation_year),
+    CHECK (quotation_year BETWEEN 2000 AND 2100),
+    CHECK (last_number >= 0)
+);
+
+INSERT INTO public.quotation_number_counters (company_id, quotation_year, last_number)
+SELECT
+    q.company_id,
+    SUBSTRING(q.quotation_number FROM '^QT-([0-9]{4})-')::INTEGER,
+    MAX(SUBSTRING(q.quotation_number FROM '^QT-[0-9]{4}-([0-9]+)$')::INTEGER)
+FROM public.quotations q
+WHERE q.company_id IS NOT NULL
+  AND q.quotation_number ~ '^QT-[0-9]{4}-[0-9]+$'
+GROUP BY q.company_id, SUBSTRING(q.quotation_number FROM '^QT-([0-9]{4})-')::INTEGER
+ON CONFLICT (company_id, quotation_year) DO UPDATE
+SET last_number = GREATEST(public.quotation_number_counters.last_number, EXCLUDED.last_number);
+
+CREATE OR REPLACE FUNCTION public.next_quotation_number(p_company_id UUID)
+RETURNS VARCHAR
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_year INTEGER := EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
+    v_number INTEGER;
+BEGIN
+    IF p_company_id IS NULL THEN
+        RAISE EXCEPTION 'A company is required to generate a quotation number';
+    END IF;
+
+    INSERT INTO public.quotation_number_counters (company_id, quotation_year, last_number)
+    VALUES (p_company_id, v_year, 1)
+    ON CONFLICT (company_id, quotation_year) DO UPDATE
+        SET last_number = public.quotation_number_counters.last_number + 1
+    RETURNING last_number INTO v_number;
+
+    RETURN FORMAT('QT-%s-%s', v_year, LPAD(v_number::TEXT, 4, '0'));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assign_quotation_number()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    NEW.quotation_number := public.next_quotation_number(NEW.company_id);
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS quotations_assign_quotation_number ON public.quotations;
+CREATE TRIGGER quotations_assign_quotation_number
+BEFORE INSERT ON public.quotations
+FOR EACH ROW EXECUTE FUNCTION public.assign_quotation_number();
+
+ALTER TABLE public.quotations DROP CONSTRAINT IF EXISTS quotations_quotation_number_key;
+ALTER TABLE public.quotations ADD CONSTRAINT quotations_company_quotation_number_key
+    UNIQUE (company_id, quotation_number);
+
+CREATE OR REPLACE FUNCTION public.validate_invoice_quotation_match()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_company_id UUID;
+    v_customer_id UUID;
+BEGIN
+    IF NEW.quotation_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT q.company_id, q.customer_id
+      INTO v_company_id, v_customer_id
+    FROM public.quotations q
+    WHERE q.id = NEW.quotation_id;
+
+    IF NEW.company_id IS DISTINCT FROM v_company_id
+       OR NEW.customer_id IS DISTINCT FROM v_customer_id THEN
+        RAISE EXCEPTION 'Invoice does not match quotation % by company or customer', NEW.quotation_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS invoices_validate_quotation_match ON public.invoices;
+CREATE TRIGGER invoices_validate_quotation_match
+BEFORE INSERT OR UPDATE OF quotation_id, company_id, customer_id ON public.invoices
+FOR EACH ROW EXECUTE FUNCTION public.validate_invoice_quotation_match();
 
 -- END OF BIOLEGEND DATABASE SCHEMA
