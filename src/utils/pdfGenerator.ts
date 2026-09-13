@@ -473,9 +473,11 @@ const buildDocumentHTML = (data: DocumentData) => {
         ${data.subtotal ? `<tr class="subtotal-row"><td class="label">Subtotal:</td><td class="amount">${formatCurrency(data.subtotal)}</td></tr>` : ''}
         ${data.tax_amount ? `<tr><td class="label">Tax Amount:</td><td class="amount">${formatCurrency(data.tax_amount)}</td></tr>` : ''}
         <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : data.type === 'receipt' ? 'TOTAL DUE:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
-        ${data.type === 'invoice' ? `
-          <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points || 0}</td></tr>
-          <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points || 0}</td></tr>
+        ${data.type === 'invoice' && (data.earned_points || 0) > 0 ? `
+          <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points}</td></tr>
+        ` : ''}
+        ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
+          <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
         ` : ''}
         ${data.type === 'receipt' ? `
           <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
@@ -1263,9 +1265,11 @@ export const generatePDF = (data: DocumentData) => {
               <td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : 'TOTAL:'}</td>
               <td class="amount">${formatCurrency(data.total_amount)}</td>
             </tr>
-            ${data.type === 'invoice' ? `
-            <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points || 0}</td></tr>
-            <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points || 0}</td></tr>
+            ${data.type === 'invoice' && (data.earned_points || 0) > 0 ? `
+            <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points}</td></tr>
+            ` : ''}
+            ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
+            <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
             ` : ''}
             ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
             <tr class="payment-info">

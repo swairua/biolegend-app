@@ -299,14 +299,18 @@ export function ViewInvoiceModal({
                     <span className="font-bold">Total:</span>
                     <span className="font-bold text-primary">{formatCurrency(invoice.total_amount || 0)}</span>
                   </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span>Points earned on this invoice:</span>
-                    <span className="font-semibold">{invoice.earned_points || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Total points after this invoice:</span>
-                    <span className="font-semibold text-primary">{invoice.total_points || 0}</span>
-                  </div>
+                  {(invoice.earned_points || 0) > 0 && (
+                    <div className="flex justify-between border-t pt-2">
+                      <span>Points earned on this invoice:</span>
+                      <span className="font-semibold">{invoice.earned_points}</span>
+                    </div>
+                  )}
+                  {(invoice.total_points || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Total points after this invoice:</span>
+                      <span className="font-semibold text-primary">{invoice.total_points}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Paid:</span>
                     <span>{formatCurrency(invoice.paid_amount || 0)}</span>

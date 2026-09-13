@@ -774,8 +774,12 @@ export default function Invoices() {
                       {displayAmount(invoice.balance_due || 0, invoice.currency_code as any, invoice.exchange_rate as any)}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm font-medium">{invoice.earned_points || 0} earned</div>
-                      <div className="text-xs text-muted-foreground">{invoice.total_points || 0} total</div>
+                      {(invoice.earned_points || 0) > 0 && (
+                        <div className="text-sm font-medium">{invoice.earned_points} earned</div>
+                      )}
+                      {(invoice.total_points || 0) > 0 && (
+                        <div className="text-xs text-muted-foreground">{invoice.total_points} total</div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getStatusColor(invoice.status)}>
