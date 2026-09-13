@@ -21,6 +21,7 @@ import InventoryReports from "./pages/reports/InventoryReports";
 import StatementOfAccounts from "./pages/reports/StatementOfAccounts";
 import CompanySettings from "./pages/settings/CompanySettings";
 import UserManagement from "./pages/settings/UserManagement";
+import LoyaltySettings from "./pages/settings/LoyaltySettings";
 import RemittanceAdvice from "./pages/RemittanceAdvice";
 import LPOs from "./pages/LPOs";
 import CreditNotes from "./pages/CreditNotes";
@@ -262,6 +263,14 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings/loyalty"
+            element={
+              <ProtectedRoute>
+                <LoyaltySettings />
               </ProtectedRoute>
             }
           />

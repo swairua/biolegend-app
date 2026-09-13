@@ -61,6 +61,7 @@ export interface DocumentData {
   fx_date?: string;
   earned_points?: number;
   total_points?: number;
+  loyalty_credit_amount?: number;
   // Delivery note specific fields
   delivery_date?: string;
   delivery_address?: string;
@@ -478,6 +479,9 @@ const buildDocumentHTML = (data: DocumentData) => {
         ` : ''}
         ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
           <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
+        ` : ''}
+        ${data.type === 'invoice' && (data.loyalty_credit_amount || 0) > 0 ? `
+          <tr><td class="label">Loyalty points credit:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
         ` : ''}
         ${data.type === 'receipt' ? `
           <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
@@ -1271,6 +1275,9 @@ export const generatePDF = (data: DocumentData) => {
             ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
             <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
             ` : ''}
+            ${data.type === 'invoice' && (data.loyalty_credit_amount || 0) > 0 ? `
+            <tr><td class="label">Loyalty points credit:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
+            ` : ''}
             ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
             <tr class="payment-info">
               <td class="label">Paid Amount:</td>
@@ -1635,6 +1642,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
     balance_due: normalizeInvoiceAmount(invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)), invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     earned_points: Number(invoice.earned_points || 0),
     total_points: Number(invoice.total_points || 0),
+    loyalty_credit_amount: normalizeInvoiceAmount(invoice.loyalty_credit_amount || 0, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     notes: invoice.notes,
     currency_code: invoiceCurrencyCode,
     exchange_rate: invoice.exchange_rate,

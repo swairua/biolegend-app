@@ -112,6 +112,7 @@ export interface Invoice {
   total_amount?: number;
   paid_amount?: number;
   balance_due?: number;
+  loyalty_credit_amount?: number;
   notes?: string;
   terms_and_conditions?: string;
   affects_inventory?: boolean;
@@ -588,6 +589,7 @@ export const useInvoices = (companyId?: string) => {
             total_amount,
             paid_amount,
             balance_due,
+            loyalty_credit_amount,
             notes,
             terms_and_conditions,
             lpo_number,
@@ -692,6 +694,7 @@ export const useCustomerInvoices = (customerId?: string, companyId?: string) => 
             total_amount,
             paid_amount,
             balance_due,
+            loyalty_credit_amount,
             notes,
             terms_and_conditions,
             lpo_number,

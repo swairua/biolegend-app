@@ -311,6 +311,12 @@ export function ViewInvoiceModal({
                       <span className="font-semibold text-primary">{invoice.total_points}</span>
                     </div>
                   )}
+                  {(invoice.loyalty_credit_amount || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Loyalty points credit:</span>
+                      <span className="font-semibold">{formatCurrency(invoice.loyalty_credit_amount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Paid:</span>
                     <span>{formatCurrency(invoice.paid_amount || 0)}</span>
