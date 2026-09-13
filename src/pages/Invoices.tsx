@@ -83,6 +83,8 @@ interface Invoice {
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
   fx_date?: string;
+  earned_points?: number;
+  total_points?: number;
 }
 
 function getStatusColor(status: string) {
@@ -723,6 +725,7 @@ export default function Invoices() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Paid</TableHead>
                   <TableHead>Balance</TableHead>
+                  <TableHead>Points</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -769,6 +772,10 @@ export default function Invoices() {
                     </TableCell>
                     <TableCell className={`font-medium ${(invoice.balance_due || 0) > 0 ? 'text-destructive' : 'text-success'}`}>
                       {displayAmount(invoice.balance_due || 0, invoice.currency_code as any, invoice.exchange_rate as any)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm font-medium">{invoice.earned_points || 0} earned</div>
+                      <div className="text-xs text-muted-foreground">{invoice.total_points || 0} total</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getStatusColor(invoice.status)}>

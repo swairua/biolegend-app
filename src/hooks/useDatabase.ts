@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { removeInvoicePoints } from '@/utils/loyaltyPoints';
 import { ensureDocumentStatusEnum } from '@/utils/ensureDocumentStatusEnum';
 
 // Helper to normalize Supabase/PostgREST errors into Error instances with readable messages
@@ -116,6 +117,8 @@ export interface Invoice {
   affects_inventory?: boolean;
   created_at?: string;
   updated_at?: string;
+  earned_points?: number;
+  total_points?: number;
 }
 
 export interface Payment {
@@ -588,6 +591,8 @@ export const useInvoices = (companyId?: string) => {
             notes,
             terms_and_conditions,
             lpo_number,
+            earned_points,
+            total_points,
             created_at,
             updated_at
           `)
@@ -690,6 +695,8 @@ export const useCustomerInvoices = (customerId?: string, companyId?: string) => 
             notes,
             terms_and_conditions,
             lpo_number,
+            earned_points,
+            total_points,
             created_at,
             updated_at
           `)
@@ -779,6 +786,15 @@ export const useDeleteInvoice = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      const { data: invoice, error: fetchError } = await supabase
+        .from('invoices')
+        .select('customer_id')
+        .eq('id', id)
+        .single();
+      if (fetchError) throw normalizeError(fetchError);
+
+      await removeInvoicePoints(id, invoice.customer_id);
+
       const { error } = await supabase
         .from('invoices')
         .delete()

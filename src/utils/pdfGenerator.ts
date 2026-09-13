@@ -59,6 +59,8 @@ export interface DocumentData {
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
   fx_date?: string;
+  earned_points?: number;
+  total_points?: number;
   // Delivery note specific fields
   delivery_date?: string;
   delivery_address?: string;
@@ -471,6 +473,10 @@ const buildDocumentHTML = (data: DocumentData) => {
         ${data.subtotal ? `<tr class="subtotal-row"><td class="label">Subtotal:</td><td class="amount">${formatCurrency(data.subtotal)}</td></tr>` : ''}
         ${data.tax_amount ? `<tr><td class="label">Tax Amount:</td><td class="amount">${formatCurrency(data.tax_amount)}</td></tr>` : ''}
         <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : data.type === 'receipt' ? 'TOTAL DUE:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
+        ${data.type === 'invoice' ? `
+          <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points || 0}</td></tr>
+          <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points || 0}</td></tr>
+        ` : ''}
         ${data.type === 'receipt' ? `
           <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">Balance:</td><td class="amount" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">${formatCurrency(data.balance_due || 0)}</td></tr>
@@ -1257,6 +1263,10 @@ export const generatePDF = (data: DocumentData) => {
               <td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : 'TOTAL:'}</td>
               <td class="amount">${formatCurrency(data.total_amount)}</td>
             </tr>
+            ${data.type === 'invoice' ? `
+            <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points || 0}</td></tr>
+            <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points || 0}</td></tr>
+            ` : ''}
             ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
             <tr class="payment-info">
               <td class="label">Paid Amount:</td>
@@ -1619,6 +1629,8 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
     total_amount: normalizeInvoiceAmount(invoice.total_amount, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     paid_amount: normalizeInvoiceAmount(invoice.paid_amount || 0, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     balance_due: normalizeInvoiceAmount(invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)), invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
+    earned_points: Number(invoice.earned_points || 0),
+    total_points: Number(invoice.total_points || 0),
     notes: invoice.notes,
     currency_code: invoiceCurrencyCode,
     exchange_rate: invoice.exchange_rate,

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { syncInvoicePoints } from '@/utils/loyaltyPoints';
 import { toast } from 'sonner';
 
 export interface CreditNote {
@@ -250,12 +251,35 @@ export function useDeleteCreditNote() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      const { data: creditNote, error: fetchError } = await supabase
+        .from('credit_notes')
+        .select('invoice_id')
+        .eq('id', id)
+        .single();
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('credit_notes')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      if (creditNote.invoice_id) {
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id, customer_id, company_id, total_amount')
+          .eq('id', creditNote.invoice_id)
+          .single();
+        if (invoiceError) throw invoiceError;
+        await syncInvoicePoints({
+          invoiceId: invoice.id,
+          customerId: invoice.customer_id,
+          companyId: invoice.company_id,
+          totalKes: Number(invoice.total_amount || 0),
+        });
+      }
+
       return id;
     },
     onSuccess: () => {
@@ -345,6 +369,28 @@ export function useApplyCreditNoteToInvoice() {
         });
 
       if (error) throw error;
+
+      const { data: creditNote, error: creditNoteError } = await supabase
+        .from('credit_notes')
+        .select('invoice_id, applied_amount, total_amount')
+        .eq('id', creditNoteId)
+        .single();
+      if (creditNoteError) throw creditNoteError;
+
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('id, customer_id, company_id, total_amount')
+        .eq('id', creditNote.invoice_id || invoiceId)
+        .single();
+      if (invoiceError) throw invoiceError;
+
+      await syncInvoicePoints({
+        invoiceId: invoice.id,
+        customerId: invoice.customer_id,
+        companyId: invoice.company_id,
+        totalKes: Math.max(0, Number(invoice.total_amount || 0) - Number(creditNote.applied_amount || 0)),
+      });
+
       return data;
     },
     onSuccess: () => {
