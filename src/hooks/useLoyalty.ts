@@ -28,7 +28,16 @@ const loyaltyKeys = {
   settings: (companyId?: string) => ['loyalty-settings', companyId] as const,
   customer: (customerId?: string) => ['loyalty-customer', customerId] as const,
   activity: (companyId?: string) => ['loyalty-activity', companyId] as const,
+  customers: (companyId?: string) => ['loyalty-customers', companyId] as const,
 };
+
+export interface LoyaltyCustomerSummary {
+  customer_id: string;
+  available: number;
+  earned: number;
+  redeemed: number;
+  value: number;
+}
 
 export function useLoyaltySettings() {
   const { profile } = useAuth();
@@ -40,6 +49,37 @@ export function useLoyaltySettings() {
       const { data, error } = await supabase.from('loyalty_settings').select('*').eq('company_id', companyId!).maybeSingle();
       if (error) throw error;
       return data || { company_id: companyId, kes_per_point: 1 };
+    },
+  });
+}
+
+export function useLoyaltyCustomers(companyId?: string) {
+  const { data: settings } = useLoyaltySettings();
+  return useQuery({
+    queryKey: loyaltyKeys.customers(companyId),
+    enabled: !!companyId,
+    queryFn: async () => {
+      const [{ data: transactions, error: transactionError }, { data: redemptions, error: redemptionError }] = await Promise.all([
+        supabase.from('loyalty_point_transactions').select('customer_id, points_delta, event_type').eq('company_id', companyId!),
+        supabase.from('loyalty_redemptions').select('customer_id, points_redeemed, status').eq('company_id', companyId!),
+      ]);
+      if (transactionError) throw transactionError;
+      if (redemptionError) throw redemptionError;
+
+      const summaries = new Map<string, LoyaltyCustomerSummary>();
+      (transactions || []).forEach((transaction: Pick<LoyaltyTransaction, 'customer_id' | 'points_delta' | 'event_type'>) => {
+        const summary = summaries.get(transaction.customer_id) || { customer_id: transaction.customer_id, available: 0, earned: 0, redeemed: 0, value: 0 };
+        summary.available += transaction.points_delta;
+        if (transaction.event_type === 'invoice_award') summary.earned += transaction.points_delta;
+        summaries.set(transaction.customer_id, summary);
+      });
+      (redemptions || []).forEach((redemption: Pick<LoyaltyRedemption, 'customer_id' | 'points_redeemed' | 'status'>) => {
+        if (redemption.status !== 'completed') return;
+        const summary = summaries.get(redemption.customer_id) || { customer_id: redemption.customer_id, available: 0, earned: 0, redeemed: 0, value: 0 };
+        summary.redeemed += redemption.points_redeemed;
+        summaries.set(redemption.customer_id, summary);
+      });
+      return Array.from(summaries.values()).map(summary => ({ ...summary, value: summary.available * Number(settings?.kes_per_point || 1) }));
     },
   });
 }
@@ -72,6 +112,7 @@ export function useLoyaltyAdminMutations() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['loyalty-settings'] });
     queryClient.invalidateQueries({ queryKey: ['loyalty-customer'] });
+    queryClient.invalidateQueries({ queryKey: ['loyalty-customers'] });
     queryClient.invalidateQueries({ queryKey: ['loyalty-activity'] });
     queryClient.invalidateQueries({ queryKey: ['invoices'] });
   };
