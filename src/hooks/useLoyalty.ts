@@ -64,12 +64,13 @@ export function useLoyaltyCustomers(companyId?: string) {
       const customerIds = (customers || []).map(customer => customer.id);
       if (customerIds.length === 0) return [];
 
-      const [{ data: transactions, error: transactionError }, { data: redemptions, error: redemptionError }] = await Promise.all([
+      const [{ data: transactions, error: transactionError }, redemptionResult] = await Promise.all([
         supabase.from('loyalty_point_transactions').select('customer_id, points_delta, event_type').eq('company_id', companyId!),
         supabase.from('loyalty_redemptions').select('customer_id, points_redeemed, status').in('customer_id', customerIds),
       ]);
       if (transactionError) throw transactionError;
-      if (redemptionError) throw redemptionError;
+      if (redemptionResult.error && !['42P01', 'PGRST205'].includes(redemptionResult.error.code || '')) throw redemptionResult.error;
+      const redemptions = redemptionResult.data || [];
 
       const summaries = new Map<string, LoyaltyCustomerSummary>();
       (transactions || []).forEach((transaction: Pick<LoyaltyTransaction, 'customer_id' | 'points_delta' | 'event_type'>) => {
