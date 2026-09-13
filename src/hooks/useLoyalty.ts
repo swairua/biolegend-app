@@ -59,9 +59,14 @@ export function useLoyaltyCustomers(companyId?: string) {
     queryKey: loyaltyKeys.customers(companyId),
     enabled: !!companyId,
     queryFn: async () => {
+      const { data: customers, error: customersError } = await supabase.from('customers').select('id').eq('company_id', companyId!);
+      if (customersError) throw customersError;
+      const customerIds = (customers || []).map(customer => customer.id);
+      if (customerIds.length === 0) return [];
+
       const [{ data: transactions, error: transactionError }, { data: redemptions, error: redemptionError }] = await Promise.all([
         supabase.from('loyalty_point_transactions').select('customer_id, points_delta, event_type').eq('company_id', companyId!),
-        supabase.from('loyalty_redemptions').select('customer_id, points_redeemed, status').eq('company_id', companyId!),
+        supabase.from('loyalty_redemptions').select('customer_id, points_redeemed, status').in('customer_id', customerIds),
       ]);
       if (transactionError) throw transactionError;
       if (redemptionError) throw redemptionError;
