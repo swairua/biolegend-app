@@ -28,7 +28,6 @@ export function useReverseCreditNote() {
       if (!result?.success) {
         throw new Error(result?.error || 'Failed to reverse credit note');
       }
-
       // Fetch the updated credit note to return it
       const { data: updated, error: fetchErr } = await supabase
         .from('credit_notes')

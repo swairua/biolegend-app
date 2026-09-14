@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,14 @@ import {
 import { useCustomerInvoices, useCustomerPayments } from '@/hooks/useDatabase';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLoyaltyAdminMutations, useLoyaltyCustomer, useLoyaltySettings } from '@/hooks/useLoyalty';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 interface Customer {
   id: string;
@@ -50,21 +59,36 @@ interface ViewCustomerModalProps {
 }
 
 export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCreateInvoice }: ViewCustomerModalProps) {
-  if (!customer) return null;
+  const [redemptionPoints, setRedemptionPoints] = useState('');
+  const [redemptionInvoice, setRedemptionInvoice] = useState('none');
+  const [redemptionReason, setRedemptionReason] = useState('');
 
   // Fetch real customer data
-  const { data: invoices } = useCustomerInvoices(customer.id);
-  const { data: payments } = useCustomerPayments(customer.id);
+  const { data: invoices } = useCustomerInvoices(customer?.id);
+  const { data: payments } = useCustomerPayments(customer?.id);
+  const { isAdmin } = useAuth();
+  const { data: loyalty } = useLoyaltyCustomer(customer?.id);
+  const { data: loyaltySettings } = useLoyaltySettings();
+  const { redeem } = useLoyaltyAdminMutations();
+  const { currency, rate, format } = useCurrency();
+  if (!customer) return null;
 
   // Calculate real account metrics
   const totalInvoiced = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-  const totalPaid = payments?.reduce((sum, pay) => sum + (pay.amount || 0), 0) || 0;
-  const outstandingBalance = totalInvoiced - totalPaid;
+  const outstandingBalance = invoices?.reduce((sum, inv) => sum + Number(inv.balance_due || 0), 0) || 0;
   const totalInvoices = invoices?.length || 0;
   const totalPayments = payments?.length || 0;
 
-  const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
+  const selectedRedemptionInvoice = invoices?.find(invoice => invoice.id === redemptionInvoice);
+  const kesPerPoint = Number(loyaltySettings?.kes_per_point || 1);
+  const selectedInvoiceBalance = selectedRedemptionInvoice
+    ? Number(selectedRedemptionInvoice.balance_due ?? ((selectedRedemptionInvoice.total_amount || 0) - (selectedRedemptionInvoice.paid_amount || 0) - (selectedRedemptionInvoice.loyalty_credit_amount || 0)))
+    : 0;
+  const maxInvoicePoints = selectedRedemptionInvoice
+    ? Math.max(0, Math.floor(selectedInvoiceBalance / kesPerPoint))
+    : Number(loyalty?.available || 0);
+  const appliedRedemptionPoints = Math.min(Number(redemptionPoints) || 0, Number(loyalty?.available || 0), maxInvoicePoints);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -195,6 +219,18 @@ export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCrea
               </div>
             </CardContent>
           </Card>
+
+          {isAdmin && (loyalty?.available || 0) > 0 && (
+            <Card className="lg:col-span-2 border-primary/20">
+              <CardHeader><CardTitle className="text-lg flex items-center space-x-2"><CreditCard className="h-4 w-4" /><span>Loyalty Points</span></CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-3 text-center"><div className="rounded-lg bg-primary-light p-3"><div className="text-xl font-bold text-primary">{loyalty?.available || 0}</div><div className="text-xs text-muted-foreground">Available</div></div><div className="rounded-lg bg-success-light p-3"><div className="text-xl font-bold text-success">{loyalty?.earned || 0}</div><div className="text-xs text-muted-foreground">Earned</div></div><div className="rounded-lg bg-warning-light p-3"><div className="text-xl font-bold text-warning">{loyalty?.redeemed || 0}</div><div className="text-xs text-muted-foreground">Redeemed</div></div></div>
+                <p className="text-sm text-muted-foreground">Current value: {formatCurrency(loyalty?.value || 0)} ({loyaltySettings?.kes_per_point || 1} KES per point)</p>
+                <div className="grid gap-3 md:grid-cols-3"><div><Label>Points</Label><Input type="number" min="1" step="1" value={redemptionPoints} onChange={event => setRedemptionPoints(event.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Applied: {appliedRedemptionPoints} points ({formatCurrency(appliedRedemptionPoints * kesPerPoint)})</p>{redemptionInvoice !== 'none' && Number(redemptionPoints) > maxInvoicePoints && <p className="mt-1 text-xs text-warning">This invoice accepts up to {maxInvoicePoints} points. Excess points remain available.</p>}</div><div><Label>Invoice</Label><Select value={redemptionInvoice} onValueChange={setRedemptionInvoice}><SelectTrigger><SelectValue placeholder="No invoice" /></SelectTrigger><SelectContent><SelectItem value="none">No invoice</SelectItem>{invoices?.filter(invoice => Number(invoice.balance_due || 0) > 0).map(invoice => <SelectItem key={invoice.id} value={invoice.id}>{invoice.invoice_number}</SelectItem>)}</SelectContent></Select></div><div><Label>Reason</Label><Textarea value={redemptionReason} onChange={event => setRedemptionReason(event.target.value)} placeholder="Required reason" /></div></div>
+                <Button disabled={redeem.isPending} onClick={async () => { const points = Number(redemptionPoints); if (!Number.isInteger(points) || points <= 0 || points > (loyalty?.available || 0) || !redemptionReason.trim()) { toast.error('Enter valid points within the available balance and a reason'); return; } const appliedPoints = Math.min(points, maxInvoicePoints); if (appliedPoints <= 0) { toast.error('The selected invoice cannot accept loyalty points'); return; } try { await redeem.mutateAsync({ customerId: customer.id, points: appliedPoints, invoiceId: redemptionInvoice === 'none' ? undefined : redemptionInvoice, reason: redemptionReason.trim() }); setRedemptionPoints(''); setRedemptionReason(''); toast.success('Points redeemed successfully'); } catch (error: any) { toast.error(error.message || 'Could not redeem points'); } }}>Redeem points</Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Account Summary */}
           <Card className="lg:col-span-2">

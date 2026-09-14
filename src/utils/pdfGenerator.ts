@@ -59,6 +59,10 @@ export interface DocumentData {
   currency_code?: 'KES' | 'USD';
   exchange_rate?: number;
   fx_date?: string;
+  earned_points?: number;
+  total_points?: number;
+  loyalty_credit_amount?: number;
+  loyalty_points_redeemed?: number;
   // Delivery note specific fields
   delivery_date?: string;
   delivery_address?: string;
@@ -471,6 +475,19 @@ const buildDocumentHTML = (data: DocumentData) => {
         ${data.subtotal ? `<tr class="subtotal-row"><td class="label">Subtotal:</td><td class="amount">${formatCurrency(data.subtotal)}</td></tr>` : ''}
         ${data.tax_amount ? `<tr><td class="label">Tax Amount:</td><td class="amount">${formatCurrency(data.tax_amount)}</td></tr>` : ''}
         <tr class="total-row"><td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : data.type === 'receipt' ? 'TOTAL DUE:' : 'TOTAL:'}</td><td class="amount">${formatCurrency(data.total_amount)}</td></tr>
+        ${data.type === 'invoice' && (data.earned_points || 0) > 0 ? `
+          <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points}</td></tr>
+        ` : ''}
+        ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
+          <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
+        ` : ''}
+        ${data.type === 'invoice' && (data.loyalty_credit_amount || 0) > 0 ? `
+          <tr><td class="label">Loyalty points credit:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
+        ` : ''}
+        ${data.type === 'credit_note' && (data.loyalty_points_redeemed || 0) > 0 ? `
+          <tr><td class="label">Loyalty points redeemed:</td><td class="amount">${data.loyalty_points_redeemed}</td></tr>
+          <tr><td class="label">Loyalty credit value:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
+        ` : ''}
         ${data.type === 'receipt' ? `
           <tr class="payment-info"><td class="label">Amount Tendered:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">Balance:</td><td class="amount" style="font-weight: bold; color: ${Number(data.balance_due || 0) < 0 ? '#dc2626' : '#16a34a'};">${formatCurrency(data.balance_due || 0)}</td></tr>
@@ -1257,6 +1274,19 @@ export const generatePDF = (data: DocumentData) => {
               <td class="label">${data.type === 'statement' ? 'TOTAL OUTSTANDING:' : 'TOTAL:'}</td>
               <td class="amount">${formatCurrency(data.total_amount)}</td>
             </tr>
+            ${data.type === 'invoice' && (data.earned_points || 0) > 0 ? `
+            <tr><td class="label">Points earned on this invoice:</td><td class="amount">${data.earned_points}</td></tr>
+            ` : ''}
+            ${data.type === 'invoice' && (data.total_points || 0) > 0 ? `
+            <tr><td class="label">Total points after this invoice:</td><td class="amount">${data.total_points}</td></tr>
+            ` : ''}
+            ${data.type === 'invoice' && (data.loyalty_credit_amount || 0) > 0 ? `
+            <tr><td class="label">Loyalty points credit:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
+            ` : ''}
+            ${data.type === 'credit_note' && (data.loyalty_points_redeemed || 0) > 0 ? `
+            <tr><td class="label">Loyalty points redeemed:</td><td class="amount">${data.loyalty_points_redeemed}</td></tr>
+            <tr><td class="label">Loyalty credit value:</td><td class="amount">${formatCurrency(data.loyalty_credit_amount || 0)}</td></tr>
+            ` : ''}
             ${(data.type === 'invoice' || data.type === 'proforma') && data.paid_amount !== undefined ? `
             <tr class="payment-info">
               <td class="label">Paid Amount:</td>
@@ -1619,6 +1649,9 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
     total_amount: normalizeInvoiceAmount(invoice.total_amount, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     paid_amount: normalizeInvoiceAmount(invoice.paid_amount || 0, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     balance_due: normalizeInvoiceAmount(invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)), invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
+    earned_points: Number(invoice.earned_points || 0),
+    total_points: Number(invoice.total_points || 0),
+    loyalty_credit_amount: normalizeInvoiceAmount(invoice.loyalty_credit_amount || 0, invoiceCurrencyCode, invoiceRate, invoiceCurrencyCode, currentRate),
     notes: invoice.notes,
     currency_code: invoiceCurrencyCode,
     exchange_rate: invoice.exchange_rate,
@@ -1688,6 +1721,8 @@ export const downloadCreditNotePDF = async (creditNote: any, company?: CompanyDe
     subtotal: normalizeInvoiceAmount(creditNote.subtotal, creditNoteCurrencyCode, creditNoteRate, creditNoteCurrencyCode, currentRate),
     tax_amount: normalizeInvoiceAmount(creditNote.tax_amount, creditNoteCurrencyCode, creditNoteRate, creditNoteCurrencyCode, currentRate),
     total_amount: normalizeInvoiceAmount(creditNote.total_amount, creditNoteCurrencyCode, creditNoteRate, creditNoteCurrencyCode, currentRate),
+    loyalty_points_redeemed: Number(creditNote.loyalty_points_redeemed || 0),
+    loyalty_credit_amount: normalizeInvoiceAmount(creditNote.loyalty_credit_amount || 0, creditNoteCurrencyCode, creditNoteRate, creditNoteCurrencyCode, currentRate),
     notes: creditNote.notes,
     terms_and_conditions: creditNote.terms_and_conditions,
   };
@@ -1807,42 +1842,56 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
 export const generateCustomerStatementPDF = async (customer: any, invoices: any[], payments: any[], statementData?: any, company?: CompanyDetails, deliveryNotes?: any[]) => {
   const today = new Date();
   const statementDate = statementData?.statement_date || today.toISOString().split('T')[0];
+  const { data: redemptions, error: redemptionsError } = await supabase
+    .from('loyalty_redemptions')
+    .select('id, invoice_id, credit_note_id, points_redeemed, kes_value, created_at, status')
+    .eq('customer_id', customer.id)
+    .eq('status', 'completed')
+    .lte('created_at', `${statementDate}T23:59:59.999Z`);
+  if (redemptionsError && !['42P01', 'PGRST205'].includes(redemptionsError.code || '')) throw redemptionsError;
+  const completedRedemptions = redemptions || [];
+  const { data: creditNotes, error: creditNotesError } = await supabase
+    .from('credit_notes')
+    .select('id, credit_note_number, credit_note_date, total_amount, balance, status, loyalty_points_redeemed')
+    .eq('customer_id', customer.id)
+    .neq('status', 'cancelled')
+    .lte('credit_note_date', statementDate);
+  if (creditNotesError && !['42P01', 'PGRST205'].includes(creditNotesError.code || '')) throw creditNotesError;
+  const invoiceOutstanding = (inv: any) => Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0)));
 
-  // Calculate outstanding amounts
-  const totalOutstanding = invoices.reduce((sum, inv) =>
-    sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0
-  );
+  // Calculate outstanding amounts from the invoice balance, which already includes loyalty credits.
+  const totalOutstanding = invoices.reduce((sum, inv) => sum + invoiceOutstanding(inv), 0) - (creditNotes || []).reduce((sum, note) => sum + Number(note.balance || 0), 0);
 
   // Calculate aging buckets
   const current = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue <= 0 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue <= 0 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days30 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 0 && daysOverdue <= 30 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue > 0 && daysOverdue <= 30 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days60 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 30 && daysOverdue <= 60 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue > 30 && daysOverdue <= 60 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 60 && daysOverdue <= 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue > 60 && daysOverdue <= 90 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const over90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue > 90 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   // Build quick lookup for delivery notes by invoice id
   const dnByInvoiceId = new Map((deliveryNotes || []).map((d: any) => [d.invoice_id, (d.delivery_number || d.delivery_note_number || '')]));
@@ -1864,6 +1913,20 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
       lpo_date: inv.lpo_date || inv.invoice_date
     })),
     // Add all payments as credits
+    ...(creditNotes || []).map(note => ({
+      date: note.credit_note_date,
+      type: 'credit_note',
+      reference: note.credit_note_number,
+      description: `Credit Note ${note.credit_note_number}${Number(note.loyalty_points_redeemed || 0) > 0 ? ` (${note.loyalty_points_redeemed} points)` : ''}`,
+      debit: 0,
+      credit: Number(note.total_amount || 0),
+      due_date: null,
+      lpo_number: '',
+      invoice_number: '',
+      delivery_note_number: '',
+      lpo_date: note.credit_note_date,
+      amount: -Number(note.total_amount || 0)
+    })),
     ...payments.map(pay => ({
       date: pay.payment_date,
       type: 'payment',
@@ -1877,6 +1940,20 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
       delivery_note_number: '',
       lpo_date: pay.payment_date,
       amount: -Number(pay.amount || 0)
+    })),
+    ...completedRedemptions.filter(redemption => Number(redemption.kes_value || 0) > 0).map(redemption => ({
+      date: redemption.created_at,
+      type: 'loyalty_redemption',
+      reference: redemption.id,
+      description: `Loyalty points redeemed (${redemption.points_redeemed} points)`,
+      debit: 0,
+      credit: Number(redemption.kes_value || 0),
+      due_date: null,
+      lpo_number: '',
+      invoice_number: invoices.find(inv => inv.id === redemption.invoice_id)?.invoice_number || '',
+      delivery_note_number: '',
+      lpo_date: redemption.created_at,
+      amount: -Number(redemption.kes_value || 0)
     }))
   ];
 

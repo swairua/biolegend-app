@@ -43,8 +43,8 @@ export default function CustomerStatementPreviewModal({
   const customerPayments = payments?.filter(pay => pay.customer_id === customer.customer_id) || [];
   
   // Get outstanding invoices
-  const outstandingInvoices = customerInvoices.filter(inv => 
-    (inv.total_amount - (inv.paid_amount || 0)) > 0
+  const outstandingInvoices = customerInvoices.filter(inv =>
+    Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0))) > 0
   );
 
   // Calculate aging
@@ -60,7 +60,7 @@ export default function CustomerStatementPreviewModal({
   outstandingInvoices.forEach(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    const outstanding = inv.total_amount - (inv.paid_amount || 0);
+    const outstanding = Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0)));
 
     if (daysOverdue <= 0) {
       aging.current += outstanding;
@@ -225,7 +225,7 @@ export default function CustomerStatementPreviewModal({
                   </TableHeader>
                   <TableBody>
                     {outstandingInvoices.map((invoice) => {
-                      const outstanding = invoice.total_amount - (invoice.paid_amount || 0);
+                      const outstanding = Number(invoice.balance_due ?? ((invoice.total_amount || 0) - (invoice.paid_amount || 0) - (invoice.loyalty_credit_amount || 0)));
                       const daysOverdue = Math.max(0, Math.floor((today.getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)));
                       
                       return (

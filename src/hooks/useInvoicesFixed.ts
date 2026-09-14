@@ -34,6 +34,8 @@ export const useInvoicesFixed = (companyId?: string) => {
             notes,
             terms_and_conditions,
             lpo_number,
+            earned_points,
+            total_points,
             created_at,
             updated_at,
             currency_code,
@@ -65,6 +67,8 @@ export const useInvoicesFixed = (companyId?: string) => {
                 notes,
                 terms_and_conditions,
                 lpo_number,
+                earned_points,
+                total_points,
                 created_at,
                 updated_at
               `)
@@ -259,6 +263,8 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
             notes,
             terms_and_conditions,
             lpo_number,
+            earned_points,
+            total_points,
             created_at,
             updated_at,
             currency_code,
@@ -296,6 +302,8 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
                 notes,
                 terms_and_conditions,
                 lpo_number,
+                earned_points,
+                total_points,
                 created_at,
                 updated_at
               `)

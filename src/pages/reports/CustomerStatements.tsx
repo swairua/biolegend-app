@@ -84,8 +84,8 @@ export default function CustomerStatements() {
       const customerInvoices = invoices.filter(inv => inv.customer_id === customer.id);
       
       // Calculate totals
-      const totalOutstanding = customerInvoices.reduce((sum, inv) => 
-        sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0
+      const totalOutstanding = customerInvoices.reduce((sum, inv) =>
+        sum + Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0))), 0
       );
 
       // Calculate overdue amounts (invoices past due date)
@@ -98,7 +98,7 @@ export default function CustomerStatements() {
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
         
         if (daysOverdue > 0) {
-          const outstanding = (inv.total_amount || 0) - (inv.paid_amount || 0);
+          const outstanding = Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0)));
           if (outstanding > 0) {
             overdueAmount += outstanding;
             maxDaysOverdue = Math.max(maxDaysOverdue, daysOverdue);

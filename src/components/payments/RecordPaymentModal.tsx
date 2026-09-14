@@ -35,6 +35,8 @@ import { parseErrorMessageWithCodes } from '@/utils/errorHelpers';
 import { useCreatePayment } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLoyaltyCustomer } from '@/hooks/useLoyalty';
 import { PaymentAllocationQuickFix } from './PaymentAllocationQuickFix';
 
 interface RecordPaymentModalProps {
@@ -56,6 +58,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allocationFailed, setAllocationFailed] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
   // Reset allocation failed state when modal closes
   useEffect(() => {
@@ -66,6 +69,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
 
   // Fetch all available invoices for selection
   const { currentCompany } = useCurrentCompany();
+  const { isAdmin } = useAuth();
   const { data: invoices = [] } = useInvoices(currentCompany?.id);
   const createPaymentMutation = useCreatePayment();
   
@@ -73,6 +77,20 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   const availableInvoices = invoices.filter(inv =>
     inv.total_amount !== null && inv.total_amount !== undefined
   );
+  const selectedInvoice = invoice || availableInvoices.find(inv => inv.id === paymentData.invoice_id);
+  const { data: loyaltyCustomer } = useLoyaltyCustomer(selectedInvoice?.customer_id);
+  const availablePoints = Number(loyaltyCustomer?.available || 0);
+  const kesPerPoint = Number(loyaltyCustomer?.value || 0) / Math.max(availablePoints, 1);
+  const currentBalance = Number(selectedInvoice?.balance_due ?? (selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0));
+  const maxApplicablePoints = Math.max(
+    0,
+    Math.min(
+      availablePoints,
+      Math.floor((Math.max(0, currentBalance - Math.max(0, Number(paymentData.amount) || 0)) + 0.000001) / Math.max(kesPerPoint, 0.000001))
+    )
+  );
+  const appliedPoints = Math.min(pointsToRedeem, maxApplicablePoints);
+  const pointsValue = appliedPoints * kesPerPoint;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -96,9 +114,6 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
       return;
     }
 
-    const selectedInvoice = availableInvoices.find(inv => inv.id === paymentData.invoice_id);
-    const currentBalance = selectedInvoice?.balance_due || (selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0);
-
     // Allow manual adjustments: warn about overpayments but don't prevent them
     if (paymentData.amount > currentBalance && currentBalance > 0) {
       console.warn(`Payment amount (${paymentData.amount}) exceeds outstanding balance (${currentBalance}) - this will create an overpayment`);
@@ -107,6 +122,25 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
     if (!paymentData.payment_method) {
       toast.error('Please select a payment method');
       return;
+    }
+
+    if (pointsToRedeem > 0) {
+      if (!isAdmin) {
+        toast.error('Only administrators can apply loyalty points');
+        return;
+      }
+      if (!Number.isInteger(pointsToRedeem) || pointsToRedeem > availablePoints) {
+        toast.error('Selected loyalty points exceed the customer balance');
+        return;
+      }
+      if (paymentData.amount <= 0) {
+        toast.error('A positive payment is required when applying loyalty points');
+        return;
+      }
+      if (appliedPoints <= 0) {
+        toast.error('The invoice balance cannot accept any loyalty points after this payment');
+        return;
+      }
     }
 
     if (!currentCompany?.id) {
@@ -144,7 +178,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
         fx_date: paymentData.payment_date
       };
 
-      const result = await createPaymentMutation.mutateAsync(paymentRecord);
+      const result = await createPaymentMutation.mutateAsync({ ...paymentRecord, points_to_redeem: appliedPoints });
 
       // Check if payment was recorded but allocation might have failed
       if (result.fallback_used) {
@@ -190,6 +224,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
       notes: '',
       customer_name: invoice?.customers?.name || ''
     });
+    setPointsToRedeem(0);
     setAllocationFailed(false);
   };
 
@@ -362,6 +397,30 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
                 </div>
               </div>
 
+              {isAdmin && selectedInvoice?.customer_id && availablePoints > 0 && (
+                <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <Label htmlFor="points_to_redeem">Apply loyalty points</Label>
+                  <Input
+                    id="points_to_redeem"
+                    type="number"
+                    min="0"
+                    max={availablePoints}
+                    step="1"
+                    value={pointsToRedeem || ''}
+                    onChange={(event) => setPointsToRedeem(Math.max(0, Number(event.target.value) || 0))}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Available: {availablePoints} points ({formatCurrency(availablePoints * kesPerPoint)}). Applied: {appliedPoints} points ({formatCurrency(pointsValue)}).
+                  </p>
+                  {pointsToRedeem > maxApplicablePoints && (
+                    <p className="text-xs text-warning">
+                      This payment can apply up to {maxApplicablePoints} points. The excess will remain available.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Payment Date */}
               <div className="space-y-2">
                 <Label htmlFor="payment_date">Payment Date *</Label>
@@ -446,8 +505,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
                       <span className="font-semibold">
                         {formatCurrency((() => {
                           const selectedInv = invoice || availableInvoices.find(inv => inv.id === paymentData.invoice_id);
-                          const balance = selectedInv?.balance_due || selectedInv?.total_amount || 0;
-                          return Math.max(0, balance - paymentData.amount);
+                          const balance = Number(selectedInv?.balance_due ?? (selectedInv?.total_amount || 0) - (selectedInv?.paid_amount || 0));
+                          return Math.max(0, balance - paymentData.amount - pointsValue);
                         })())}
                       </span>
                     </div>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { reverseInvoiceRedemptions } from '@/utils/loyaltyPoints';
 import { toast } from 'sonner';
 
 export interface CreditNote {
@@ -23,6 +24,8 @@ export interface CreditNote {
   exchange_rate?: number;
   fx_date?: string;
   created_by?: string;
+  loyalty_points_redeemed?: number;
+  loyalty_credit_amount?: number;
   created_at: string;
   updated_at: string;
   customers?: {
@@ -250,12 +253,30 @@ export function useDeleteCreditNote() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      const { data: creditNote, error: fetchError } = await supabase
+        .from('credit_notes')
+        .select('invoice_id')
+        .eq('id', id)
+        .single();
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('credit_notes')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      if (creditNote.invoice_id) {
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id, customer_id, company_id, total_amount')
+          .eq('id', creditNote.invoice_id)
+          .single();
+        if (invoiceError) throw invoiceError;
+        await reverseInvoiceRedemptions(invoice.id);
+      }
+
       return id;
     },
     onSuccess: () => {
@@ -345,6 +366,23 @@ export function useApplyCreditNoteToInvoice() {
         });
 
       if (error) throw error;
+
+      const { data: creditNote, error: creditNoteError } = await supabase
+        .from('credit_notes')
+        .select('invoice_id, applied_amount, total_amount')
+        .eq('id', creditNoteId)
+        .single();
+      if (creditNoteError) throw creditNoteError;
+
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('id, customer_id, company_id, total_amount')
+        .eq('id', creditNote.invoice_id || invoiceId)
+        .single();
+      if (invoiceError) throw invoiceError;
+
+      await reverseInvoiceRedemptions(invoice.id);
+
       return data;
     },
     onSuccess: () => {

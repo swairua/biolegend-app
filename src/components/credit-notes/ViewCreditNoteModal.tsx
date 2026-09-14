@@ -218,6 +218,12 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote, onDelete }
                   <span className="text-primary">Remaining Balance:</span>
                   <span className="font-semibold text-primary">{fmt(creditNote.balance)}</span>
                 </div>
+                {(creditNote.loyalty_points_redeemed || 0) > 0 && (
+                  <div className="border-t pt-2 text-sm text-primary">
+                    <div className="flex justify-between"><span>Loyalty points redeemed:</span><span className="font-semibold">{creditNote.loyalty_points_redeemed}</span></div>
+                    <div className="flex justify-between"><span>Loyalty credit value:</span><span className="font-semibold">{fmt(creditNote.loyalty_credit_amount || 0)}</span></div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

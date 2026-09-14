@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { syncInvoicePoints } from '@/utils/loyaltyPoints';
 
 // Helper to normalize Supabase/PostgREST errors into Error instances with readable messages
 const normalizeError = (err: any): Error => {
@@ -196,6 +197,8 @@ export const useConvertQuotationToInvoice = () => {
       
       // Create invoice from quotation
       const quotationRate = (quotation as any).exchange_rate || 1;
+      const quotationCurrency = (quotation as any).currency_code || 'KES';
+      const conversionFactor = quotationCurrency === 'USD' ? quotationRate : 1;
       const invoiceData = {
         company_id: quotation.company_id,
         customer_id: quotation.customer_id,
@@ -204,13 +207,13 @@ export const useConvertQuotationToInvoice = () => {
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: 'draft',
-        subtotal: quotation.subtotal,
-        tax_amount: quotation.tax_amount,
-        total_amount: quotation.total_amount,
+        subtotal: Number(quotation.subtotal || 0) * conversionFactor,
+        tax_amount: Number(quotation.tax_amount || 0) * conversionFactor,
+        total_amount: Number(quotation.total_amount || 0) * conversionFactor,
         notes: quotation.notes,
         terms_and_conditions: quotation.terms_and_conditions,
         affects_inventory: true,
-        currency_code: (quotation as any).currency_code,
+        currency_code: quotationCurrency,
         exchange_rate: quotationRate || 1,
         fx_date: (quotation as any).quotation_date || new Date().toISOString().split('T')[0]
       };
@@ -231,14 +234,14 @@ export const useConvertQuotationToInvoice = () => {
           product_name: item.product_name?.substring(0, 255) || '',
           description: item.description,
           quantity: item.quantity,
-          unit_price: item.unit_price,
+          unit_price: Number(item.unit_price || 0) * conversionFactor,
           discount_percentage: item.discount_percentage || 0,
           discount_before_vat: item.discount_before_vat || 0,
           tax_setting_id: item.tax_setting_id,
           tax_percentage: item.tax_percentage,
-          tax_amount: item.tax_amount,
+          tax_amount: Number(item.tax_amount || 0) * conversionFactor,
           tax_inclusive: item.tax_inclusive,
-          line_total: item.line_total,
+          line_total: Number(item.line_total || 0) * conversionFactor,
           sort_order: item.sort_order
         }));
         
@@ -286,7 +289,14 @@ export const useConvertQuotationToInvoice = () => {
           });
         }
       }
-      
+
+      await syncInvoicePoints({
+        invoiceId: invoice.id,
+        customerId: invoice.customer_id,
+        companyId: invoice.company_id,
+        totalKes: Number(invoice.total_amount || 0),
+      });
+
       // Update quotation status
       await supabase
         .from('quotations')
@@ -414,6 +424,13 @@ export const useCreateInvoiceWithItems = () => {
           }
         }
       }
+
+      await syncInvoicePoints({
+        invoiceId: invoiceData.id,
+        customerId: invoiceData.customer_id,
+        companyId: invoiceData.company_id,
+        totalKes: Number(invoiceData.total_amount || 0),
+      });
 
       return invoiceData;
     },
@@ -561,6 +578,13 @@ export const useUpdateInvoiceWithItems = () => {
           }
         }
       }
+
+      await syncInvoicePoints({
+        invoiceId: invoiceData.id,
+        customerId: invoiceData.customer_id,
+        companyId: invoiceData.company_id,
+        totalKes: Number(invoiceData.total_amount || 0),
+      });
 
       return invoiceData;
     },

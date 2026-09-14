@@ -23,6 +23,8 @@ export interface OptimizedInvoice {
   lpo_number?: string;
   created_at?: string;
   updated_at?: string;
+  earned_points?: number;
+  total_points?: number;
   // Related data
   customers?: {
     id: string;
@@ -128,6 +130,8 @@ export const useOptimizedInvoices = (
           exchange_rate,
           fx_date,
           lpo_number,
+          earned_points,
+          total_points,
           created_at,
           updated_at
         `,
