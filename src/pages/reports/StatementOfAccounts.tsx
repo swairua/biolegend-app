@@ -43,7 +43,8 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
     // Calculate totals
     const totalInvoiced = customerInvoices.reduce((sum, inv) => sum + normalizeInvoiceAmount(Number(inv.total_amount) || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
     const totalPaid = customerPayments.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
-    const currentBalance = totalInvoiced - totalPaid;
+    const totalLoyaltyCredit = customerInvoices.reduce((sum, inv) => sum + (Number(inv.loyalty_credit_amount) || 0), 0);
+    const currentBalance = totalInvoiced - totalPaid - totalLoyaltyCredit;
 
     // Calculate aging analysis
     const today = new Date();
@@ -53,7 +54,7 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
       const dueDate = new Date(invoice.due_date || invoice.invoice_date);
       const daysPastDue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       const invAmount = normalizeInvoiceAmount(Number(invoice.total_amount) || 0, (invoice as any).currency_code as any, (invoice as any).exchange_rate as any, currency, rate);
-      const unpaidAmount = invAmount - Number(invoice.paid_amount || 0);
+      const unpaidAmount = Math.max(0, invAmount - Number(invoice.paid_amount || 0) - Number(invoice.loyalty_credit_amount || 0));
 
       if (daysPastDue <= 0) current += unpaidAmount;
       else if (daysPastDue <= 30) days30 += unpaidAmount;

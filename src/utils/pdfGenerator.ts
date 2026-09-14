@@ -1854,25 +1854,25 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
   const days30 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 0 && daysOverdue <= 30 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
+    return daysOverdue > 0 && daysOverdue <= 30 && invoiceOutstanding(inv) > 0;
   }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days60 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 30 && daysOverdue <= 60 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
+    return daysOverdue > 30 && daysOverdue <= 60 && invoiceOutstanding(inv) > 0;
   }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 60 && daysOverdue <= 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
+    return daysOverdue > 60 && daysOverdue <= 90 && invoiceOutstanding(inv) > 0;
   }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const over90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue > 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
+    return daysOverdue > 90 && invoiceOutstanding(inv) > 0;
   }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   // Build quick lookup for delivery notes by invoice id

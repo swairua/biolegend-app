@@ -81,7 +81,16 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   const { data: loyaltyCustomer } = useLoyaltyCustomer(selectedInvoice?.customer_id);
   const availablePoints = Number(loyaltyCustomer?.available || 0);
   const kesPerPoint = Number(loyaltyCustomer?.value || 0) / Math.max(availablePoints, 1);
-  const pointsValue = pointsToRedeem * kesPerPoint;
+  const currentBalance = Number(selectedInvoice?.balance_due ?? (selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0));
+  const maxApplicablePoints = Math.max(
+    0,
+    Math.min(
+      availablePoints,
+      Math.floor((Math.max(0, currentBalance - Math.max(0, Number(paymentData.amount) || 0)) + 0.000001) / Math.max(kesPerPoint, 0.000001))
+    )
+  );
+  const appliedPoints = Math.min(pointsToRedeem, maxApplicablePoints);
+  const pointsValue = appliedPoints * kesPerPoint;
 
   const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
@@ -104,8 +113,6 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
       toast.error('Please enter a valid payment amount (can be negative for refunds/adjustments)');
       return;
     }
-
-    const currentBalance = selectedInvoice?.balance_due ?? (selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0);
 
     // Allow manual adjustments: warn about overpayments but don't prevent them
     if (paymentData.amount > currentBalance && currentBalance > 0) {
@@ -130,8 +137,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
         toast.error('A positive payment is required when applying loyalty points');
         return;
       }
-      if (pointsValue + paymentData.amount > Math.max(0, currentBalance) + 0.01) {
-        toast.error('Payment and loyalty points exceed the invoice balance');
+      if (appliedPoints <= 0) {
+        toast.error('The invoice balance cannot accept any loyalty points after this payment');
         return;
       }
     }
@@ -171,7 +178,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
         fx_date: paymentData.payment_date
       };
 
-      const result = await createPaymentMutation.mutateAsync({ ...paymentRecord, points_to_redeem: pointsToRedeem });
+      const result = await createPaymentMutation.mutateAsync({ ...paymentRecord, points_to_redeem: appliedPoints });
 
       // Check if payment was recorded but allocation might have failed
       if (result.fallback_used) {
@@ -404,8 +411,13 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Available: {availablePoints} points ({formatCurrency(availablePoints * kesPerPoint)}). Selected value: {formatCurrency(pointsValue)}.
+                    Available: {availablePoints} points ({formatCurrency(availablePoints * kesPerPoint)}). Applied: {appliedPoints} points ({formatCurrency(pointsValue)}).
                   </p>
+                  {pointsToRedeem > maxApplicablePoints && (
+                    <p className="text-xs text-warning">
+                      This payment can apply up to {maxApplicablePoints} points. The excess will remain available.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -493,8 +505,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
                       <span className="font-semibold">
                         {formatCurrency((() => {
                           const selectedInv = invoice || availableInvoices.find(inv => inv.id === paymentData.invoice_id);
-                          const balance = selectedInv?.balance_due || selectedInv?.total_amount || 0;
-                          return Math.max(0, balance - paymentData.amount);
+                          const balance = Number(selectedInv?.balance_due ?? (selectedInv?.total_amount || 0) - (selectedInv?.paid_amount || 0));
+                          return Math.max(0, balance - paymentData.amount - pointsValue);
                         })())}
                       </span>
                     </div>

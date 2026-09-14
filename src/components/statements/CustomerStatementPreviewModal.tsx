@@ -225,7 +225,7 @@ export default function CustomerStatementPreviewModal({
                   </TableHeader>
                   <TableBody>
                     {outstandingInvoices.map((invoice) => {
-                      const outstanding = invoice.total_amount - (invoice.paid_amount || 0);
+                      const outstanding = Number(invoice.balance_due ?? ((invoice.total_amount || 0) - (invoice.paid_amount || 0) - (invoice.loyalty_credit_amount || 0)));
                       const daysOverdue = Math.max(0, Math.floor((today.getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)));
                       
                       return (
