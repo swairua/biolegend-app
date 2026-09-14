@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { syncInvoicePoints } from '@/utils/loyaltyPoints';
+import { reverseInvoiceRedemptions } from '@/utils/loyaltyPoints';
 import { toast } from 'sonner';
 
 export interface CreditNote {
@@ -272,12 +272,7 @@ export function useDeleteCreditNote() {
           .eq('id', creditNote.invoice_id)
           .single();
         if (invoiceError) throw invoiceError;
-        await syncInvoicePoints({
-          invoiceId: invoice.id,
-          customerId: invoice.customer_id,
-          companyId: invoice.company_id,
-          totalKes: Number(invoice.total_amount || 0),
-        });
+        await reverseInvoiceRedemptions(invoice.id);
       }
 
       return id;
@@ -384,12 +379,7 @@ export function useApplyCreditNoteToInvoice() {
         .single();
       if (invoiceError) throw invoiceError;
 
-      await syncInvoicePoints({
-        invoiceId: invoice.id,
-        customerId: invoice.customer_id,
-        companyId: invoice.company_id,
-        totalKes: Math.max(0, Number(invoice.total_amount || 0) - Number(creditNote.applied_amount || 0)),
-      });
+      await reverseInvoiceRedemptions(invoice.id);
 
       return data;
     },

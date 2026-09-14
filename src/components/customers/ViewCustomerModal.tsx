@@ -28,6 +28,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLoyaltyAdminMutations, useLoyaltyCustomer, useLoyaltySettings } from '@/hooks/useLoyalty';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,6 +59,10 @@ interface ViewCustomerModalProps {
 }
 
 export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCreateInvoice }: ViewCustomerModalProps) {
+  const [redemptionPoints, setRedemptionPoints] = useState('');
+  const [redemptionInvoice, setRedemptionInvoice] = useState('none');
+  const [redemptionReason, setRedemptionReason] = useState('');
+
   // Fetch real customer data
   const { data: invoices } = useCustomerInvoices(customer?.id);
   const { data: payments } = useCustomerPayments(customer?.id);
@@ -65,19 +70,15 @@ export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCrea
   const { data: loyalty } = useLoyaltyCustomer(customer?.id);
   const { data: loyaltySettings } = useLoyaltySettings();
   const { redeem } = useLoyaltyAdminMutations();
+  const { currency, rate, format } = useCurrency();
   if (!customer) return null;
-  const [redemptionPoints, setRedemptionPoints] = useState('');
-  const [redemptionInvoice, setRedemptionInvoice] = useState('none');
-  const [redemptionReason, setRedemptionReason] = useState('');
 
   // Calculate real account metrics
   const totalInvoiced = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-  const totalPaid = payments?.reduce((sum, pay) => sum + (pay.amount || 0), 0) || 0;
-  const outstandingBalance = totalInvoiced - totalPaid;
+  const outstandingBalance = invoices?.reduce((sum, inv) => sum + Number(inv.balance_due || 0), 0) || 0;
   const totalInvoices = invoices?.length || 0;
   const totalPayments = payments?.length || 0;
 
-  const { currency, rate, format } = useCurrency();
   const formatCurrency = (amount: number) => format(convertAmount(Number(amount) || 0, 'KES', currency, rate));
 
   const formatDate = (dateString?: string) => {

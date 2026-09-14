@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
@@ -103,7 +104,7 @@ export function useLoyaltyCustomer(customerId?: string) {
       if (transactionError) throw transactionError;
       if (redemptionError) throw redemptionError;
       const rows = (transactions || []) as LoyaltyTransaction[];
-      const earned = rows.filter(row => row.points_delta > 0).reduce((sum, row) => sum + row.points_delta, 0);
+      const earned = rows.filter(row => row.event_type === 'invoice_award').reduce((sum, row) => sum + row.points_delta, 0);
       const redeemed = (redemptions || []).filter((row: LoyaltyRedemption) => row.status === 'completed').reduce((sum, row) => sum + row.points_redeemed, 0);
       return { available: rows.reduce((sum, row) => sum + row.points_delta, 0), earned, redeemed, value: rows.reduce((sum, row) => sum + row.points_delta, 0) * Number(settings?.kes_per_point || 1), transactions: rows, redemptions: (redemptions || []) as LoyaltyRedemption[] };
     },
@@ -121,6 +122,8 @@ export function useLoyaltyAdminMutations() {
     queryClient.invalidateQueries({ queryKey: ['loyalty-customers'] });
     queryClient.invalidateQueries({ queryKey: ['loyalty-activity'] });
     queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['customer_invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['customers'] });
   };
   const settings = useMutation({
     mutationFn: async (kesPerPoint: number) => {

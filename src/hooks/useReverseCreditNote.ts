@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { reverseInvoiceRedemptions } from '@/utils/loyaltyPoints';
 import { toast } from 'sonner';
 
 interface ReverseParams {
@@ -12,6 +13,13 @@ export function useReverseCreditNote() {
 
   return useMutation({
     mutationFn: async ({ creditNoteId, reason }: ReverseParams) => {
+      const { data: creditNote, error: creditNoteError } = await supabase
+        .from('credit_notes')
+        .select('invoice_id')
+        .eq('id', creditNoteId)
+        .single();
+      if (creditNoteError) throw creditNoteError;
+
       // Call the atomic reversal function in the database
       // This ensures all operations are transactional: all succeed or all fail
       const { data: result, error: rpcErr } = await supabase
@@ -28,6 +36,7 @@ export function useReverseCreditNote() {
       if (!result?.success) {
         throw new Error(result?.error || 'Failed to reverse credit note');
       }
+      if (creditNote.invoice_id) await reverseInvoiceRedemptions(creditNote.invoice_id);
 
       // Fetch the updated credit note to return it
       const { data: updated, error: fetchErr } = await supabase

@@ -53,37 +53,25 @@ export const syncInvoicePoints = async ({
   companyId: string;
   totalKes: number;
 }) => {
-  const earnedPoints = calculateInvoicePoints(totalKes);
-
-  const { error: deleteError } = await supabase
-    .from('loyalty_point_transactions')
-    .delete()
-    .eq('invoice_id', invoiceId)
-    .eq('event_type', 'invoice_award');
-  if (deleteError) throw deleteError;
-
-  if (earnedPoints > 0) {
-    const { error: insertError } = await supabase
-      .from('loyalty_point_transactions')
-      .insert({
-        company_id: companyId,
-        customer_id: customerId,
-        invoice_id: invoiceId,
-        points_delta: earnedPoints,
-        event_type: 'invoice_award',
-        calculation_kes: Number(totalKes) || 0,
-      });
-    if (insertError) throw insertError;
-  }
-
-  await refreshCustomerPointSnapshots(customerId);
+  const { error } = await supabase.rpc('loyalty_sync_invoice_points', {
+    p_invoice_id: invoiceId,
+    p_company_id: companyId,
+    p_customer_id: customerId,
+    p_total_kes: Number(totalKes) || 0,
+  });
+  if (error) throw error;
 };
 
-export const removeInvoicePoints = async (invoiceId: string, customerId: string) => {
-  const { error } = await supabase
-    .from('loyalty_point_transactions')
-    .delete()
-    .eq('invoice_id', invoiceId);
+export const removeInvoicePoints = async (invoiceId: string, _customerId: string) => {
+  const { error } = await supabase.rpc('loyalty_remove_invoice_points', {
+    p_invoice_id: invoiceId,
+  });
   if (error) throw error;
-  await refreshCustomerPointSnapshots(customerId);
+};
+
+export const reverseInvoiceRedemptions = async (invoiceId: string) => {
+  const { error } = await supabase.rpc('loyalty_reverse_invoice_redemptions', {
+    p_invoice_id: invoiceId,
+  });
+  if (error) throw error;
 };
