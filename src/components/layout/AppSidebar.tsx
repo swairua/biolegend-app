@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -104,7 +104,16 @@ const sidebarItems: SidebarItem[] = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
+    if (location.pathname.startsWith('/settings')) return ['Settings'];
+    return [];
+  });
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/settings')) {
+      setExpandedItems(prev => prev.includes('Settings') ? prev : [...prev, 'Settings']);
+    }
+  }, [location.pathname]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems(prev => 
