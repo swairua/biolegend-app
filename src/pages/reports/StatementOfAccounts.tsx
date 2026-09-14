@@ -28,23 +28,26 @@ import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import { useCustomers, usePayments, useCompanies, useDeliveryNotes } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useCreditNotes } from '@/hooks/useCreditNotes';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { normalizeInvoiceAmount } from '@/utils/currency';
 
 // Helper function to compute customer statements from real data
-const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[], deliveryNotes: any[] = [], currency: 'KES' | 'USD', rate: number) => {
+const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[], creditNotes: any[] = [], deliveryNotes: any[] = [], currency: 'KES' | 'USD', rate: number) => {
   if (!customers || !invoices || !payments) return [];
 
   return customers.map(customer => {
     // Get customer invoices
     const customerInvoices = invoices.filter(inv => inv.customer_id === customer.id);
     const customerPayments = payments.filter(pay => pay.customer_id === customer.id);
+    const customerCreditNotes = creditNotes.filter(note => note.customer_id === customer.id && note.status !== 'cancelled');
 
     // Calculate totals
     const totalInvoiced = customerInvoices.reduce((sum, inv) => sum + normalizeInvoiceAmount(Number(inv.total_amount) || 0, (inv as any).currency_code as any, (inv as any).exchange_rate as any, currency, rate), 0);
     const totalPaid = customerPayments.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
     const totalLoyaltyCredit = customerInvoices.reduce((sum, inv) => sum + (Number(inv.loyalty_credit_amount) || 0), 0);
-    const currentBalance = totalInvoiced - totalPaid - totalLoyaltyCredit;
+    const totalCreditNotes = customerCreditNotes.reduce((sum, note) => sum + (Number(note.balance) || 0), 0);
+    const currentBalance = totalInvoiced - totalPaid - totalLoyaltyCredit - totalCreditNotes;
 
     // Calculate aging analysis
     const today = new Date();
@@ -84,6 +87,19 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
           amount: Number(inv.total_amount) || 0
         };
       }),
+      ...customerCreditNotes.map(note => ({
+        date: note.credit_note_date,
+        type: 'Credit Note',
+        reference: note.credit_note_number,
+        description: `Credit Note - ${note.credit_note_number}${(note.loyalty_points_redeemed || 0) > 0 ? ` (${note.loyalty_points_redeemed} points)` : ''}`,
+        debit: 0,
+        credit: Number(note.total_amount) || 0,
+        balance: 0,
+        invoice_number: '',
+        lpo_number: '',
+        delivery_note_number: '',
+        amount: -(Number(note.total_amount) || 0)
+      })),
       ...customerPayments.map(pay => ({
         date: pay.payment_date,
         type: 'Payment',
@@ -141,6 +157,7 @@ const StatementOfAccounts = () => {
   const { data: customers } = useCustomers(currentCompany?.id);
   const { data: invoices } = useInvoices(currentCompany?.id);
   const { data: payments } = usePayments(currentCompany?.id);
+  const { data: creditNotes } = useCreditNotes(currentCompany?.id);
   const { data: deliveryNotes } = useDeliveryNotes(currentCompany?.id);
 
   const { format, currency, rate } = useCurrency();
@@ -150,6 +167,7 @@ const StatementOfAccounts = () => {
     customers || [],
     invoices || [],
     payments || [],
+    creditNotes || [],
     deliveryNotes || [],
     currency,
     rate

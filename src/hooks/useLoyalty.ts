@@ -123,6 +123,9 @@ export function useLoyaltyAdminMutations() {
     queryClient.invalidateQueries({ queryKey: ['loyalty-activity'] });
     queryClient.invalidateQueries({ queryKey: ['invoices'] });
     queryClient.invalidateQueries({ queryKey: ['customer_invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
+    queryClient.invalidateQueries({ queryKey: ['customerCreditNotes'] });
+    queryClient.invalidateQueries({ queryKey: ['creditNote'] });
     queryClient.invalidateQueries({ queryKey: ['customers'] });
   };
   const settings = useMutation({
@@ -153,5 +156,21 @@ export function useLoyaltyAdminMutations() {
       return data as LoyaltyRedemption;
     }, onSuccess: invalidate,
   });
-  return { settings, adjust, redeem };
+  const createCreditNote = useMutation({
+    mutationFn: async ({ customerId, creditNoteNumber, creditNoteDate, points, reason, notes }: { customerId: string; creditNoteNumber: string; creditNoteDate: string; points: number; reason: string; notes?: string }) => {
+      if (!isAdmin || !companyId) throw new Error('Administrator access and company are required');
+      const { data, error } = await supabase.rpc('loyalty_create_credit_note_with_points', {
+        p_company_id: companyId,
+        p_customer_id: customerId,
+        p_credit_note_number: creditNoteNumber,
+        p_credit_note_date: creditNoteDate,
+        p_reason: reason,
+        p_notes: notes || null,
+        p_requested_points: points,
+      });
+      if (error) throw new Error(error.message || 'Could not create points-funded credit note');
+      return data;
+    }, onSuccess: invalidate,
+  });
+  return { settings, adjust, redeem, createCreditNote };
 }

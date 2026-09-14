@@ -24,6 +24,8 @@ export interface CreditNote {
   exchange_rate?: number;
   fx_date?: string;
   created_by?: string;
+  loyalty_points_redeemed?: number;
+  loyalty_credit_amount?: number;
   created_at: string;
   updated_at: string;
   customers?: {

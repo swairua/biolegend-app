@@ -36,6 +36,8 @@ import { useGenerateCreditNoteNumber } from '@/hooks/useCreditNotes';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { convertAmount } from '@/utils/currency';
 import { useCreateCreditNoteWithItems } from '@/hooks/useCreditNoteItems';
+import { useLoyaltyAdminMutations, useLoyaltyCustomer } from '@/hooks/useLoyalty';
+import { useAuth } from '@/contexts/AuthContext';
 import { getExchangeRate } from '@/utils/exchangeRates';
 import { toast } from 'sonner';
 
@@ -74,7 +76,9 @@ export function CreateCreditNoteModal({
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('All credits must be used within 90 days.');
   const [affectsInventory, setAffectsInventory] = useState(false);
-  
+  const [pointsFunded, setPointsFunded] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+
   const [items, setItems] = useState<CreditNoteItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,6 +91,9 @@ export function CreateCreditNoteModal({
   const { data: products, isLoading: loadingProducts } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
   const { data: invoices } = useInvoices(companyId);
+  const { isAdmin } = useAuth();
+  const { data: loyaltyCustomer } = useLoyaltyCustomer(selectedCustomerId || undefined);
+  const { createCreditNote: createPointsCreditNote } = useLoyaltyAdminMutations();
   const createCreditNoteWithItems = useCreateCreditNoteWithItems();
   const generateCreditNoteNumber = useGenerateCreditNoteNumber();
 
@@ -265,8 +272,13 @@ export function CreateCreditNoteModal({
       return;
     }
 
-    if (items.length === 0) {
+    if (!pointsFunded && items.length === 0) {
       toast.error('Please add at least one item');
+      return;
+    }
+
+    if (pointsFunded && (!isAdmin || pointsToRedeem <= 0 || pointsToRedeem > (loyaltyCustomer?.available || 0))) {
+      toast.error('Enter valid points within the customer’s available balance');
       return;
     }
 
@@ -297,6 +309,15 @@ export function CreateCreditNoteModal({
     try {
       // Generate credit note number
       const creditNoteNumber = await generateCreditNoteNumber.mutateAsync(companyId);
+
+      if (pointsFunded) {
+        await createPointsCreditNote.mutateAsync({ customerId: selectedCustomerId, creditNoteNumber, creditNoteDate, points: pointsToRedeem, reason, notes });
+        toast.success(`Credit note ${creditNoteNumber} created from ${pointsToRedeem} points`);
+        onSuccess();
+        onOpenChange(false);
+        resetForm();
+        return;
+      }
 
       // Lock FX rate if creating in USD
       let effectiveRate = currency === 'USD' ? rate : 1;
@@ -377,6 +398,8 @@ export function CreateCreditNoteModal({
     setNotes('');
     setTermsAndConditions('All credits must be used within 90 days.');
     setAffectsInventory(false);
+    setPointsFunded(false);
+    setPointsToRedeem(0);
     setItems([]);
     setSearchProduct('');
   };
@@ -473,8 +496,23 @@ export function CreateCreditNoteModal({
                   </div>
                 </div>
 
-                {/* Inventory Checkbox */}
-                <div className="flex items-center space-x-2">
+                {isAdmin && (
+                  <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="points_funded" checked={pointsFunded} onCheckedChange={(checked) => setPointsFunded(!!checked)} />
+                      <Label htmlFor="points_funded" className="text-sm font-medium">Fund this credit note with loyalty points</Label>
+                    </div>
+                    {pointsFunded && (
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">Available points: {loyaltyCustomer?.available || 0}</div>
+                        <Input type="number" min="1" max={loyaltyCustomer?.available || 0} step="1" value={pointsToRedeem || ''} onChange={(e) => setPointsToRedeem(Math.floor(Number(e.target.value) || 0))} placeholder="Points to redeem" />
+                        <div className="text-sm text-muted-foreground">Credit value is calculated using the company loyalty conversion rate.</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!pointsFunded && <div className="flex items-center space-x-2">
                   <Checkbox
                     id="affects_inventory"
                     checked={affectsInventory}
@@ -483,7 +521,7 @@ export function CreateCreditNoteModal({
                   <Label htmlFor="affects_inventory" className="text-sm">
                     Affects Inventory (returns items to stock)
                   </Label>
-                </div>
+                </div>}
 
                 {/* Notes */}
                 <div className="space-y-2">
@@ -512,7 +550,7 @@ export function CreateCreditNoteModal({
           </div>
 
           {/* Right Column - Product Selection */}
-          <div className="space-y-4">
+          {!pointsFunded && <div className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Add Products</CardTitle>
@@ -577,9 +615,10 @@ export function CreateCreditNoteModal({
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div>}
         </div>
 
+        {!pointsFunded && <>
         {/* Items Table */}
         <Card>
           <CardHeader>
@@ -717,6 +756,7 @@ export function CreateCreditNoteModal({
             )}
           </CardContent>
         </Card>
+        </>}
 
         <DialogFooter>
           <Button
@@ -729,7 +769,7 @@ export function CreateCreditNoteModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedCustomerId || items.length === 0 || !reason.trim()}
+            disabled={isSubmitting || !selectedCustomerId || !reason.trim() || (pointsFunded ? pointsToRedeem <= 0 : items.length === 0)}
             className="h-9 sm:h-10 px-3 sm:px-4 w-full sm:w-auto"
           >
             <Calculator className="h-4 w-4 mr-1 sm:mr-2" />
