@@ -152,7 +152,11 @@ begin
     update public.invoices
     set loyalty_credit_amount = greatest(0, coalesce(loyalty_credit_amount, 0) - redemption.kes_value),
         balance_due = greatest(0, total_amount - coalesce(paid_amount, 0) - greatest(0, coalesce(loyalty_credit_amount, 0) - redemption.kes_value)),
-        status = case when total_amount - coalesce(paid_amount, 0) - greatest(0, coalesce(loyalty_credit_amount, 0) - redemption.kes_value) <= 0 then 'paid' else 'partial' end,
+        status = case
+          when total_amount - coalesce(paid_amount, 0) - greatest(0, coalesce(loyalty_credit_amount, 0) - redemption.kes_value) <= 0 then 'paid'
+          when coalesce(paid_amount, 0) <= 0 then 'unpaid'
+          else 'partial'
+        end,
         updated_at = now()
     where id = invoice_row.id;
   end if;
@@ -195,6 +199,10 @@ begin
   perform public.loyalty_refresh_customer_snapshots(invoice_row.customer_id);
 end;
 $$;
+
+create unique index if not exists loyalty_redemption_reversal_once_idx
+on public.loyalty_point_transactions(redemption_id)
+where event_type = 'redemption_reversal';
 
 revoke all on function public.loyalty_sync_invoice_points(uuid, uuid, uuid, numeric) from public;
 revoke all on function public.loyalty_adjust_points(uuid, uuid, integer, text) from public;

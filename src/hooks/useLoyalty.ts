@@ -144,7 +144,12 @@ export function useLoyaltyAdminMutations() {
     mutationFn: async ({ customerId, points, invoiceId, reason }: { customerId: string; points: number; invoiceId?: string; reason: string }) => {
       if (!companyId) throw new Error('Company is required');
       const { data, error } = await supabase.rpc('loyalty_redeem_points', { p_company_id: companyId, p_customer_id: customerId, p_points: points, p_invoice_id: invoiceId || null, p_reason: reason });
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42883' || error.message?.includes('does not exist')) {
+          throw new Error('Loyalty database migration is not installed');
+        }
+        throw new Error(error.message || 'Could not redeem loyalty points');
+      }
       return data as LoyaltyRedemption;
     }, onSuccess: invalidate,
   });
