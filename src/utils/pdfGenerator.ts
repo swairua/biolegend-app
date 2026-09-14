@@ -1831,42 +1831,49 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
 export const generateCustomerStatementPDF = async (customer: any, invoices: any[], payments: any[], statementData?: any, company?: CompanyDetails, deliveryNotes?: any[]) => {
   const today = new Date();
   const statementDate = statementData?.statement_date || today.toISOString().split('T')[0];
+  const { data: redemptions, error: redemptionsError } = await supabase
+    .from('loyalty_redemptions')
+    .select('id, invoice_id, points_redeemed, kes_value, created_at, status')
+    .eq('customer_id', customer.id)
+    .eq('status', 'completed')
+    .lte('created_at', `${statementDate}T23:59:59.999Z`);
+  if (redemptionsError && !['42P01', 'PGRST205'].includes(redemptionsError.code || '')) throw redemptionsError;
+  const completedRedemptions = redemptions || [];
+  const invoiceOutstanding = (inv: any) => Number(inv.balance_due ?? ((inv.total_amount || 0) - (inv.paid_amount || 0) - (inv.loyalty_credit_amount || 0)));
 
-  // Calculate outstanding amounts
-  const totalOutstanding = invoices.reduce((sum, inv) =>
-    sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0
-  );
+  // Calculate outstanding amounts from the invoice balance, which already includes loyalty credits.
+  const totalOutstanding = invoices.reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   // Calculate aging buckets
   const current = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysOverdue <= 0 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+    return daysOverdue <= 0 && invoiceOutstanding(inv) > 0;
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days30 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 0 && daysOverdue <= 30 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days60 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 30 && daysOverdue <= 60 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const days90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 60 && daysOverdue <= 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   const over90 = invoices.filter(inv => {
     const dueDate = new Date(inv.due_date);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 90 && (inv.total_amount - (inv.paid_amount || 0)) > 0;
-  }).reduce((sum, inv) => sum + (inv.total_amount - (inv.paid_amount || 0)), 0);
+  }).reduce((sum, inv) => sum + invoiceOutstanding(inv), 0);
 
   // Build quick lookup for delivery notes by invoice id
   const dnByInvoiceId = new Map((deliveryNotes || []).map((d: any) => [d.invoice_id, (d.delivery_number || d.delivery_note_number || '')]));
@@ -1901,6 +1908,20 @@ export const generateCustomerStatementPDF = async (customer: any, invoices: any[
       delivery_note_number: '',
       lpo_date: pay.payment_date,
       amount: -Number(pay.amount || 0)
+    })),
+    ...completedRedemptions.filter(redemption => Number(redemption.kes_value || 0) > 0).map(redemption => ({
+      date: redemption.created_at,
+      type: 'loyalty_redemption',
+      reference: redemption.id,
+      description: `Loyalty points redeemed (${redemption.points_redeemed} points)`,
+      debit: 0,
+      credit: Number(redemption.kes_value || 0),
+      due_date: null,
+      lpo_number: '',
+      invoice_number: invoices.find(inv => inv.id === redemption.invoice_id)?.invoice_number || '',
+      delivery_note_number: '',
+      lpo_date: redemption.created_at,
+      amount: -Number(redemption.kes_value || 0)
     }))
   ];
 

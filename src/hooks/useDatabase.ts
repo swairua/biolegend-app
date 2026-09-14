@@ -944,7 +944,32 @@ export const useCreatePayment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (paymentData: Omit<Payment, 'id' | 'created_at' | 'updated_at'> & { invoice_id: string }) => {
+    mutationFn: async (paymentData: Omit<Payment, 'id' | 'created_at' | 'updated_at'> & { invoice_id: string; points_to_redeem?: number }) => {
+      // Points redemption must use the atomic database function so payment, redemption, and invoice balances commit together.
+      if ((paymentData.points_to_redeem || 0) > 0) {
+        const { points_to_redeem, ...payment } = paymentData;
+        const { data, error } = await supabase.rpc('record_payment_with_loyalty', {
+          p_company_id: payment.company_id,
+          p_customer_id: payment.customer_id,
+          p_invoice_id: payment.invoice_id,
+          p_payment_number: payment.payment_number,
+          p_payment_date: payment.payment_date,
+          p_amount: payment.amount,
+          p_payment_method: payment.payment_method,
+          p_reference_number: payment.reference_number || payment.payment_number,
+          p_notes: payment.notes || null,
+          p_points_to_redeem: points_to_redeem,
+        });
+        if (error) {
+          if (error.code === '42883' || error.message?.includes('does not exist')) {
+            throw new Error('Payment loyalty migration is not installed. Run the supplied SQL migration first.');
+          }
+          throw error;
+        }
+        if (!data?.success) throw new Error(data?.error || 'Could not apply loyalty points');
+        return data;
+      }
+
       // Precondition: ensure required enum exists
       try { await ensureDocumentStatusEnum(); } catch {}
       // Validate UUID fields before insert
@@ -1265,6 +1290,9 @@ export const useCreatePayment = () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', result.invoice_id] });
       queryClient.invalidateQueries({ queryKey: ['customer_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['loyalty-customer'] });
+      queryClient.invalidateQueries({ queryKey: ['loyalty-customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer_payments'] });
     },
   });
 };
