@@ -89,7 +89,7 @@ export function Layout({ children }: LayoutProps) {
 
   // Show authenticated layout
   return (
-    <SidebarProvider className="h-screen">
+    <SidebarProvider defaultOpen={true} className="h-screen">
       <AppSidebar />
       <div className="flex flex-1 flex-col overflow-hidden w-full">
         <Header />
