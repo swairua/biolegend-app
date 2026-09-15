@@ -104,10 +104,7 @@ const sidebarItems: SidebarItem[] = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
-    if (location.pathname.startsWith('/settings')) return ['Settings'];
-    return [];
-  });
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Settings']);
 
   useEffect(() => {
     if (location.pathname.startsWith('/settings')) {
