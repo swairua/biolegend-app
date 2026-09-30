@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getExchangeRate, getLocaleForCurrency } from '@/utils/exchangeRates';
 import { toast } from '@/hooks/use-toast';
+import { appStorage } from '@/utils/storage';
 
 export type CurrencyCode = 'KES' | 'USD';
 
@@ -16,21 +17,21 @@ const CurrencyContext = createContext<CurrencyState | undefined>(undefined);
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrencyState] = useState<CurrencyCode>(() => {
-    const stored = localStorage.getItem('app_currency');
+    const stored = appStorage.getItem('app_currency');
     return (stored === 'USD' || stored === 'KES') ? stored : 'KES';
   });
   const [rate, setRate] = useState<number>(() => {
-    const stored = localStorage.getItem('app_currency_rate');
+    const stored = appStorage.getItem('app_currency_rate');
     const val = stored ? parseFloat(stored) : 1;
     return Number.isFinite(val) && val > 0 ? val : 1;
   });
 
   useEffect(() => {
-    localStorage.setItem('app_currency', currency);
+    appStorage.setItem('app_currency', currency);
   }, [currency]);
 
   useEffect(() => {
-    localStorage.setItem('app_currency_rate', String(rate));
+    appStorage.setItem('app_currency_rate', String(rate));
   }, [rate]);
 
   const setCurrency = async (c: CurrencyCode) => {
