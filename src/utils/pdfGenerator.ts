@@ -235,9 +235,9 @@ const buildDocumentHTML = (data: DocumentData) => {
   <style>
     @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
-    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; line-height: 1.4; font-size: 12px; background: white; }
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; line-height: 1.25; font-size: 12px; background: white; }
     .page { width: 210mm; min-height: 297mm; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 20mm; position: relative; display: flex; flex-direction: column; }
-    .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #D1D5DB; }
+    .header { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #D1D5DB; }
     .header-rows { width: 100%; }
     .header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
     .logo-row { justify-content: flex-end; }
@@ -268,12 +268,12 @@ const buildDocumentHTML = (data: DocumentData) => {
     .section-title { font-size: 14px; font-weight: bold; color: #111827; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; }
     .customer-name { font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #212529; }
     .customer-details { color: #666; line-height: 1.6; }
-    .items-section { margin: 30px 0; }
-    .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 11px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+    .items-section { margin: 14px 0; }
+    .items-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
     .items-table thead { background: #F3F4F6; color: #111827; }
-    .items-table th { padding: 12px 8px; text-align: center; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); }
+    .items-table th { padding: 7px 6px; text-align: center; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); }
     .items-table th:last-child { border-right: none; }
-    .items-table td { padding: 10px 8px; border-bottom: 1px solid #e9ecef; border-right: 1px solid #e9ecef; text-align: center; vertical-align: top; }
+    .items-table td { padding: 6px 6px; border-bottom: 1px solid #e9ecef; border-right: 1px solid #e9ecef; text-align: center; vertical-align: top; }
     .items-table td:last-child { border-right: none; }
     .items-table tbody tr:last-child td { border-bottom: none; }
     .items-table tbody tr:nth-child(even) { background: #f8f9fa; }
@@ -281,9 +281,9 @@ const buildDocumentHTML = (data: DocumentData) => {
     .description-cell { text-align: left !important; max-width: 200px; word-wrap: break-word; }
     .amount-cell { text-align: right !important; font-weight: 500; }
     .center { text-align: center !important; }
-    .totals-section { margin-top: 20px; display: flex; justify-content: flex-end; }
+    .totals-section { margin-top: 12px; display: flex; justify-content: flex-end; }
     .totals-table { width: 300px; border-collapse: collapse; font-size: 12px; }
-    .totals-table td { padding: 8px 15px; border: none; }
+    .totals-table td { padding: 4px 10px; border: none; }
     .totals-table .label { text-align: left; color: #495057; font-weight: 500; }
     .totals-table .amount { text-align: right; font-weight: 600; color: #212529; }
     .totals-table .subtotal-row { border-top: 1px solid #dee2e6; }
@@ -495,7 +495,7 @@ const buildDocumentHTML = (data: DocumentData) => {
           <tr class="payment-info"><td class="label">Paid Amount:</td><td class="amount" style="color: #111827;">${formatCurrency(data.paid_amount || 0)}</td></tr>
           <tr class="balance-info"><td class="label" style="font-weight: bold;">Balance Due:</td><td class="amount" style="font-weight: bold; color: #111827;">${formatCurrency(data.balance_due || 0)}</td></tr>
         ` : ''}
-        ${data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && (data.exchange_rate || 0) > 0 ? `
+        ${data.type !== 'invoice' && data.type !== 'proforma' && data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && (data.exchange_rate || 0) > 0 ? `
           <tr style="border-top: 1px dashed #999; margin-top: 8px;"><td colspan="2" style="padding-top: 12px; font-size: 10px; color: #666; padding: 8px 15px 0 15px;">Exchange Rate: 1 USD = ${(data.exchange_rate || 0).toFixed(2)} KES (${data.fx_date ? new Date(data.fx_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'})</td></tr>
         ` : ''}
       </table>
@@ -608,7 +608,7 @@ export const generatePDF = (data: DocumentData) => {
           margin: 0;
           padding: 0;
           color: #333;
-          line-height: 1.4;
+          line-height: 1.25;
           font-size: 12px;
           background: white;
         }
@@ -626,8 +626,8 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .header {
-          margin-bottom: 30px;
-          padding-bottom: 20px;
+          margin-bottom: 18px;
+          padding-bottom: 12px;
           border-bottom: 1px solid #D1D5DB;
         }
 
@@ -743,13 +743,13 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .items-section {
-          margin: 30px 0;
+          margin: 14px 0;
         }
         
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          margin: 20px 0;
+          margin: 10px 0;
           font-size: 11px;
           border: 1px solid #E5E7EB;
           border-radius: 8px;
@@ -762,7 +762,7 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .items-table th {
-          padding: 12px 8px;
+          padding: 7px 6px;
           text-align: center;
           font-weight: bold;
           font-size: 10px;
@@ -776,7 +776,7 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .items-table td {
-          padding: 10px 8px;
+          padding: 6px 6px;
           border-bottom: 1px solid #e9ecef;
           border-right: 1px solid #e9ecef;
           text-align: center;
@@ -787,6 +787,15 @@ export const generatePDF = (data: DocumentData) => {
           border-right: none;
         }
         
+        .items-table thead {
+          display: table-row-group;
+        }
+
+        .items-table tbody tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
         .items-table tbody tr:last-child td {
           border-bottom: none;
         }
@@ -815,7 +824,7 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .totals-section {
-          margin-top: 20px;
+          margin-top: 12px;
           display: flex;
           justify-content: flex-end;
         }
@@ -827,7 +836,7 @@ export const generatePDF = (data: DocumentData) => {
         }
         
         .totals-table td {
-          padding: 8px 15px;
+          padding: 4px 10px;
           border: none;
         }
         
@@ -1298,7 +1307,7 @@ export const generatePDF = (data: DocumentData) => {
             </tr>
             ` : ''}
           </table>
-          ${data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && data.exchange_rate > 0 ? `
+          ${data.type !== 'invoice' && data.type !== 'proforma' && data.currency_code === 'USD' && Number.isFinite(data.exchange_rate) && data.exchange_rate > 0 ? `
           <div style="margin-top: 12px; padding: 8px; background: #dbeafe; border: 1px solid #60a5fa; border-radius: 4px; font-size: 11px; color: #1e40af;">
             ℹ️ Created at rate: 1 USD = ${data.exchange_rate.toFixed(2)} KES (on ${data.fx_date ? new Date(data.fx_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'})
           </div>
@@ -1487,10 +1496,30 @@ export const generatePDFDownload = async (data: DocumentData) => {
 
     // Compute scale from CSS px to canvas px
     const scalePx = canvas.width / (pageEl as HTMLElement).clientWidth;
+    const rowBounds = Array.from(pageEl.querySelectorAll('.items-table tbody tr')).map(row => {
+      const rect = row.getBoundingClientRect();
+      return {
+        top: Math.round((rect.top - pageRect.top) * scalePx),
+        bottom: Math.round((rect.bottom - pageRect.top) * scalePx),
+      };
+    });
     const termsTopCanvasPx = termsTopCssPx != null ? Math.round(termsTopCssPx * scalePx) : null;
 
+    const findContentBreak = (start: number, height: number) => {
+      const target = start + height;
+      const crossingRow = rowBounds.find(row => row.top < target && row.bottom > target);
+      if (crossingRow) {
+        const previousRowBottom = rowBounds
+          .map(row => row.bottom)
+          .filter(bottom => bottom > start + 10 && bottom <= crossingRow.top)
+          .pop();
+        if (previousRowBottom !== undefined) return previousRowBottom;
+      }
+      return findBreak(start, height);
+    };
+
     while (renderedY < canvas.height) {
-      let breakY = findBreak(renderedY, innerPageHeightPx);
+      let breakY = findContentBreak(renderedY, innerPageHeightPx);
 
       // Force a break exactly before Terms section so it starts on a fresh page,
       // but only if there is a meaningful amount of content before the terms.
@@ -1502,7 +1531,7 @@ export const generatePDFDownload = async (data: DocumentData) => {
         const hasRoomBeforeTerms = preTermsHeight > (innerPageHeightPx * 0.15); // at least 15% of a page
         const wouldSplitThisSlice = termsTopCanvasPx > renderedY + 10 && termsTopCanvasPx < breakY - 10;
         if (wouldSplitThisSlice && hasRoomBeforeTerms) {
-          breakY = findBreak(renderedY, preTermsHeight);
+          breakY = findContentBreak(renderedY, preTermsHeight);
         }
       }
 
