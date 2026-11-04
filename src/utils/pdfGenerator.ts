@@ -536,6 +536,7 @@ const buildDocumentHTML = (data: DocumentData) => {
       <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
       <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
       <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
+      <div class="bank-line">-KCB BANK KENYA LTD, BIOLEGEND SCIENTIFIC LTD USD ACCOUNT NUMBER: 1344239218 - SWIFT CODE; KCBLKENX - BANK CODE; 01</div>
     </div>` : ''}
 
     ${''}
@@ -1355,6 +1356,7 @@ export const generatePDF = (data: DocumentData) => {
           <div class="bank-line">-KCB RIVER ROAD BRANCH NUMBER: 1216348367 - SWIFT CODE; KCBLKENX - BANK CODE; 01 - BRANCH CODE; 114</div>
           <div class="bank-line">-ABSA BANK KENYA PLC: THIKA ROAD MALL BRANCH, ACC: 2051129930, BRANCH CODE; 024, SWIFT CODE; BARCKENX</div>
           <div class="bank-line">-NCBA BANK KENYA PLC: THIKA ROAD MALL (TRM) BRANCH, ACC: 1007470556, BANK CODE: 000, BRANCH CODE; 07, SWIFT CODE: CBAFKENX</div>
+          <div class="bank-line">-KCB BANK KENYA LTD, BIOLEGEND SCIENTIFIC LTD USD ACCOUNT NUMBER: 1344239218 - SWIFT CODE; KCBLKENX - BANK CODE; 01</div>
         </div>
         ` : ''}
 
