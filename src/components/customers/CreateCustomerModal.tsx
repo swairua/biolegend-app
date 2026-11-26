@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/taxCalculation';
-import { useCreateCustomer, useCustomers, useCompanies } from '@/hooks/useDatabase';
+import { useCreateCustomer, useCompanies } from '@/hooks/useDatabase';
 
 interface CreateCustomerModalProps {
   open: boolean;
@@ -55,13 +55,7 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers } = useCustomers(currentCompany?.id);
   const createCustomer = useCreateCustomer();
-
-  const generateCustomerCode = () => {
-    const customerCount = customers?.length || 0;
-    return `CUST${(customerCount + 1).toString().padStart(3, '0')}`;
-  };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
@@ -76,13 +70,20 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
 
     setIsSubmitting(true);
     try {
-      const customerCode = generateCustomerCode();
-      
-      await createCustomer.mutateAsync({
-        company_id: currentCompany.id,
-        customer_code: customerCode,
-        ...formData
-      });
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await createCustomer.mutateAsync({
+            company_id: currentCompany.id,
+            customer_code: `CUST-${crypto.randomUUID()}`,
+            ...formData
+          });
+          break;
+        } catch (error) {
+          const isCodeConflict = error instanceof Error &&
+            /unique constraint "(?:customers_company_code_unique|customers_customer_code_key)"/i.test(error.message);
+          if (!isCodeConflict || attempt >= 2) throw error;
+        }
+      }
       
       toast.success(`Customer ${formData.name} created successfully!`);
       onSuccess();
@@ -102,7 +103,11 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
       });
     } catch (error) {
       console.error('Error creating customer:', error);
-      toast.error('Failed to create customer. Please try again.');
+      const isCodeConflict = error instanceof Error &&
+        /unique constraint "(?:customers_company_code_unique|customers_customer_code_key)"/i.test(error.message);
+      toast.error(isCodeConflict
+        ? 'Unable to generate a unique customer code. Please try again.'
+        : 'Failed to create customer. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -298,7 +303,7 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
               <div className="mt-6 p-4 bg-muted/50 rounded-lg">
                 <h4 className="font-medium mb-2">Customer Preview</h4>
                 <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>Code: {generateCustomerCode()}</p>
+                  <p>Code: Assigned when created</p>
                   <p>Credit Limit: {formatCurrency(formData.credit_limit)}</p>
                   <p>Payment Terms: {formData.payment_terms} days</p>
                   <p>Status: {formData.is_active ? 'Active' : 'Inactive'}</p>
